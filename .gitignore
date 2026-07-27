@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+backend/vendor/
+
+# Next.js build outputs
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/dist/
+
+# Environment files & secret keys (CRITICAL)
+.env
+.env.local
+.env.*.local
+frontend/.env
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+backend/.env
+backend/.env.backup
+backend/.env.production
+
+# Laravel Storage & Cache
+backend/storage/*.key
+backend/storage/logs/*
+backend/storage/framework/cache/*
+backend/storage/framework/sessions/*
+backend/storage/framework/views/*
+backend/bootstrap/cache/*
+!backend/storage/logs/.gitkeep
+!backend/storage/framework/cache/.gitkeep
+!backend/storage/framework/sessions/.gitkeep
+!backend/storage/framework/views/.gitkeep
+!backend/bootstrap/cache/.gitkeep
+
+# IDEs & System files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+*.log
+
+# Temporary test / brain output
+brain/
+scratch/

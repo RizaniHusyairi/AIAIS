@@ -1,0 +1,49 @@
+{
+  "name": "APT Pranoto Samarinda",
+  "short_name": "APT Pranoto",
+  "description": "Aplikasi resmi Bandar Udara APT Pranoto Samarinda — jadwal penerbangan, fasilitas, layanan, dan informasi bandara dalam genggaman Anda.",
+  "id": "/app",
+  "start_url": "/app",
+  "scope": "/app",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b1e5b",
+  "theme_color": "#0b1e5b",
+  "categories": ["travel", "navigation", "utilities"],
+  "lang": "id",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "/icon-app.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Cek Penerbangan",
+      "short_name": "Penerbangan",
+      "url": "/app/penerbangan",
+      "description": "Lihat jadwal keberangkatan & kedatangan"
+    },
+    {
+      "name": "Fasilitas Bandara",
+      "short_name": "Fasilitas",
+      "url": "/app/fasilitas",
+      "description": "Temukan fasilitas di terminal"
+    },
+    {
+      "name": "Layanan Online",
+      "short_name": "Layanan",
+      "url": "/app/layanan",
+      "description": "Pengaduan, lost & found, dan lainnya"
+    }
+  ]
+}

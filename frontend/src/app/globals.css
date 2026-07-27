@@ -1,0 +1,136 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  }
+
+  body {
+    background-color: #f8fafc;
+    color: #0f172a;
+    font-family: var(--font-sans);
+    overflow-x: hidden;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #e2e8f0;
+}
+::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2563eb;
+}
+
+/* Glassmorphism & Card Utility Classes */
+.glass-panel {
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.white-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  transition: all 0.25s ease-in-out;
+}
+
+.white-card:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+  transform: translateY(-2px);
+}
+
+/* Hide scrollbars for horizontal pill rows / app surfaces */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ---- Article typography (light theme, aviation nuance) ---- */
+.article-content {
+  color: #334155;
+  font-size: 1rem;
+  line-height: 1.85;
+}
+.article-content > * + * { margin-top: 1.15rem; }
+.article-content p { color: #475569; }
+.article-content h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  margin-top: 2rem;
+  padding-left: 0.85rem;
+  position: relative;
+}
+.article-content h2::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0.2em; bottom: 0.2em;
+  width: 4px; border-radius: 2px;
+  background: linear-gradient(#2563eb, #14b8a6);
+}
+.article-content h3 { font-size: 1.2rem; font-weight: 700; color: #1e293b; margin-top: 1.5rem; }
+.article-content strong { color: #0f172a; font-weight: 700; }
+.article-content a { color: #2563eb; text-decoration: underline; text-underline-offset: 2px; }
+.article-content ul, .article-content ol { padding-left: 1.25rem; }
+.article-content ul { list-style: none; }
+.article-content ul li { position: relative; padding-left: 1.5rem; }
+.article-content ul li::before {
+  content: '✈';
+  position: absolute; left: 0; top: 0;
+  color: #2563eb; font-size: 0.8em;
+}
+.article-content ol { list-style: decimal; }
+.article-content ol li { padding-left: 0.35rem; }
+.article-content blockquote {
+  border-left: 4px solid #2563eb;
+  background: #eff6ff;
+  border-radius: 0 0.75rem 0.75rem 0;
+  padding: 1rem 1.25rem;
+  color: #1e3a8a;
+  font-style: italic;
+  font-weight: 500;
+}
+.article-content img { border-radius: 1rem; width: 100%; }
+
+@keyframes cloudDrift {
+  0% { transform: translateX(-20px); }
+  100% { transform: translateX(20px); }
+}
+
+/* Used by the news detail feedback confirmation */
+.animate-fadeIn {
+  animation: fadeIn 0.4s ease both;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Section Title Bar */
+.section-title {
+  position: relative;
+  padding-left: 0.85rem;
+  font-weight: 800;
+  font-size: 1.25rem;
+  color: #0f172a;
+}
+.section-title::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.15rem;
+  bottom: 0.15rem;
+  width: 4px;
+  background-color: #2563eb;
+  border-radius: 2px;
+}
