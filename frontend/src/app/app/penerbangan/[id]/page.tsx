@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { fetchApi } from '@/lib/api';
@@ -8,14 +9,13 @@ import { Flight } from '@/types';
 import { StatusBar, AppHeader, ShareButton } from '@/components/pwa/ui';
 import {
   AirlineLogo, splitPlace, statusTheme, shortTime, fmtFlightDate, relativeUpdated,
-  DEMO_DEPARTURES, DEMO_ARRIVALS,
 } from '@/components/flights/shared';
 import FlightMap from '@/components/map/FlightMap';
 import SimulationNotice from '@/components/map/SimulationNotice';
 import { simulateAt, phaseLabel } from '@/lib/flightSim';
 import {
   Plane, Bookmark, Luggage, DoorOpen, Info, TriangleAlert, Phone, Mail,
-  ClipboardList, RefreshCw, Map as MapIcon,
+  ClipboardList, RefreshCw, Map as MapIcon, SearchX,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -23,15 +23,17 @@ export default function DetailPenerbanganScreen() {
   const params = useParams();
   const id = String(params?.id ?? '');
   const [flights, setFlights] = useState<Flight[]>([]);
+  const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
   /** Dipasang setelah mount agar tidak bentrok dengan hasil render server. */
   const [nowMs, setNowMs] = useState<number | null>(null);
 
   useEffect(() => {
-    fetchApi<{ flights: Flight[] }>('/flights').then((res) => {
-      const data: any = res.data;
+    fetchApi<{ flights: Flight[] } | Flight[]>('/flights').then((res) => {
+      const data = res.data;
       const list = Array.isArray(data) ? data : data?.flights;
       if (Array.isArray(list)) setFlights(list);
+      setLoading(false);
     });
   }, []);
 
@@ -42,8 +44,52 @@ export default function DetailPenerbanganScreen() {
     return () => clearInterval(t);
   }, []);
 
-  const pool = [...flights, ...DEMO_DEPARTURES, ...DEMO_ARRIVALS];
-  const flight = pool.find((f) => String(f.id) === id) || DEMO_DEPARTURES[0];
+  /* Hanya penerbangan yang benar-benar ada di umpan. Jangan pernah jatuh ke
+     penerbangan lain atau ke data karangan — tautan kedaluwarsa yang
+     menampilkan penerbangan asing sebagai milik pengguna jauh lebih
+     menyesatkan daripada halaman "tidak ditemukan". */
+  const flight = flights.find((f) => String(f.id) === id) ?? null;
+
+  if (!flight) {
+    return (
+      <div className="min-h-full bg-slate-50">
+        <div className="sticky top-0 z-20 bg-gradient-to-b from-blue-50 to-slate-50">
+          <StatusBar />
+          <AppHeader title="Detail Penerbangan" />
+        </div>
+
+        <div className="px-6 py-16 flex flex-col items-center text-center">
+          {loading ? (
+            <>
+              <motion.div
+                animate={{ x: [-12, 12, -12], y: [3, -3, 3] }}
+                transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
+                className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/30"
+              >
+                <Plane className="w-7 h-7 text-white rotate-45" />
+              </motion.div>
+              <p className="mt-4 text-slate-500 text-[13px]">Memuat detail penerbangan...</p>
+            </>
+          ) : (
+            <>
+              <SearchX className="w-12 h-12 text-slate-300" />
+              <p className="mt-4 text-[16px] font-bold text-slate-800">Penerbangan tidak ditemukan</p>
+              <p className="mt-1.5 text-[12.5px] text-slate-500 leading-relaxed max-w-xs">
+                Jadwal hanya memuat hari berjalan, sehingga tautan lama menjadi tidak berlaku
+                setelah pergantian hari.
+              </p>
+              <Link
+                href="/app/penerbangan"
+                className="mt-6 inline-flex items-center gap-2 bg-blue-600 active:bg-blue-700 text-white font-semibold text-[13px] px-5 py-3 rounded-2xl shadow-lg shadow-blue-600/25"
+              >
+                Lihat Jadwal Penerbangan
+              </Link>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   const from = splitPlace(flight.origin);
   const to = splitPlace(flight.destination);

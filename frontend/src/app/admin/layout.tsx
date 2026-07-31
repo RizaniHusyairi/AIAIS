@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { getToken, getUser, logout, AdminUser } from '@/lib/adminApi';
+import { API_BASE_URL } from '@/lib/api';
+import { APP_VERSION, VERSION_LABEL, IS_PRERELEASE, RELEASE_CHANNEL } from '@/lib/version';
 import {
   LayoutDashboard, Plane, Newspaper, Megaphone, Building2, Store, FileText, MessageSquareWarning,
   LogOut, ExternalLink, ShieldCheck, Menu, X, Radar, ChevronRight, ImageIcon,
@@ -53,6 +55,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [user, setUser] = useState<AdminUser | null>(null);
   const [navOpen, setNavOpen] = useState(false);
   const [clock, setClock] = useState('--:--:--');
+  /** Versi yang dilaporkan backend; dipakai mendeteksi selisih dengan frontend. */
+  const [backendVersion, setBackendVersion] = useState<string | null>(null);
 
   /* auth guard */
   useEffect(() => {
@@ -77,6 +81,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, []);
 
   useEffect(() => setNavOpen(false), [pathname]);
+
+  // Sekali saat mount: tanyakan versi ke backend untuk dibandingkan.
+  // Gagal diam-diam — ini informasi pelengkap, bukan fungsi utama panel.
+  useEffect(() => {
+    let alive = true;
+    fetch(`${API_BASE_URL}/version`, { headers: { Accept: 'application/json' }, cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => {
+        const v = json?.data?.version;
+        if (alive && typeof v === 'string') setBackendVersion(v);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const doLogout = async () => {
     await logout();
@@ -173,7 +193,26 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             />
             SERVER TERHUBUNG
           </div>
-          <p className="text-[9.5px] text-slate-500 mt-1">Laravel API · Sanctum Auth</p>
+          <p className="text-[9.5px] text-slate-500 mt-1">
+            AIAIS {VERSION_LABEL} · Laravel API
+          </p>
+
+          {/* Lencana kanal, hanya untuk build pra-rilis. */}
+          {IS_PRERELEASE && (
+            <span className="inline-block mt-1.5 text-[8.5px] font-black tracking-wider uppercase px-1.5 py-0.5 rounded bg-amber-400/15 text-amber-300 border border-amber-400/25">
+              {RELEASE_CHANNEL}
+            </span>
+          )}
+
+          {/* Pendeteksi selisih versi: kalau backend dan frontend menyebut
+              angka berbeda, salah satunya lupa di-build/di-cache ulang.
+              Ditampilkan alih-alih mengandalkan kedisiplinan. */}
+          {backendVersion && backendVersion !== APP_VERSION && (
+            <p className="mt-1.5 text-[9px] leading-snug text-amber-300 border-t border-amber-400/20 pt-1.5">
+              Backend v{backendVersion} ≠ frontend {VERSION_LABEL}. Jalankan{' '}
+              <span className="font-mono">config:cache</span> / build ulang.
+            </p>
+          )}
         </div>
       </div>
     </div>

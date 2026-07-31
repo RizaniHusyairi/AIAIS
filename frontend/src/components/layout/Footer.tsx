@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { VERSION_LABEL } from '@/lib/version';
 
 export default function Footer() {
   const pathname = usePathname();
@@ -106,7 +107,9 @@ export default function Footer() {
 
       <div className="max-w-7xl mx-auto px-4 pt-12 mt-12 border-t border-white/10 flex flex-col sm:flex-row justify-between items-center text-slate-500 text-xs gap-4">
         <p>© {new Date().getFullYear()} APT Pranoto Samarinda. All Rights Reserved.</p>
-        <p className="font-mono text-[11px]">Bandar Udara Klas I APT Pranoto Samarinda — AIAIS Portal</p>
+        <p className="font-mono text-[11px]">
+          Bandar Udara Klas I APT Pranoto Samarinda — AIAIS Portal {VERSION_LABEL}
+        </p>
       </div>
     </footer>
   );

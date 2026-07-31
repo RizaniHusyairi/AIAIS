@@ -7,7 +7,7 @@ import { fetchApi } from '@/lib/api';
 import { useSetting } from '@/lib/settings';
 import { Flight, NewsItem, Announcement, Facility } from '@/types';
 import { StatusBar, Segmented, listContainer, listItem } from '@/components/pwa/ui';
-import { AirlineLogo, splitPlace, statusInfo, DEMO_DEPARTURES, DEMO_ARRIVALS } from '@/components/flights/shared';
+import { AirlineLogo, splitPlace, statusInfo } from '@/components/flights/shared';
 import { TOURISM_SPOTS, TOURISM_CAT_META } from '@/lib/tourismData';
 import { facilityCatMeta, facilityIcon } from '@/lib/facilityMeta';
 import { CATEGORY_STYLES } from '@/lib/newsData';
@@ -286,6 +286,18 @@ export default function BerandaScreen() {
               </motion.div>
             );
           })}
+
+          {/* Katakan apa adanya saat umpan FIDS kosong — jangan diisi contoh. */}
+          {rows.length === 0 && (
+            <div className="bg-white rounded-2xl p-5 shadow-sm shadow-slate-200/60 text-center">
+              <p className="text-[13px] font-semibold text-slate-700">
+                Belum ada jadwal {tab === 'departure' ? 'keberangkatan' : 'kedatangan'}
+              </p>
+              <p className="mt-1 text-[11.5px] text-slate-500 leading-relaxed">
+                Jadwal akan muncul begitu diterbitkan sistem informasi bandara.
+              </p>
+            </div>
+          )}
         </motion.div>
 
         <Link
@@ -447,7 +459,7 @@ export default function BerandaScreen() {
             <div className="flex-1 min-w-0">
               <p className="font-bold text-slate-900 text-[13.5px]">Alamat Terminal</p>
               <p className="mt-0.5 text-[11.5px] text-slate-500 leading-relaxed">
-                Jl. Marsma APT Pranoto, Sungai Siring, Samarinda Utara, Kalimantan Timur
+                Jl. Poros Samarinda–Bontang, Kel. Sungai Siring, Samarinda 75119
               </p>
             </div>
           </div>

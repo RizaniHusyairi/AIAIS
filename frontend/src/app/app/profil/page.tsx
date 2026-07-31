@@ -3,6 +3,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { StatusBar, listContainer, listItem } from '@/components/pwa/ui';
+import { APP_VERSION } from '@/lib/version';
 import { User, Bell, Bookmark, FileText, Languages, Info, Settings, ChevronRight, LogOut } from 'lucide-react';
 
 const MENU = [
@@ -71,7 +72,11 @@ export default function ProfilScreen() {
         >
           Buka Versi Desktop
         </button>
-        <p className="text-center text-[11px] text-slate-400 pt-1">APT Pranoto App · Versi 1.0.0</p>
+        {/* Sebelumnya "Versi 1.0.0" ter-hardcode dan salah — bertentangan
+            dengan package.json. Kini bersumber dari berkas VERSION. */}
+        <p className="text-center text-[11px] text-slate-400 pt-1">
+          APT Pranoto App · Versi {APP_VERSION}
+        </p>
       </motion.div>
     </div>
   );

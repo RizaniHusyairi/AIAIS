@@ -25,9 +25,9 @@ Aplikasi ini mengintegrasikan **Flight Information Display System (FIDS) real-ti
 - **Animations**: [Framer Motion](https://www.framer.com/motion/)
 
 ### **Backend & Database**
-- **Framework**: [Laravel 12 REST API](https://laravel.com/)
+- **Framework**: [Laravel 13 REST API](https://laravel.com/)
 - **Database**: MySQL 8 (Laragon Connection)
-- **Environment**: PHP 8.2+
+- **Environment**: PHP 8.3+
 
 ---
 
@@ -64,7 +64,7 @@ npm run dev
 
 ```text
 AIAIS/
-├── backend/            # Laravel 12 API Project
+├── backend/            # Laravel 13 API Project
 │   ├── app/            # Controllers, Models, Routes
 │   ├── database/       # Migrations & Seeders
 │   └── routes/api.php  # API Endpoints (/flights, /news, /settings)
@@ -78,6 +78,50 @@ AIAIS/
 ├── .gitignore          # Unified Git Exclusion Rules
 └── README.md           # Dokumentasi Proyek
 ```
+
+---
+
+## 🔖 Versi
+
+AIAIS adalah **generasi kedua** portal Bandara APT Pranoto. Ia menggantikan
+situs lama [aptpairport.id](https://aptpairport.id), yang ditandai sebagai
+**v1.0.0**.
+
+| Produk | Versi | Status |
+|---|---|---|
+| aptpairport.id (Laravel monolit) | `1.0.0` | Produksi, akan digantikan |
+| AIAIS (monorepo ini) | lihat berkas [`VERSION`](VERSION) | Pengembangan menuju `2.0.0` |
+
+Penomoran mengikuti [Semantic Versioning](https://semver.org/lang/id/).
+Selama pengembangan versinya berakhiran pra-rilis (`-alpha.N`, `-beta.N`,
+`-rc.N`); menjadi `2.0.0` tepat saat menggantikan situs lama.
+
+### Sumber kebenaran tunggal
+
+Angka versi **hanya diketik di satu tempat**: berkas [`VERSION`](VERSION) di
+akar repositori. Semua yang lain menurunkannya:
+
+| Konsumen | Cara membaca |
+|---|---|
+| Frontend | `next.config.ts` membacanya saat build → `NEXT_PUBLIC_APP_VERSION` → `src/lib/version.ts` |
+| Backend | `config/app.php` membacanya → `config('app.version')` |
+| Cache PWA | Disisipkan ke URL service worker (`/sw.js?v=…`), cache berotasi otomatis |
+| `frontend/package.json` | Cermin, disamakan lewat `npm version` saat rilis |
+
+Versi terpasang dapat diperiksa lewat `GET /api/v2/version`, dan tampil di
+footer portal, halaman profil PWA, serta sidebar panel admin. Panel admin akan
+memperingatkan bila versi backend dan frontend berbeda.
+
+### Jangan tertukar
+
+Ada **tiga sumbu versi** di proyek ini yang menandai hal berbeda:
+
+1. **Versi produk** (`VERSION`) — naik saat produk dirilis. *Ini yang dimaksud "AIAIS 2.0.0".*
+2. **Versi kontrak API** (`config/api.php`, prefiks `/api/v2`) — naik hanya saat **bentuk data** berubah dan merusak klien lama. Tidak terikat versi produk.
+3. **Versi cache aset** (service worker) — berotasi otomatis tiap rilis, tidak perlu disunting manual.
+
+Prosedur menaikkan versi ada di [`docs/RELEASING.md`](docs/RELEASING.md).
+Riwayat perubahan ada di [`CHANGELOG.md`](CHANGELOG.md).
 
 ---
 

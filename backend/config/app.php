@@ -17,6 +17,29 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Application Version
+    |--------------------------------------------------------------------------
+    |
+    | Versi produk AIAIS. Sumber kebenaran tunggalnya adalah berkas VERSION di
+    | akar monorepo, yang juga dibaca frontend lewat next.config.ts — sehingga
+    | backend dan frontend tidak bisa menyebut angka yang berbeda.
+    |
+    | APP_VERSION pada .env menang, untuk kasus backend dideploy terpisah tanpa
+    | akar monorepo. Perhatikan: `php artisan config:cache` MEMBEKUKAN nilai ini,
+    | jadi membersihkan cache config adalah langkah wajib saat merilis. Kalau
+    | versi terlihat basi, penyebabnya hampir selalu cache config yang lama.
+    |
+    */
+
+    'version' => env('APP_VERSION') ?: (static function (): string {
+        // config/ -> backend/ -> akar repo
+        $file = dirname(__DIR__, 2).'/VERSION';
+
+        return is_file($file) ? trim((string) file_get_contents($file)) : '0.0.0';
+    })(),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------
     |

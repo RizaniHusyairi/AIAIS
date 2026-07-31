@@ -9,41 +9,52 @@ import { Flight } from '@/types';
 import {
   Search, ChevronDown, Phone, Menu, X, Moon, Plane, Home, Building2, Users,
   Newspaper, Download, MessageSquareWarning, Info, UserRound, MapPin, Clock,
-  CloudSun, Globe, ArrowRight, PlaneTakeoff, Palmtree,
+  CloudSun, Globe, ArrowRight, PlaneTakeoff, Palmtree, Bus, ShieldCheck,
 } from 'lucide-react';
 
 /* ------------------------------------------------------------------ */
-/*  Menu definition                                                    */
+/*  Menu definition (Synced with official aptpairport.id structure)  */
 /* ------------------------------------------------------------------ */
 type MenuChild = { name: string; href: string; icon: any; desc: string };
 type MenuItem = { name: string; href: string; icon: any; children?: MenuChild[] };
 
 const MENU: MenuItem[] = [
   { name: 'Beranda', href: '/', icon: Home },
-  { name: 'Penerbangan', href: '/flights', icon: Plane },
-  { name: 'Fasilitas', href: '/facilities', icon: Building2 },
-  { name: 'Layanan', href: '/tenants', icon: Users },
   {
-    name: 'Informasi',
-    href: '/news',
-    icon: Newspaper,
+    name: 'Layanan Kami',
+    href: '/complaints',
+    icon: Building2,
     children: [
-      { name: 'Berita & Pengumuman', href: '/news', icon: Newspaper, desc: 'Kabar terbaru seputar operasional bandara' },
-      { name: 'Pariwisata Terdekat', href: '/tourism', icon: Palmtree, desc: 'Destinasi wisata di sekitar bandara' },
-      { name: 'Pusat Unduhan', href: '/downloads', icon: Download, desc: 'Regulasi, formulir, dan dokumen publik' },
-      { name: 'Pengaduan Online', href: '/complaints', icon: MessageSquareWarning, desc: 'Sampaikan keluhan atau saran Anda' },
+      { name: 'Pelayanan Pas Bandara Orang', href: '/complaints#pas-orang', icon: UserRound, desc: 'Permohonan pas masuk area terbatas terminal & airside' },
+      { name: 'Pelayanan Pas Bandara Kendaraan', href: '/complaints#pas-kendaraan', icon: Bus, desc: 'Izin pas sirkulasi kendaraan operasional bandara' },
+      { name: 'Pelayanan Tanda Ijin Mengemudi (TIM)', href: '/complaints#tim', icon: ShieldCheck, desc: 'Izin mengemudi pengemudi Sisi Udara (Airside Driver)' },
     ],
   },
   {
-    name: 'Tentang Kami',
+    name: 'Informasi & Flight',
+    href: '/flights',
+    icon: Plane,
+    children: [
+      { name: 'Jadwal Penerbangan (FIDS)', href: '/flights', icon: Plane, desc: 'Status keberangkatan & kedatangan real-time' },
+      { name: 'Fasilitas Bandara', href: '/facilities', icon: Building2, desc: 'Ruang tunggu, WiFi, Nursery Room & fasilitas umum' },
+      { name: 'Transportasi & Bus DAMRI', href: '/tenants', icon: Bus, desc: 'Moda transportasi darat menuju IKN & Kota Samarinda' },
+      { name: 'Berita & Pengumuman', href: '/news', icon: Newspaper, desc: 'Kabar terbaru & pengumuman resmi operasional' },
+      { name: 'Pariwisata Terdekat', href: '/tourism', icon: Palmtree, desc: 'Destinasi wisata unggulan di sekitar bandara' },
+      { name: 'Pusat Unduhan (Dokumen)', href: '/downloads', icon: Download, desc: 'Regulasi, formulir, dan siaran pers publik' },
+    ],
+  },
+  { name: 'Galeri Kegiatan', href: '/facilities#galeri', icon: Palmtree },
+  {
+    name: 'Profil Bandara',
     href: '/profile',
     icon: Info,
     children: [
-      { name: 'Profil & Visi Misi', href: '/profile', icon: Info, desc: 'Sejarah dan arah pengembangan bandara' },
-      { name: 'Pejabat Bandara', href: '/profile#pejabat', icon: UserRound, desc: 'Struktur pimpinan UPBU Kelas I' },
-      { name: 'Lokasi & Akses', href: '/facilities#peta', icon: MapPin, desc: 'Peta terminal dan rute menuju bandara' },
+      { name: 'Profil & Visi Misi', href: '/profile', icon: Info, desc: 'Sejarah, visi-misi, dan tata kelola UPBU APT Pranoto' },
+      { name: 'Pejabat Bandara', href: '/profile#pejabat', icon: Users, desc: 'Struktur pimpinan Kantor UPBU Kelas I APT Pranoto' },
+      { name: 'Peta & Lokasi Terminal', href: '/facilities#peta', icon: MapPin, desc: 'Denah sirkulasi terminal dan rute menuju bandara' },
     ],
   },
+  { name: 'FAQ & Pengaduan', href: '/complaints', icon: MessageSquareWarning },
 ];
 
 export default function Navbar() {
@@ -139,8 +150,9 @@ export default function Navbar() {
                 <span className="flex items-center gap-1.5 text-blue-100 tabular-nums">
                   <Clock className="w-3.5 h-3.5 text-cyan-300" /> {clock} WITA
                 </span>
-                <a href="tel:+62541123456" className="hidden sm:flex items-center gap-1.5 text-blue-100 hover:text-white transition-colors">
-                  <Phone className="w-3.5 h-3.5" /> (0541) 123456
+                {/* Nomor resmi sesuai aptpairport.id (sebelumnya placeholder 0541-123456). */}
+                <a href="tel:+62811551944" className="hidden sm:flex items-center gap-1.5 text-blue-100 hover:text-white transition-colors">
+                  <Phone className="w-3.5 h-3.5" /> +62 811 551 944
                 </a>
               </div>
             </div>

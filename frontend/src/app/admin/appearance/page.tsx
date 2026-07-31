@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { adminFetch } from '@/lib/adminApi';
+import { API_BASE_URL } from '@/lib/api';
 import { BACKGROUND_META, DEFAULT_SETTINGS, invalidateSettings, BackgroundKey } from '@/lib/settings';
 import {
   PageHeader, Panel, Btn, Badge, Toast, ToastMsg, Loading, InfoNote, stagger, riseIn,
@@ -25,8 +26,9 @@ export default function AdminAppearancePage() {
   const loadSettings = async () => {
     setLoading(true);
     try {
-      const base = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api/v1';
-      const r = await fetch(`${base}/settings`, { headers: { Accept: 'application/json' }, cache: 'no-store' });
+      // Pakai konstanta bersama — jangan menyusun ulang alamat API di sini,
+      // itu yang dulu membuat prefiks versi tertinggal saat berpindah.
+      const r = await fetch(`${API_BASE_URL}/settings`, { headers: { Accept: 'application/json' }, cache: 'no-store' });
       const json = await r.json().catch(() => null);
       const data: Draft = { ...DEFAULT_SETTINGS, ...(json?.data ?? {}) };
       setSaved(data);

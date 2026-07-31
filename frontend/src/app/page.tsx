@@ -388,7 +388,8 @@ export default function HomePage() {
                   <p className="mt-4 text-blue-50 text-[12.5px] leading-relaxed italic max-w-xs">"{current.quote}"</p>
 
                   <div className="mt-4 flex items-center gap-2">
-                    <a href="mailto:info@aptpranoto.co.id" className="w-8 h-8 rounded-lg bg-white/12 border border-white/20 flex items-center justify-center text-white hover:bg-white/22 transition-colors" aria-label="Email">
+                    {/* Email resmi sesuai aptpairport.id. */}
+                    <a href="mailto:mail.aptpranotoairport@gmail.com" className="w-8 h-8 rounded-lg bg-white/12 border border-white/20 flex items-center justify-center text-white hover:bg-white/22 transition-colors" aria-label="Email">
                       <Mail className="w-4 h-4" />
                     </a>
                     <a href="#" className="w-8 h-8 rounded-lg bg-white/12 border border-white/20 flex items-center justify-center text-white hover:bg-white/22 transition-colors" aria-label="Bagikan profil">
@@ -510,7 +511,8 @@ export default function HomePage() {
               </motion.span>
               <div className="min-w-0">
                 <p className="font-bold text-slate-900 text-[12.5px]">APT Pranoto Samarinda</p>
-                <p className="text-[11px] text-slate-500 leading-snug">Jl. Marsma APT Pranoto, Samarinda, Kalimantan Timur</p>
+                {/* Alamat resmi sesuai aptpairport.id. */}
+                <p className="text-[11px] text-slate-500 leading-snug">Jl. Poros Samarinda–Bontang, Kel. Sungai Siring, Samarinda 75119</p>
               </div>
             </div>
           </div>

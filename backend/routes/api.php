@@ -11,11 +11,19 @@ use App\Http\Controllers\Api\ComplaintController;
 use App\Http\Controllers\Api\DocumentController;
 use App\Http\Controllers\Api\AnalyticsController;
 use App\Http\Controllers\Api\SettingController;
+use App\Http\Controllers\Api\VersionController;
 
 // Public Endpoints
-Route::prefix('v1')->group(function () {
+//
+// Prefiks versi diambil dari config/api.php (bukan literal), supaya perpindahan
+// versi kontrak berikutnya cukup satu baris. Ini versi KONTRAK API — versi
+// produk ada di config('app.version').
+Route::prefix(config('api.version'))->group(function () {
     // Auth
     Route::post('/auth/login', [AuthController::class, 'login']);
+
+    // Informasi versi portal (dipakai panel admin untuk mendeteksi selisih versi)
+    Route::get('/version', VersionController::class);
 
     // Settings — baca publik; perubahan hanya lewat /admin/settings (butuh token)
     Route::get('/settings', [SettingController::class, 'index']);

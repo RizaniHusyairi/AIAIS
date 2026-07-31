@@ -1,5 +1,23 @@
 import { NEWS_FALLBACK, ANNOUNCEMENTS_FALLBACK } from '@/lib/newsData';
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api/v1';
+
+/* ------------------------------------------------------------------ */
+/*  Alamat API                                                         */
+/*                                                                     */
+/*  Disusun dari bagian-bagian, bukan satu literal, supaya perpindahan  */
+/*  versi kontrak berikutnya tidak perlu diburu di banyak berkas.       */
+/*  Ini SATU-SATUNYA tempat alamat API didefinisikan di frontend —      */
+/*  berkas lain wajib mengimpor `API_BASE_URL`, jangan menyusun ulang.  */
+/* ------------------------------------------------------------------ */
+
+/** Versi KONTRAK API, bukan versi produk. Selaras dengan config/api.php. */
+export const API_VERSION = process.env.NEXT_PUBLIC_API_VERSION || 'v2';
+
+/** Asal server backend, tanpa path. */
+export const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN || 'http://127.0.0.1:8000';
+
+/** `NEXT_PUBLIC_API_URL` tetap didukung sebagai override URL penuh. */
+export const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || `${API_ORIGIN}/api/${API_VERSION}`;
 
 /** Lokasi berkas logo maskapai pada server FIDS APT Pranoto. */
 const AIRLINE_LOGO_BASE = 'http://103.210.122.2/storage/logo';
@@ -180,134 +198,21 @@ export async function fetchApi<T>(endpoint: string, options: RequestInit = {}): 
     }
   }
 
-  // Data contoh terakhir bila kedua server tidak dapat dihubungi.
-  // Mengikuti kontrak yang sama dengan FlightController::mapFlight():
-  // kedatangan memakai `baggage_belt` (bukan gate), keberangkatan memakai
-  // `checkin_counters`, dan `gate: null` berarti belum ditentukan.
-  const dummyFlights = [
-    {
-      id: 1,
-      flight_number: 'ID-6256',
-      airline: 'Batik Air',
-      origin: 'SOEKARNO HATTA (CGK)',
-      destination: 'Samarinda (AAP)',
-      origin_city: 'TANGERANG/BANTEN',
-      destination_city: 'Samarinda, Kalimantan Timur',
-      scheduled_time: '12:30 WITA',
-      estimated_time: null,
-      terminal: 'Terminal Utama',
-      gate: null,
-      baggage_belt: 2,
-      checkin_counters: [],
-      aircraft_type: 'Airbus',
-      flight_type: 'arrival',
-      status: 'landed',
-      remarks: 'Arrived',
-    },
-    {
-      id: 2,
-      flight_number: 'IW-1479',
-      airline: 'Wings Air',
-      origin: 'MELALAN (GHS)',
-      destination: 'Samarinda (AAP)',
-      origin_city: 'Kutai Barat, Kalimantan Timur',
-      destination_city: 'Samarinda, Kalimantan Timur',
-      scheduled_time: '13:06 WITA',
-      estimated_time: null,
-      terminal: 'Terminal Utama',
-      gate: null,
-      baggage_belt: 2,
-      checkin_counters: [],
-      aircraft_type: 'ATR',
-      flight_type: 'arrival',
-      status: 'landed',
-      remarks: 'Arrived On-Time',
-    },
-    {
-      id: 3,
-      flight_number: 'ID-6257',
-      airline: 'Batik Air',
-      origin: 'Samarinda (AAP)',
-      destination: 'SOEKARNO HATTA (CGK)',
-      origin_city: 'Samarinda, Kalimantan Timur',
-      destination_city: 'TANGERANG/BANTEN',
-      scheduled_time: '13:20 WITA',
-      estimated_time: null,
-      terminal: 'Terminal Utama',
-      gate: 'A2',
-      baggage_belt: null,
-      checkin_counters: [7, 8],
-      aircraft_type: 'Airbus',
-      flight_type: 'departure',
-      status: 'departed',
-      remarks: 'Departured',
-    },
-    {
-      id: 4,
-      flight_number: 'QG-422',
-      airline: 'Citilink',
-      origin: 'SOEKARNO HATTA (CGK)',
-      destination: 'Samarinda (AAP)',
-      origin_city: 'TANGERANG/BANTEN',
-      destination_city: 'Samarinda, Kalimantan Timur',
-      scheduled_time: '14:19 WITA',
-      estimated_time: null,
-      terminal: 'Terminal Utama',
-      gate: null,
-      baggage_belt: 1,
-      checkin_counters: [],
-      aircraft_type: 'Airbus',
-      flight_type: 'arrival',
-      status: 'landed',
-      remarks: 'Arrived On-Time',
-    },
-    {
-      id: 5,
-      flight_number: 'QG-423',
-      airline: 'Citilink',
-      origin: 'Samarinda (AAP)',
-      destination: 'SOEKARNO HATTA (CGK)',
-      origin_city: 'Samarinda, Kalimantan Timur',
-      destination_city: 'TANGERANG/BANTEN',
-      scheduled_time: '15:00 WITA',
-      estimated_time: null,
-      terminal: 'Terminal Utama',
-      gate: 'B1',
-      baggage_belt: null,
-      checkin_counters: [3, 4],
-      aircraft_type: 'Airbus',
-      flight_type: 'departure',
-      status: 'boarding',
-      remarks: 'To Waiting Room',
-    },
-    {
-      id: 6,
-      flight_number: 'ID-6677',
-      airline: 'Batik Air',
-      origin: 'Samarinda (AAP)',
-      destination: 'SOEKARNO HATTA (CGK)',
-      origin_city: 'Samarinda, Kalimantan Timur',
-      destination_city: 'TANGERANG/BANTEN',
-      scheduled_time: '17:35 WITA',
-      estimated_time: null,
-      terminal: 'Terminal Utama',
-      gate: null,
-      baggage_belt: null,
-      checkin_counters: [10, 11],
-      aircraft_type: 'Airbus',
-      flight_type: 'departure',
-      status: 'check_in',
-      remarks: 'Check In Open',
-    },
-  ];
+  // Tidak ada data contoh penerbangan.
+  //
+  // Jadwal penerbangan hanya boleh berasal dari FIDS bandara. Bila kedua
+  // server tidak dapat dihubungi, kembalikan daftar kosong supaya tampilan
+  // berkata apa adanya "belum ada jadwal" — bukan menampilkan penerbangan
+  // karangan yang tampak seperti jadwal hari ini.
 
   const dummyNews = NEWS_FALLBACK;
   const dummyAnnouncements = ANNOUNCEMENTS_FALLBACK;
 
   if (endpoint.startsWith('/flights')) {
     return {
-      success: true,
-      data: { flights: dummyFlights, stats: { total: dummyFlights.length } } as unknown as T,
+      success: false,
+      data: { flights: [], stats: { total: 0 } } as unknown as T,
+      message: 'Jadwal penerbangan tidak dapat dimuat',
     };
   }
 
