@@ -7,13 +7,16 @@ import { fetchApi } from '@/lib/api';
 import { useSetting } from '@/lib/settings';
 import { Flight, NewsItem, Announcement, Facility } from '@/types';
 import { StatusBar, Segmented, listContainer, listItem } from '@/components/pwa/ui';
-import { AirlineLogo, splitPlace, statusInfo } from '@/components/flights/shared';
+import {
+  AirlineLogo, splitPlace, statusInfo, gateLabel, counterLabel,
+} from '@/components/flights/shared';
 import { TOURISM_SPOTS, TOURISM_CAT_META } from '@/lib/tourismData';
 import { facilityCatMeta, facilityIcon } from '@/lib/facilityMeta';
 import { CATEGORY_STYLES } from '@/lib/newsData';
 import {
   Menu, Plane, ArrowRight, Building2, Car, ParkingSquare, MapPin, MessageCircle, ChevronRight,
   Megaphone, Clock, Newspaper, Phone, Navigation, TriangleAlert, Info,
+  DoorOpen, Luggage, ClipboardList,
 } from 'lucide-react';
 
 const QUICK = [
@@ -267,21 +270,60 @@ export default function BerandaScreen() {
               <motion.div key={f.id} variants={listItem}>
                 <Link
                   href={`/app/penerbangan/${f.id}`}
-                  className="flex items-center gap-3 bg-white rounded-2xl p-3 shadow-sm shadow-slate-200/60 active:scale-[0.98] transition-transform"
+                  className="block bg-white rounded-2xl p-3 shadow-sm shadow-slate-200/60 active:scale-[0.98] transition-transform"
                 >
-                  <AirlineLogo airline={f.airline} logo={f.airline_logo} size={40} />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-slate-900 text-[14px] leading-tight">{f.flight_number}</p>
-                    <p className="text-[11px] text-slate-500 truncate">{f.airline}</p>
+                  <div className="flex items-center gap-3">
+                    <AirlineLogo airline={f.airline} logo={f.airline_logo} code={f.airline_code} color={f.airline_color} size={40} />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-slate-900 text-[14px] leading-tight">{f.flight_number}</p>
+                      <p className="text-[11px] text-slate-500 truncate">{f.airline}</p>
+                    </div>
+                    <div className="text-center min-w-0">
+                      <p className="font-bold text-slate-900 text-[14px]">{place.code}</p>
+                      <p className="text-[10px] text-slate-500 truncate max-w-[64px]">{place.city}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-slate-900 text-[14px]">{f.scheduled_time.replace(' WITA', '')}</p>
+                      <p className={`text-[10px] font-semibold ${st.className}`}>{st.label}</p>
+                    </div>
                   </div>
-                  <div className="text-center min-w-0">
-                    <p className="font-bold text-slate-900 text-[14px]">{place.code}</p>
-                    <p className="text-[10px] text-slate-500 truncate max-w-[64px]">{place.city}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold text-slate-900 text-[14px]">{f.scheduled_time.replace(' WITA', '')}</p>
-                    <p className={`text-[10px] font-semibold ${st.className}`}>{st.label}</p>
-                  </div>
+
+                  {/* Titik layan penumpang. Di layar ponsel inilah informasi
+                      yang paling dicari begitu tiba di terminal: konter mana
+                      untuk lapor, gate mana untuk naik, conveyor mana untuk
+                      mengambil bagasi. */}
+                  {(() => {
+                    const g = gateLabel(f);
+                    const c = counterLabel(f);
+                    const departing = f.flight_type === 'departure';
+                    const Icon = departing ? DoorOpen : Luggage;
+
+                    return (
+                      <div className="mt-2 pt-2 border-t border-dashed border-slate-100 flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <span className="inline-flex items-center gap-1">
+                          <Icon className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
+                            {g.label}
+                          </span>
+                          <span className={g.assigned ? 'text-[12px] font-black text-slate-800 tabular-nums' : 'text-[10px] text-slate-400'}>
+                            {g.bare}
+                          </span>
+                        </span>
+
+                        {departing && (
+                          <span className="inline-flex items-center gap-1">
+                            <ClipboardList className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
+                              Konter
+                            </span>
+                            <span className={c.assigned ? 'text-[12px] font-black text-slate-800 tabular-nums' : 'text-[10px] text-slate-400'}>
+                              {c.assigned ? c.list.join(', ') : 'Belum ditentukan'}
+                            </span>
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </Link>
               </motion.div>
             );

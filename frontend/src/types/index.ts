@@ -11,7 +11,16 @@ export interface Flight {
   id: number;
   flight_number: string;
   airline: string;
-  airline_logo?: string;
+  /**
+   * URL logo. Menunjuk ke proksi backend (`/airlines/logo/…`), bukan langsung
+   * ke server FIDS — host FIDS hanya HTTP dan akan diblokir sebagai mixed
+   * content saat portal berjalan di HTTPS.
+   */
+  airline_logo?: string | null;
+  /** Kode maskapai dari FIDS, mis. "SAQ". Dipakai lencana cadangan. */
+  airline_code?: string | null;
+  /** Warna merek maskapai dari FIDS, mis. "#1fb253". Sudah divalidasi heks. */
+  airline_color?: string | null;
   origin: string;
   destination: string;
   /** Kota & provinsi bandara asal, mis. "Berau, Kalimantan Timur". */
@@ -106,6 +115,37 @@ export interface Complaint {
   created_at: string;
 }
 
+/**
+ * Permohonan Informasi Publik (UU 14/2008).
+ *
+ * `ktp_path` dan `statement_path` sengaja TIDAK ada di sini: keduanya
+ * disembunyikan model backend supaya lokasi scan KTP pemohon tidak pernah
+ * ikut terkirim. Berkasnya diambil lewat `adminDownload`.
+ */
+export interface InformationRequest {
+  id: number;
+  ticket_number: string;
+  request_from: string;
+  name: string;
+  address: string;
+  occupation: string;
+  npwp: string;
+  phone: string;
+  email: string;
+  information_details: string;
+  information_purpose: string;
+  obtain_method: string;
+  copy_method: string;
+  status: 'submitted' | 'in_progress' | 'fulfilled' | 'rejected';
+  admin_response?: string | null;
+  response_link?: string | null;
+  responded_at?: string | null;
+  /** Batas jawaban PPID: 10 hari kerja, dapat diperpanjang 7 hari kerja. */
+  due_date?: string | null;
+  is_extended: boolean;
+  created_at: string;
+}
+
 export interface DocumentItem {
   id: number;
   title: string;
@@ -115,3 +155,28 @@ export interface DocumentItem {
   file_url: string;
   download_count: number;
 }
+
+export interface ChatMessage {
+  id: number;
+  chat_thread_id: number;
+  sender_type: 'visitor' | 'admin';
+  sender_name: string;
+  message: string;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface ChatThread {
+  id: number;
+  ticket_number: string;
+  visitor_name: string;
+  visitor_email?: string | null;
+  visitor_phone?: string | null;
+  category: string;
+  subject: string;
+  status: 'open' | 'active' | 'resolved' | 'closed';
+  last_activity_at: string;
+  created_at: string;
+  messages?: ChatMessage[];
+}
+

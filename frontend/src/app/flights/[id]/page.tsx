@@ -136,7 +136,7 @@ export default function FlightDetailPage() {
           >
             <div className="min-w-0">
               <div className="flex items-center gap-3">
-                <AirlineLogo airline={flight.airline} logo={flight.airline_logo} size={52} />
+                <AirlineLogo airline={flight.airline} logo={flight.airline_logo} code={flight.airline_code} color={flight.airline_color} size={52} />
                 <div className="min-w-0">
                   <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight leading-none">
                     {flight.flight_number}
@@ -285,12 +285,14 @@ export default function FlightDetailPage() {
                 {!isArrival && (
                   <Row icon={DoorOpen} label="Konter Check-in" value={counters.length ? counters.join(', ') : 'Belum ditentukan'} muted={!counters.length} />
                 )}
-                {/* Untuk kedatangan, `gateLabel` juga menghasilkan "Ban Bagasi",
-                    jadi cukup satu baris agar tidak tampil ganda. */}
+                {/* Untuk kedatangan, `gateLabel` menghasilkan "Conveyor", jadi
+                    cukup satu baris agar tidak tampil ganda. `bare` dipakai —
+                    bukan `value` — karena barisnya sudah punya label sendiri;
+                    `value` akan berbunyi "Conveyor: Conveyor 1". */}
                 <Row
                   icon={isArrival ? Luggage : DoorOpen}
                   label={gate.label}
-                  value={gate.value}
+                  value={gate.bare}
                   muted={!gate.assigned}
                 />
                 <Row icon={Plane} label="Tipe Pesawat" value={flight.aircraft_type || 'Tidak tersedia'} muted={!flight.aircraft_type} />

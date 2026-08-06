@@ -6,13 +6,17 @@ import { motion } from 'framer-motion';
 import { fetchApi } from '@/lib/api';
 import { useSetting } from '@/lib/settings';
 import { TOURISM_SPOTS, TOURISM_CAT_META } from '@/lib/tourismData';
+import { OFFICIALS, ORG_NAME } from '@/lib/airportProfile';
 import HeroParticles from '@/components/effects/HeroParticles';
-import { AirlineLogo } from '@/components/flights/shared';
+import {
+  AirlineLogo, splitPlace, shortTime, statusTheme, gateLabel, counterLabel,
+} from '@/components/flights/shared';
 import { Flight, NewsItem } from '@/types';
 import {
   Plane, ArrowRight, Building2, ChevronRight, ChevronLeft, Users, MapPin, Star, Car,
   ParkingSquare, Headphones, Play, Wifi, Sofa, UtensilsCrossed, MoonStar, Baby, Accessibility,
   Ruler, Award, CarFront, Bus, Mail, Share2, Send, Navigation, Calendar, Palmtree, Clock,
+  DoorOpen, ClipboardList, Luggage,
 } from 'lucide-react';
 
 /* ================================================================
@@ -31,7 +35,7 @@ const ABOUT_STATS = [
   { icon: Users, value: '1.250.000+', label: 'Penumpang / Tahun' },
   { icon: MapPin, value: '18', label: 'Destinasi' },
   { icon: Plane, value: '120+', label: 'Penerbangan / Hari' },
-  { icon: Ruler, value: '3.250 m', label: 'Panjang Runway' },
+  { icon: Ruler, value: '2.250 m', label: 'Panjang Runway' },
   { icon: Award, value: '4 Star', label: 'Bandara Terakreditasi' },
 ];
 
@@ -59,47 +63,22 @@ const ANGKA = [
 ];
 
 /**
- * Foto dummy pejabat — avatar SVG berlatar transparan (DiceBear).
- * Ganti dengan foto potong (PNG transparan) resmi saat sudah tersedia.
+ * Pejabat bandara — data resmi, dipakai bersama halaman /profile.
+ *
+ * Sebelumnya berkas ini memuat lima nama rekaan dengan avatar kartun
+ * DiceBear, salah satunya diberi jabatan "Sekretaris Daerah Pemerintah
+ * Kalimantan Timur" — jabatan publik nyata pada nama yang tidak ada —
+ * lengkap dengan kutipan karangan. Semuanya dihapus; lihat provenans di
+ * lib/airportProfile.ts.
  */
-const avatar = (seed: string) =>
-  `https://api.dicebear.com/9.x/personas/svg?seed=${encodeURIComponent(seed)}`;
+const EXECUTIVES = OFFICIALS;
 
-const EXECUTIVES = [
-  {
-    name: 'Ahmad Syauqi Shahab', role: 'Kepala Kantor', org: 'UPBU APT Pranoto Samarinda',
-    quote: 'Menghadirkan pelayanan terbaik, aman, nyaman, dan berdaya saing global.',
-    image: avatar('Ahmad Syauqi Shahab'),
-  },
-  {
-    name: 'Neneng Chamelia Shanti', role: 'Sekretaris Daerah', org: 'Pemerintah Kalimantan Timur',
-    quote: 'Bangunlah suatu dunia dimana semua bangsa hidup dalam damai dan persaudaraan.',
-    image: avatar('Neneng Chamelia Shanti'),
-  },
-  {
-    name: 'Budi Santoso', role: 'Kepala Seksi Operasi & Keamanan', org: 'UPBU APT Pranoto Samarinda',
-    quote: 'Menjamin standar keselamatan penerbangan 24/7 di seluruh area terminal.',
-    image: avatar('Budi Santoso'),
-  },
-  {
-    name: 'Dewi Lestari', role: 'Kepala Seksi Lalu Lintas Udara', org: 'UPBU APT Pranoto Samarinda',
-    quote: 'Mengoptimalkan slot penerbangan serta ketepatan waktu keberangkatan.',
-    image: avatar('Dewi Lestari'),
-  },
-  {
-    name: 'Fajar Ramadhan', role: 'Kepala Seksi Teknik & Bangunan', org: 'UPBU APT Pranoto Samarinda',
-    quote: 'Menjaga keandalan fasilitas sisi udara maupun sisi darat bandara.',
-    image: avatar('Fajar Ramadhan'),
-  },
-];
-
-const FALLBACK_DEPARTURES = [
-  { id: 'ga539', flight_number: 'GA 539', airline: 'Garuda Indonesia', code: 'GA', color: '#0d9488', dest: 'CGK', city: 'Jakarta', time: '09:00' },
-  { id: 'jt367', flight_number: 'JT 367', airline: 'Lion Air', code: 'JT', color: '#dc2626', dest: 'SUB', city: 'Surabaya', time: '10:15' },
-  { id: 'qg752', flight_number: 'QG 752', airline: 'Citilink', code: 'QG', color: '#16a34a', dest: 'BPN', city: 'Balikpapan', time: '11:30' },
-  { id: 'sj588', flight_number: 'SJ 588', airline: 'Sriwijaya Air', code: 'SJ', color: '#f59e0b', dest: 'UPG', city: 'Makassar', time: '12:45' },
-  { id: 'id6856', flight_number: 'ID 6856', airline: 'Batik Air', code: 'ID', color: '#e11d48', dest: 'DPS', city: 'Denpasar', time: '14:00' },
-];
+/* Tidak ada FALLBACK_DEPARTURES di sini.
+ *
+ * Kartu ini dulu menampilkan lima penerbangan karangan (GA 539 ke CGK, JT 367
+ * ke SUB, dan seterusnya) setiap kali umpan FIDS kosong — tanpa penanda apa
+ * pun bahwa itu bukan jadwal hari ini. Sama seperti DEMO_DEPARTURES yang sudah
+ * dibuang dari komponen bersama: kalau tidak ada jadwal, katakan tidak ada. */
 
 const rise = {
   hidden: { opacity: 0, y: 24 },
@@ -203,21 +182,75 @@ export default function HomePage() {
               </div>
 
               <div className="divide-y divide-slate-50">
-                {(apiFlights.length > 0 ? apiFlights.slice(0, 5) : FALLBACK_DEPARTURES).map((f: any) => (
-                  <div key={f.id} className="flex items-center gap-4 px-6 py-3 hover:bg-slate-50 transition-colors">
-                    <AirlineLogo airline={f.airline} logo={f.airline_logo} size={36} />
-                    <div className="w-32 flex-shrink-0">
-                      <p className="font-bold text-slate-900 text-sm">{f.flight_number}</p>
-                      <p className="text-xs text-slate-500 truncate">{f.airline}</p>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-slate-900 text-sm truncate">{f.dest ?? (tab === 'departure' ? f.destination : f.origin)}</p>
-                      <p className="text-xs text-slate-500 truncate">{f.city ?? f.airline}</p>
-                    </div>
-                    <p className="font-bold text-slate-900 text-sm w-14 text-right">{(f.time ?? f.scheduled_time ?? '').replace(' WITA', '')}</p>
-                    <span className="text-xs font-semibold text-emerald-600 w-16 text-right">Terjadwal</span>
+                {apiFlights.slice(0, 5).map((f) => {
+                  const place = splitPlace(tab === 'departure' ? f.destination : f.origin);
+                  const st = statusTheme(f.status);
+                  const g = gateLabel(f);
+                  const c = counterLabel(f);
+                  const departing = f.flight_type === 'departure';
+
+                  return (
+                    <Link
+                      key={f.id}
+                      href={`/flights/${f.id}`}
+                      className="block px-6 py-3 hover:bg-slate-50 transition-colors"
+                    >
+                      <div className="flex items-center gap-4">
+                        <AirlineLogo airline={f.airline} logo={f.airline_logo} code={f.airline_code} color={f.airline_color} size={36} />
+                        <div className="w-28 flex-shrink-0">
+                          <p className="font-bold text-slate-900 text-sm">{f.flight_number}</p>
+                          <p className="text-xs text-slate-500 truncate">{f.airline}</p>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-slate-900 text-sm truncate">{place.code}</p>
+                          <p className="text-xs text-slate-500 truncate">{place.city}</p>
+                        </div>
+                        <p className="font-bold text-slate-900 text-sm w-14 text-right tabular-nums">
+                          {shortTime(f.scheduled_time)}
+                        </p>
+                        {/* Status sebenarnya dari FIDS. Sebelumnya baris ini
+                            selalu tertulis "Terjadwal" — penerbangan yang
+                            sedang boarding, delay, bahkan dibatalkan pun
+                            tampil hijau seolah normal. */}
+                        <span className={`text-[11px] font-semibold w-20 text-right leading-tight ${st.text}`}>
+                          {st.label}
+                        </span>
+                      </div>
+
+                      {/* Titik layan penumpang: Gate + Konter untuk yang
+                          berangkat, Conveyor untuk yang datang. */}
+                      <div className="mt-1.5 ml-[3.25rem] flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <HomeDeskFact
+                          icon={departing ? DoorOpen : Luggage}
+                          label={g.label}
+                          value={g.bare}
+                          assigned={g.assigned}
+                        />
+                        {departing && (
+                          <HomeDeskFact
+                            icon={ClipboardList}
+                            label="Konter"
+                            value={c.assigned ? c.list.join(', ') : 'Belum ditentukan'}
+                            assigned={c.assigned}
+                          />
+                        )}
+                      </div>
+                    </Link>
+                  );
+                })}
+
+                {/* Umpan FIDS kosong — katakan apa adanya, jangan diisi contoh. */}
+                {apiFlights.length === 0 && (
+                  <div className="px-6 py-10 text-center">
+                    <Plane className="w-6 h-6 text-slate-300 mx-auto" />
+                    <p className="mt-3 text-sm font-bold text-slate-700">
+                      Belum ada jadwal {tab === 'departure' ? 'keberangkatan' : 'kedatangan'}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Jadwal akan muncul begitu diterbitkan sistem informasi bandara.
+                    </p>
                   </div>
-                ))}
+                )}
               </div>
 
               <Link href="/flights" className="flex items-center justify-center gap-2 py-4 text-sm font-semibold text-blue-600 hover:bg-blue-50/50 transition-colors border-t border-slate-100">
@@ -381,11 +414,14 @@ export default function HomePage() {
               <div className="relative z-10 flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4 p-6">
                 {/* teks */}
                 <motion.div key={current.name} initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.45 }} className="flex flex-col justify-center">
-                  <p className="text-cyan-300 text-[13px] italic font-medium">{current.role}</p>
+                  <p className="text-cyan-300 text-[13px] italic font-medium">{current.shortTitle}</p>
                   <h3 className="mt-1.5 text-[26px] sm:text-[28px] font-black text-white leading-tight">{current.name}</h3>
-                  <p className="mt-1.5 text-blue-100/85 text-[12.5px]">{current.org}</p>
+                  <p className="mt-1.5 text-blue-100/85 text-[12.5px]">{ORG_NAME}</p>
 
-                  <p className="mt-4 text-blue-50 text-[12.5px] leading-relaxed italic max-w-xs">"{current.quote}"</p>
+                  {/* Nomenklatur jabatan lengkap menggantikan slot "quote".
+                      Tidak ada kutipan resmi dari para pejabat ini; yang
+                      sebelumnya ada di sini karangan. */}
+                  <p className="mt-4 text-blue-50 text-[12.5px] leading-relaxed max-w-xs">{current.title}</p>
 
                   <div className="mt-4 flex items-center gap-2">
                     {/* Email resmi sesuai aptpairport.id. */}
@@ -405,11 +441,11 @@ export default function HomePage() {
                 {/* foto */}
                 <div className="relative hidden sm:flex items-end justify-center">
                   <motion.img
-                    key={current.image}
+                    key={current.photo}
                     initial={{ opacity: 0, y: 18 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
-                    src={current.image}
+                    src={current.photo}
                     alt={current.name}
                     className="relative z-10 h-[290px] w-auto object-contain drop-shadow-2xl"
                   />
@@ -443,18 +479,18 @@ export default function HomePage() {
             {/* daftar pejabat lain */}
             <div className="lg:col-span-4 space-y-3">
               {others.map((p) => {
-                const idx = EXECUTIVES.findIndex((e) => e.name === p.name);
+                const idx = EXECUTIVES.findIndex((e) => e.slug === p.slug);
                 return (
                   <motion.button
-                    key={p.name}
+                    key={p.slug}
                     onClick={() => pickExec(idx)}
                     whileHover={{ x: 4 }}
                     className="w-full flex items-center gap-3.5 p-2.5 rounded-xl hover:bg-slate-50 transition-colors text-left cursor-pointer"
                   >
-                    <img src={p.image} alt={p.name} className="w-14 h-14 rounded-xl object-contain bg-blue-50 p-0.5 flex-shrink-0" />
+                    <img src={p.photo} alt={p.name} loading="lazy" className="w-14 h-14 rounded-xl object-contain object-bottom bg-slate-50 p-0.5 flex-shrink-0" />
                     <div className="min-w-0">
                       <p className="font-bold text-slate-900 text-[13px] leading-snug truncate">{p.name}</p>
-                      <p className="text-[11px] text-slate-500 leading-snug line-clamp-2">{p.role}</p>
+                      <p className="text-[11px] text-slate-500 leading-snug line-clamp-2">{p.shortTitle}</p>
                     </div>
                   </motion.button>
                 );
@@ -651,5 +687,38 @@ export default function HomePage() {
         </motion.div>
       </section>
     </div>
+  );
+}
+
+/**
+ * Satu fakta titik layan pada kartu FIDS beranda (Gate / Konter / Conveyor).
+ *
+ * Nomor yang sudah ditetapkan dibuat tebal dan gelap; yang belum ditetapkan
+ * pudar dan berukuran sama dengan labelnya, supaya tidak terbaca sebagai nomor.
+ */
+function HomeDeskFact({
+  icon: Icon, label, value, assigned,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: string;
+  assigned: boolean;
+}) {
+  return (
+    <span className="inline-flex items-center gap-1" title={`${label}: ${value}`}>
+      <Icon className="w-3 h-3 text-slate-400 flex-shrink-0" />
+      <span className="text-[10.5px] font-semibold text-slate-400 uppercase tracking-wide">
+        {label}
+      </span>
+      <span
+        className={
+          assigned
+            ? 'text-[12.5px] font-black text-slate-800 tabular-nums'
+            : 'text-[10.5px] font-medium text-slate-400'
+        }
+      >
+        {value}
+      </span>
+    </span>
   );
 }

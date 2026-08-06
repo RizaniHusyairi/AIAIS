@@ -24,6 +24,24 @@ const TO_DESKTOP: [string, string][] = [
   ['/app/profil', '/profile'],
 ];
 
+/**
+ * Halaman yang TIDAK boleh dialihkan ke PWA.
+ *
+ * `toAppRoute` mengembalikan '/app' untuk lintasan yang tidak dikenalnya, jadi
+ * setiap halaman baru tanpa padanan PWA akan melemparkan pengunjung ponsel ke
+ * beranda aplikasi — halaman yang dicari lenyap tanpa jejak.
+ *
+ * Halaman PPID adalah kewajiban UU 14/2008 tentang Keterbukaan Informasi
+ * Publik dan harus dapat dibuka dari perangkat apa pun. Keduanya sudah
+ * responsif sampai lebar 375 px, jadi versi ini disajikan apa adanya di ponsel
+ * alih-alih dialihkan. Hapus dari daftar ini hanya bila layar PWA-nya sudah
+ * benar-benar dibuat.
+ *
+ * Catatan: `proxy.ts` di sisi server memang tidak mencocokkan '/ppid', jadi
+ * pengecualian ini membuat kedua lapisan sepakat.
+ */
+const KEEP_RESPONSIVE = ['/ppid'];
+
 function toAppRoute(pathname: string): string {
   // Keep the article: /news/<slug> -> /app/berita/<slug>
   if (pathname.startsWith('/news')) {
@@ -74,6 +92,7 @@ export default function MobileRedirect() {
   useEffect(() => {
     if (!pathname) return;
     if (pathname.startsWith('/admin')) return;
+    if (KEEP_RESPONSIVE.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return;
     if (isStandalone()) return;
 
     const isApp = pathname.startsWith('/app');

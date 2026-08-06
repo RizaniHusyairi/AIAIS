@@ -5,7 +5,8 @@
  * PROVENANS DATA
  *   Sumber : OurAirports — https://davidmegginson.github.io/ourairports-data/airports.csv
  *   Lisensi: domain publik (dedikasi publik oleh OurAirports)
- *   Diunduh: 27 Juli 2026
+ *   Diunduh: 27 Juli 2026; LPU dan RTU ditambahkan dari unduhan ulang
+ *            2 Agustus 2026 (lihat catatan pada kedua entri itu)
  *   Saring : iso_country = "ID"
  *
  *   Kolom `icao` disertakan sebagai pembanding silang manual terhadap
@@ -52,6 +53,15 @@ export const AIRPORTS: Record<string, AirportGeo> = {
   KNO: { iata: 'KNO', icao: 'WIMM', name: 'Kualanamu', city: 'Deli Serdang', lat: 3.6378, lon: 98.8706 },
   KOE: { iata: 'KOE', icao: 'WATT', name: 'El Tari', city: 'Kupang', lat: -10.1716, lon: 123.6710 },
   LOP: { iata: 'LOP', icao: 'WADL', name: 'Lombok', city: 'Lombok Tengah', lat: -8.7600, lon: 116.2782 },
+  /**
+   * Long Apung — rute perintis Smart Aviation dari Samarinda.
+   *
+   * Catatan ICAO: kolom `ident` OurAirports masih berisi kode lama `WRLP`,
+   * sedangkan `icao_code`/`gps_code` berisi `WAQL`. Yang dipakai di sini
+   * `WAQL`, sejalan dengan awalan WAQ* bandara Kalimantan Utara/Timur lain
+   * pada tabel ini (WAQT Berau, WAQA Nunukan, WAQQ Tarakan).
+   */
+  LPU: { iata: 'LPU', icao: 'WAQL', name: 'Long Apung', city: 'Kayan Hulu, Malinau', lat: 1.706932, lon: 114.969934 },
   MDC: { iata: 'MDC', icao: 'WAMM', name: 'Sam Ratulangi', city: 'Manado', lat: 1.5486, lon: 124.9262 },
   MOF: { iata: 'MOF', icao: 'WATC', name: 'Frans Xavier Seda', city: 'Maumere', lat: -8.6395, lon: 122.2381 },
   NNX: { iata: 'NNX', icao: 'WAQA', name: 'Nunukan', city: 'Nunukan', lat: 4.1340, lon: 117.6695 },
@@ -59,6 +69,8 @@ export const AIRPORTS: Record<string, AirportGeo> = {
   PKN: { iata: 'PKN', icao: 'WAGI', name: 'Iskandar', city: 'Pangkalan Bun', lat: -2.7052, lon: 111.6730 },
   PKY: { iata: 'PKY', icao: 'WAGG', name: 'Tjilik Riwut', city: 'Palangka Raya', lat: -2.2271, lon: 113.9434 },
   PLM: { iata: 'PLM', icao: 'WIPP', name: 'Sultan Mahmud Badaruddin II', city: 'Palembang', lat: -2.8977, lon: 104.6981 },
+  /** Maratua — pulau di lepas pantai Berau; rute perintis dari Samarinda. */
+  RTU: { iata: 'RTU', icao: 'WAQC', name: 'Maratua', city: 'Maratua, Berau', lat: 2.19759, lon: 118.599361 },
   SUB: { iata: 'SUB', icao: 'WARR', name: 'Juanda', city: 'Surabaya', lat: -7.3798, lon: 112.7870 },
   TRK: { iata: 'TRK', icao: 'WAQQ', name: 'Juwata', city: 'Tarakan', lat: 3.3251, lon: 117.5642 },
   UPG: { iata: 'UPG', icao: 'WAAA', name: 'Sultan Hasanuddin', city: 'Makassar', lat: -5.0755, lon: 119.5537 },
@@ -104,6 +116,14 @@ const NAME_ALIASES: Record<string, string> = {
   MINANGKABAU: 'PDG',
   'LNG BADAK': 'BXT',
   ISKANDAR: 'PKN',
+  // FIDS mengirim kedua bandara perintis ini sebagai "Bandar Udara X (KODE)".
+  // Kode dalam kurung sudah cukup, tetapi aliasnya tetap didaftarkan sebagai
+  // cadangan bila suatu saat kurungnya hilang — termasuk bentuk berawalan
+  // "BANDAR UDARA", karena `normalize` tidak membuang awalan itu.
+  'LONG APUNG': 'LPU',
+  'BANDAR UDARA LONG APUNG': 'LPU',
+  MARATUA: 'RTU',
+  'BANDAR UDARA MARATUA': 'RTU',
 };
 
 const normalize = (s: string) =>

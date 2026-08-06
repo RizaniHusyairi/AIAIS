@@ -124,7 +124,7 @@ export default function DetailPenerbanganScreen() {
           <div className="p-5">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
-                <AirlineLogo airline={flight.airline} logo={flight.airline_logo} size={44} />
+                <AirlineLogo airline={flight.airline} logo={flight.airline_logo} code={flight.airline_code} color={flight.airline_color} size={44} />
                 <div className="min-w-0">
                   <p className="font-black text-slate-900 text-[17px] leading-none">{flight.flight_number}</p>
                   <p className="text-[12px] text-slate-500 mt-1 truncate">{flight.airline}</p>
@@ -198,10 +198,10 @@ export default function DetailPenerbanganScreen() {
                 align="right"
               />
               <Detail
-                label={isArrival ? 'Ban Bagasi' : 'Gate'}
+                label={isArrival ? 'Conveyor' : 'Gate'}
                 value={
                   isArrival
-                    ? flight.baggage_belt != null ? `Belt ${flight.baggage_belt}` : 'Belum ditentukan'
+                    ? flight.baggage_belt != null ? String(flight.baggage_belt) : 'Belum ditentukan'
                     : flight.gate || 'Belum ditentukan'
                 }
                 valueClass={
@@ -303,7 +303,7 @@ export default function DetailPenerbanganScreen() {
             {isArrival && (
               <InfoTile
                 icon={Luggage}
-                label="Ban Bagasi"
+                label="Conveyor"
                 value={flight.baggage_belt != null ? String(flight.baggage_belt) : 'Belum ditentukan'}
                 muted={flight.baggage_belt == null}
               />

@@ -7,11 +7,11 @@ import { fetchApi } from '@/lib/api';
 import { Flight } from '@/types';
 import SkyParticles from '@/components/effects/SkyParticles';
 import {
-  AirlineLogo, splitPlace, shortTime, statusTheme, gateLabel,
+  AirlineLogo, splitPlace, shortTime, statusTheme, gateLabel, counterLabel,
 } from '@/components/flights/shared';
 import {
   Plane, PlaneTakeoff, PlaneLanding, Search, RefreshCw, Clock,
-  MapPin, DoorOpen, SearchX, Radio, Map as MapIcon,
+  MapPin, DoorOpen, SearchX, Radio, Map as MapIcon, Luggage, ClipboardList,
 } from 'lucide-react';
 
 type TypeFilter = 'all' | 'departure' | 'arrival';
@@ -258,9 +258,11 @@ export default function FlightsPage() {
         {/* judul kolom, hanya pada layar lebar */}
         <div className="hidden lg:grid grid-cols-12 gap-4 px-5 pb-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
           <div className="col-span-3">Penerbangan</div>
-          <div className="col-span-4">Rute</div>
+          <div className="col-span-3">Rute</div>
           <div className="col-span-2">Jadwal WITA</div>
-          <div className="col-span-1">Gate / Bagasi</div>
+          {/* Kolom ini berganti isi menurut arah penerbangan: keberangkatan
+              menampilkan Gate + Konter, kedatangan menampilkan Conveyor. */}
+          <div className="col-span-2">Gate / Konter / Conveyor</div>
           <div className="col-span-2 text-right">Status</div>
         </div>
 
@@ -308,6 +310,41 @@ function HeroStat({
   );
 }
 
+/**
+ * Satu fakta titik layan (Gate / Konter / Conveyor).
+ *
+ * Nilai yang sudah ditetapkan tampil tebal dan gelap supaya terbaca dari jarak
+ * jauh seperti papan FIDS; yang belum ditetapkan sengaja dibuat kecil dan
+ * pudar agar tidak disangka nomor sungguhan.
+ */
+function DeskFact({
+  icon: Icon, label, value, assigned, className = '',
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: string;
+  assigned: boolean;
+  className?: string;
+}) {
+  return (
+    <div className={`flex items-center gap-1.5 ${className}`} title={`${label}: ${value}`}>
+      <Icon className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+      <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">
+        {label}
+      </span>
+      <span
+        className={
+          assigned
+            ? 'text-[15px] font-black text-slate-900 leading-none tabular-nums'
+            : 'text-[11px] font-medium text-slate-400'
+        }
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
 function FlightRow({ flight: f }: { flight: Flight }) {
   const departing = f.flight_type === 'departure';
   const from = splitPlace(f.origin);
@@ -336,7 +373,7 @@ function FlightRow({ flight: f }: { flight: Flight }) {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center pl-5 pr-4 py-4">
         {/* identitas */}
         <div className="lg:col-span-3 flex items-center gap-3">
-          <AirlineLogo airline={f.airline} logo={f.airline_logo} size={42} />
+          <AirlineLogo airline={f.airline} logo={f.airline_logo} code={f.airline_code} color={f.airline_color} size={42} />
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <p className="font-black text-slate-900 text-[15px] leading-none">{f.flight_number}</p>
@@ -349,7 +386,7 @@ function FlightRow({ flight: f }: { flight: Flight }) {
         </div>
 
         {/* rute */}
-        <div className="lg:col-span-4 flex items-center gap-3">
+        <div className="lg:col-span-3 flex items-center gap-3">
           <div className="text-left">
             <p className="text-[17px] font-black text-slate-900 leading-none">{from.code}</p>
             <p className="text-[11px] text-slate-500 mt-1 truncate max-w-[7rem]">{from.city}</p>
@@ -383,31 +420,44 @@ function FlightRow({ flight: f }: { flight: Flight }) {
           )}
         </div>
 
-        {/* gate / ban bagasi, konter check-in, terminal */}
-        <div className="lg:col-span-1 flex items-center gap-4 lg:gap-0 lg:block">
+        {/* Titik layan penumpang.
+
+            Keberangkatan butuh dua hal berbeda pada tahap berbeda: Konter
+            check-in lebih dulu, Gate menjelang boarding. Kedatangan hanya
+            butuh satu — Conveyor tempat bagasi keluar.
+
+            Nomor tidak pernah dikarang: bila FIDS belum menetapkannya, yang
+            tampil adalah "Belum ditentukan", bukan angka tebakan. */}
+        <div className="lg:col-span-2 flex flex-wrap items-center gap-x-4 gap-y-1 lg:gap-0 lg:block">
           {(() => {
             const g = gateLabel(f);
+            const c = counterLabel(f);
+            const isDeparture = f.flight_type === 'departure';
+
             return (
-              <div
-                className={`flex items-center gap-1.5 ${g.assigned ? 'text-slate-700' : 'text-slate-400'}`}
-                title={`${g.label}: ${g.value}`}
-              >
-                <DoorOpen className="w-3.5 h-3.5 text-slate-400 lg:hidden" />
-                <span className={g.assigned ? 'text-[15px] font-black' : 'text-[11.5px] font-semibold'}>
-                  {g.assigned ? g.value : 'Belum ditentukan'}
-                </span>
-              </div>
+              <>
+                <DeskFact
+                  icon={isDeparture ? DoorOpen : Luggage}
+                  label={g.label}
+                  value={g.bare}
+                  assigned={g.assigned}
+                />
+
+                {isDeparture && (
+                  <DeskFact
+                    icon={ClipboardList}
+                    label="Konter"
+                    value={c.assigned ? c.list.join(', ') : 'Belum ditentukan'}
+                    assigned={c.assigned}
+                    className="lg:mt-1.5"
+                  />
+                )}
+              </>
             );
           })()}
 
-          {f.flight_type === 'departure' && !!f.checkin_counters?.length && (
-            <p className="text-[11px] text-slate-500 lg:mt-1">
-              Konter {f.checkin_counters.join(', ')}
-            </p>
-          )}
-
-          <p className="text-[11px] text-slate-400 lg:mt-1 flex items-center gap-1">
-            <MapPin className="w-3 h-3" />
+          <p className="text-[11px] text-slate-400 lg:mt-1.5 flex items-center gap-1">
+            <MapPin className="w-3 h-3 flex-shrink-0" />
             {f.terminal || '—'}
           </p>
         </div>

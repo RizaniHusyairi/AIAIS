@@ -9,7 +9,7 @@ import { API_BASE_URL } from '@/lib/api';
 import { APP_VERSION, VERSION_LABEL, IS_PRERELEASE, RELEASE_CHANNEL } from '@/lib/version';
 import {
   LayoutDashboard, Plane, Newspaper, Megaphone, Building2, Store, FileText, MessageSquareWarning,
-  LogOut, ExternalLink, ShieldCheck, Menu, X, Radar, ChevronRight, ImageIcon,
+  LogOut, ExternalLink, ShieldCheck, Menu, X, Radar, ChevronRight, ImageIcon, ScrollText,
 } from 'lucide-react';
 
 const NAV: { section: string; items: { name: string; href: string; icon: any }[] }[] = [
@@ -38,7 +38,10 @@ const NAV: { section: string; items: { name: string; href: string; icon: any }[]
   },
   {
     section: 'Interaksi Publik',
-    items: [{ name: 'Pengaduan', href: '/admin/complaints', icon: MessageSquareWarning }],
+    items: [
+      { name: 'Pengaduan', href: '/admin/complaints', icon: MessageSquareWarning },
+      { name: 'Permohonan Informasi', href: '/admin/information-requests', icon: ScrollText },
+    ],
   },
   {
     section: 'Pengaturan',

@@ -301,7 +301,7 @@ function PetaRuteContent() {
                       active ? 'bg-blue-50 ring-1 ring-blue-300' : 'hover:bg-slate-50'
                     }`}
                   >
-                    <AirlineLogo airline={f.airline} logo={f.airline_logo} size={36} />
+                    <AirlineLogo airline={f.airline} logo={f.airline_logo} code={f.airline_code} color={f.airline_color} size={36} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
                         {f.flight_type === 'departure' ? (

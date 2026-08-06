@@ -19,13 +19,43 @@ export const API_ORIGIN = process.env.NEXT_PUBLIC_API_ORIGIN || 'http://127.0.0.
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || `${API_ORIGIN}/api/${API_VERSION}`;
 
-/** Lokasi berkas logo maskapai pada server FIDS APT Pranoto. */
-const AIRLINE_LOGO_BASE = 'http://103.210.122.2/storage/logo';
+/** Asal server FIDS APT Pranoto (tanpa path). */
+const FIDS_ORIGIN = 'http://103.210.122.2';
 
-/** Susun URL logo dari nama berkas yang dikirim API FIDS. */
-function airlineLogoFrom(item: any): string | null {
-  const file = item?.maskapai?.logo;
-  return file ? `${AIRLINE_LOGO_BASE}/${file}` : null;
+/** Folder unggahan logo maskapai, dipakai bila FIDS hanya mengirim nama berkas. */
+const AIRLINE_LOGO_DIR = '/storage/airlines';
+
+/**
+ * Susun URL logo maskapai untuk **jalur darurat** ini.
+ *
+ * Jalur normal memakai proksi backend (`/airlines/logo/{berkas}`) supaya
+ * gambarnya tetap bisa dimuat halaman HTTPS — server FIDS hanya melayani
+ * HTTP. Berkas ini hanya berjalan ketika backend Laravel TIDAK dapat
+ * dihubungi, jadi proksi itu ikut tidak tersedia dan satu-satunya pilihan
+ * adalah menembak FIDS langsung.
+ *
+ * Konsekuensinya jujur: pada portal HTTPS gambar ini akan diblokir sebagai
+ * mixed content dan `AirlineLogo` jatuh ke lencana kode maskapai — yang kini
+ * memakai kode dan warna asli dari FIDS, jadi barisnya tetap terbaca benar.
+ *
+ * Nilai `maskapai.logo` dari FIDS berbentuk lintasan absolut
+ * ("/storage/airlines/xxxx.png"), tetapi pernah pula hanya nama berkas atau
+ * URL utuh; ketiganya ditangani.
+ */
+function airlineLogoFrom(item: FidsRecord | any): string | null {
+  const file = String(item?.maskapai?.logo ?? '').trim();
+  if (!file) return null;
+
+  if (file.startsWith('http://') || file.startsWith('https://')) return file;
+  if (file.startsWith('/')) return `${FIDS_ORIGIN}${file}`;
+
+  return `${FIDS_ORIGIN}${AIRLINE_LOGO_DIR}/${file.replace(/^\/+/, '')}`;
+}
+
+/** Warna merek maskapai, hanya diterima bila heksadesimal yang sah. */
+function airlineColorFrom(value?: string | null): string | null {
+  const hex = String(value ?? '').trim();
+  return /^#[0-9a-f]{3,8}$/i.test(hex) ? hex : null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -58,7 +88,10 @@ interface FidsRecord {
   keterangan?: string | null;
   is_extra?: number | boolean;
   updated_at?: string;
-  maskapai?: { nama?: string; logo?: string; no_telp1?: string; email?: string };
+  maskapai?: {
+    nama?: string; kode?: string; kode_warna?: string;
+    logo?: string; no_telp1?: string; email?: string;
+  };
   pesawat?: { kode_penerbangan?: string; jenis?: string };
   gate?: { nama?: string };
   remark?: { status?: string };
@@ -89,11 +122,17 @@ function placeLabel(airport: FidsAirport | undefined): string | null {
   return airport?.iata ? `${name} (${airport.iata})` : name;
 }
 
-/** Nomor konter check-in yang benar-benar terpakai (0/null = tidak dipakai). */
+/**
+ * Nomor konter check-in yang benar-benar terpakai.
+ *
+ * Aturannya menyalin v1: `Number(v) > 0`. Penyaringan lama memakai `!!c`,
+ * yang benar untuk angka 0 tetapi meloloskan string "0" — FIDS pernah
+ * mengirim ketiga kolom ini sebagai teks.
+ */
 function checkinCounters(item: FidsRecord): number[] {
   return [...new Set([item?.konter, item?.konter2, item?.konter3]
-    .filter((c) => !!c)
-    .map((c) => Number(c)))]
+    .map((c) => Number(c))
+    .filter((c) => Number.isFinite(c) && c > 0))]
     .sort((a, b) => a - b);
 }
 
@@ -117,6 +156,8 @@ function mapFidsFlight(item: FidsRecord, type: 'arrival' | 'departure') {
     flight_number: item?.pesawat?.kode_penerbangan || (isArrival ? 'AAP-ARR' : 'AAP-DEP'),
     airline: item?.maskapai?.nama || 'Maskapai',
     airline_logo: airlineLogoFrom(item),
+    airline_code: item?.maskapai?.kode ?? null,
+    airline_color: airlineColorFrom(item?.maskapai?.kode_warna),
 
     origin: isArrival ? counterpart : 'Samarinda (AAP)',
     destination: isArrival ? 'Samarinda (AAP)' : counterpart,
@@ -147,6 +188,38 @@ function mapFidsFlight(item: FidsRecord, type: 'arrival' | 'departure') {
   };
 }
 
+/**
+ * Batas penelusuran halaman FIDS — jaring pengaman bila `next_page_url`
+ * suatu saat tidak pernah kosong. Selaras dengan FIDS_MAX_PAGES di backend.
+ */
+const FIDS_MAX_PAGES = 20;
+
+/**
+ * Ambil seluruh halaman satu endpoint FIDS.
+ *
+ * FIDS memberi 5 baris per halaman dan jadwal sehari bisa lebih dari 20 baris,
+ * jadi membaca halaman pertama saja memotong sebagian besar jadwal tanpa
+ * penanda apa pun. Ini cara yang dipakai v1 (menelusuri `next_page_url`).
+ */
+async function fetchAllFidsPages(endpoint: 'kedatangan' | 'keberangkatan'): Promise<FidsRecord[]> {
+  const rows: FidsRecord[] = [];
+
+  for (let page = 1; page <= FIDS_MAX_PAGES; page++) {
+    const payload = await fetch(`${FIDS_ORIGIN}/api/transaksi/${endpoint}?page=${page}`)
+      .then((r) => r.json())
+      .catch(() => null);
+
+    const result = payload?.data?.result;
+    if (!result) break;
+
+    rows.push(...(result.data ?? []));
+
+    if (!result.next_page_url) break;
+  }
+
+  return rows;
+}
+
 export async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<{ success: boolean; data: T; message?: string; pagination?: any }> {
   try {
     const res = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -170,20 +243,15 @@ export async function fetchApi<T>(endpoint: string, options: RequestInit = {}): 
   // FALLBACK DIRECT FETCH FOR LIVE FLIGHTS
   if (endpoint.startsWith('/flights')) {
     try {
-      const [arrRes, depRes] = await Promise.all([
-        fetch('http://103.210.122.2/api/transaksi/kedatangan').then(r => r.json()).catch(() => null),
-        fetch('http://103.210.122.2/api/transaksi/keberangkatan').then(r => r.json()).catch(() => null),
+      const [arrRows, depRows] = await Promise.all([
+        fetchAllFidsPages('kedatangan'),
+        fetchAllFidsPages('keberangkatan'),
       ]);
 
-      const flights: any[] = [];
-
-      if (arrRes?.data?.result?.data) {
-        arrRes.data.result.data.forEach((item: any) => flights.push(mapFidsFlight(item, 'arrival')));
-      }
-
-      if (depRes?.data?.result?.data) {
-        depRes.data.result.data.forEach((item: any) => flights.push(mapFidsFlight(item, 'departure')));
-      }
+      const flights: any[] = [
+        ...arrRows.map((item) => mapFidsFlight(item, 'arrival')),
+        ...depRows.map((item) => mapFidsFlight(item, 'departure')),
+      ];
 
       // If external API has data, return it
       if (flights.length > 0) {

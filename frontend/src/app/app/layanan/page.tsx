@@ -13,7 +13,7 @@ const SERVICES = [
   { name: 'Informasi Penerbangan', desc: 'Jadwal & status penerbangan', icon: Plane, color: '#0891b2', bg: '#ecfeff', href: '/app/penerbangan' },
   { name: 'Wisata Terdekat', desc: 'Destinasi wisata di sekitar bandara', icon: Palmtree, color: '#16a34a', bg: '#f0fdf4', href: '/app/wisata' },
   { name: 'Karir', desc: 'Lowongan pekerjaan di bandara', icon: Briefcase, color: '#ea580c', bg: '#fff7ed', href: '/app/layanan' },
-  { name: 'FAQ', desc: 'Pertanyaan yang sering diajukan', icon: CircleHelp, color: '#db2777', bg: '#fdf2f8', href: '/app/layanan' },
+  { name: 'FAQ', desc: 'Pertanyaan yang sering diajukan', icon: CircleHelp, color: '#db2777', bg: '#fdf2f8', href: '/faq' },
 ];
 
 export default function LayananScreen() {

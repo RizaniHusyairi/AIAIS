@@ -47,8 +47,12 @@ export default function Footer() {
             <li><Link href="/profile#sejarah" className="hover:text-cyan-400 transition-colors">Sejarah</Link></li>
             <li><Link href="/profile#pejabat" className="hover:text-cyan-400 transition-colors">Manajemen & Pejabat</Link></li>
             <li><Link href="/tourism" className="hover:text-cyan-400 transition-colors">Pariwisata Terdekat</Link></li>
+            <li><Link href="/ppid" className="hover:text-cyan-400 transition-colors">PPID</Link></li>
             <li><Link href="/downloads" className="hover:text-cyan-400 transition-colors">Laporan & Publikasi</Link></li>
-            <li><Link href="/profile#karir" className="hover:text-cyan-400 transition-colors">Karir & Informasi</Link></li>
+            {/* "Karir & Informasi" dihapus: halamannya tidak ada di AIAIS
+                maupun di aptpairport.id (/karir mengembalikan 404). Membuat
+                halaman berisi lowongan karangan bukan pilihan. Kembalikan
+                tautannya bila halaman aslinya sudah dibuat. */}
           </ul>
         </div>
 
@@ -71,7 +75,19 @@ export default function Footer() {
             <ul className="space-y-1.5 text-slate-400">
               <li><Link href="/complaints" className="hover:text-cyan-400 transition-colors">Kontak Kami</Link></li>
               <li><Link href="/profile#lokasi" className="hover:text-cyan-400 transition-colors">Lokasi Bandara</Link></li>
-              <li><Link href="/profile#privasi" className="hover:text-cyan-400 transition-colors">Kebijakan Privasi</Link></li>
+              {/* Sementara menunjuk ke halaman resmi di portal v1; AIAIS belum
+                  punya halaman kebijakan privasi. Ganti ke tautan internal
+                  begitu halamannya tersedia. */}
+              <li>
+                <a
+                  href="https://aptpairport.id/kebijakan-privasi"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="hover:text-cyan-400 transition-colors"
+                >
+                  Kebijakan Privasi
+                </a>
+              </li>
             </ul>
           </div>
 

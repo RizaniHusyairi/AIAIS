@@ -8,6 +8,8 @@ use App\Http\Controllers\Api\AnnouncementController;
 use App\Http\Controllers\Api\FacilityController;
 use App\Http\Controllers\Api\TenantController;
 use App\Http\Controllers\Api\ComplaintController;
+use App\Http\Controllers\Api\ChatController;
+use App\Http\Controllers\Api\InformationRequestController;
 use App\Http\Controllers\Api\DocumentController;
 use App\Http\Controllers\Api\AnalyticsController;
 use App\Http\Controllers\Api\SettingController;
@@ -31,6 +33,15 @@ Route::prefix(config('api.version'))->group(function () {
     // FIDS Flights
     Route::get('/flights', [FlightController::class, 'index']);
 
+    // Proksi logo maskapai.
+    //
+    // Server FIDS hanya melayani HTTP, jadi logonya diblokir sebagai mixed
+    // content begitu portal berjalan di HTTPS. Berkas diambil di sisi server
+    // lalu disajikan ulang dari sini — cara yang sama dipakai aptpairport.id.
+    // Nama berkas disaring ketat di controller (lihat FlightController::logo).
+    Route::get('/airlines/logo/{filename}', [FlightController::class, 'logo'])
+        ->name('api.airlines.logo');
+
     // News & Announcements
     Route::get('/news', [NewsController::class, 'index']);
     Route::get('/news/{slug}', [NewsController::class, 'show']);
@@ -43,6 +54,18 @@ Route::prefix(config('api.version'))->group(function () {
     // Complaints & Feedback
     Route::post('/complaints', [ComplaintController::class, 'store']);
     Route::get('/complaints/track/{ticket}', [ComplaintController::class, 'track']);
+
+    // Live Chat & Informasi / Kritik & Saran
+    Route::post('/chat/start', [ChatController::class, 'start']);
+    Route::get('/chat/{ticket_number}', [ChatController::class, 'show']);
+    Route::post('/chat/{ticket_number}/message', [ChatController::class, 'sendVisitorMessage']);
+
+    // Permohonan Informasi Publik (UU 14/2008).
+    // Sengaja terbuka tanpa autentikasi: mengajukan permohonan informasi
+    // publik adalah hak setiap orang dan tidak boleh mensyaratkan akun.
+    // Berkas syaratnya tersimpan di cakram privat — lihat controllernya.
+    Route::post('/information-requests', [InformationRequestController::class, 'store']);
+    Route::get('/information-requests/track/{ticket}', [InformationRequestController::class, 'track']);
 
     // Downloads
     Route::get('/documents', [DocumentController::class, 'index']);
@@ -94,5 +117,17 @@ Route::prefix(config('api.version'))->group(function () {
         // Complaints Management
         Route::get('/complaints', [ComplaintController::class, 'index']);
         Route::put('/complaints/{id}/resolve', [ComplaintController::class, 'resolve']);
+
+        // Chat Helpdesk Management
+        Route::get('/chat', [ChatController::class, 'adminIndex']);
+        Route::post('/chat/{id}/reply', [ChatController::class, 'adminReply']);
+        Route::put('/chat/{id}/status', [ChatController::class, 'adminUpdateStatus']);
+
+        // Permohonan Informasi Publik. Unduhan berkas hanya lewat sini —
+        // scan KTP pemohon tidak punya URL publik.
+        Route::get('/information-requests', [InformationRequestController::class, 'index']);
+        Route::put('/information-requests/{id}/respond', [InformationRequestController::class, 'respond']);
+        Route::get('/information-requests/{id}/file/{jenis}', [InformationRequestController::class, 'file'])
+            ->whereIn('jenis', ['ktp', 'surat-pernyataan']);
     });
 });

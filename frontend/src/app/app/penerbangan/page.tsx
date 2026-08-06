@@ -169,7 +169,7 @@ function FlightCard({ flight: f }: { flight: Flight }) {
       <div className="pl-4 pr-3.5 py-3.5">
         {/* baris identitas */}
         <div className="flex items-center gap-3">
-          <AirlineLogo airline={f.airline} logo={f.airline_logo} size={40} />
+          <AirlineLogo airline={f.airline} logo={f.airline_logo} code={f.airline_code} color={f.airline_color} size={40} />
           <div className="flex-1 min-w-0">
             <p className="font-black text-slate-900 text-[14.5px] leading-none">{f.flight_number}</p>
             <p className="text-[11px] text-slate-500 truncate mt-1">{f.airline}</p>

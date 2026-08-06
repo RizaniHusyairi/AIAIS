@@ -7,19 +7,42 @@ import { Flight } from '@/types';
 /*  Identitas maskapai                                                 */
 /* ------------------------------------------------------------------ */
 
-/** Petakan nama maskapai -> kode pendek + warna khas untuk lencana logo. */
-export function airlineStyle(name: string): { code: string; color: string } {
+/**
+ * Kode pendek + warna khas maskapai untuk lencana cadangan.
+ *
+ * FIDS mengirim `maskapai.kode` ("SAQ") dan `maskapai.kode_warna` ("#1fb253"),
+ * dan v1 memakainya apa adanya — itu identitas resmi yang dikelola petugas
+ * bandara lewat panel FIDS, bukan tebakan. Daftar di bawah hanya dipakai bila
+ * FIDS tidak mengirim keduanya (mis. saat portal jatuh ke basis data lokal).
+ */
+export function airlineStyle(
+  name: string,
+  code?: string | null,
+  color?: string | null,
+): { code: string; color: string } {
+  const fromApi = {
+    code: (code || '').trim(),
+    color: (color || '').trim(),
+  };
+  if (fromApi.code && fromApi.color) return { code: fromApi.code, color: fromApi.color };
+
   const n = (name || '').toLowerCase();
-  if (n.includes('garuda')) return { code: 'GA', color: '#0e7490' };
-  if (n.includes('lion')) return { code: 'JT', color: '#dc2626' };
-  if (n.includes('citilink')) return { code: 'QG', color: '#16a34a' };
-  if (n.includes('sriwijaya')) return { code: 'SJ', color: '#ea580c' };
-  if (n.includes('batik')) return { code: 'ID', color: '#2563eb' };
-  if (n.includes('wings')) return { code: 'IW', color: '#059669' };
-  if (n.includes('super air') || n.includes('superjet')) return { code: 'IU', color: '#7c3aed' };
-  if (n.includes('pelita')) return { code: '6D', color: '#0891b2' };
-  const code = (name || 'XX').replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase() || 'XX';
-  return { code, color: '#334155' };
+  const guess =
+    n.includes('garuda') ? { code: 'GA', color: '#0e7490' } :
+    n.includes('lion') ? { code: 'JT', color: '#dc2626' } :
+    n.includes('citilink') ? { code: 'QG', color: '#16a34a' } :
+    n.includes('sriwijaya') ? { code: 'SJ', color: '#ea580c' } :
+    n.includes('batik') ? { code: 'ID', color: '#2563eb' } :
+    n.includes('wings') ? { code: 'IW', color: '#059669' } :
+    n.includes('super air') || n.includes('superjet') ? { code: 'IU', color: '#7c3aed' } :
+    n.includes('pelita') ? { code: '6D', color: '#0891b2' } :
+    {
+      code: (name || 'XX').replace(/[^A-Za-z]/g, '').slice(0, 2).toUpperCase() || 'XX',
+      color: '#334155',
+    };
+
+  // Nilai dari API selalu menang atas tebakan, walau hanya salah satunya ada.
+  return { code: fromApi.code || guess.code, color: fromApi.color || guess.color };
 }
 
 /**
@@ -39,20 +62,27 @@ export function airlineLogoUrl(logo?: string | null): string | null {
 /**
  * Lencana maskapai.
  *
- * Menampilkan logo asli dari API bila tersedia; bila URL kosong atau gambarnya
- * gagal dimuat (server FIDS eksternal sedang tidak dapat dijangkau), tampilan
- * mundur ke lencana kode dua huruf berwarna khas maskapai.
+ * Menampilkan logo asli bila tersedia; bila URL kosong atau gambarnya gagal
+ * dimuat, tampilan mundur ke lencana kode maskapai berwarna merek.
+ *
+ * URL logo datang dari proksi backend, bukan langsung dari server FIDS —
+ * host FIDS hanya melayani HTTP sehingga gambarnya diblokir sebagai mixed
+ * content begitu portal berjalan di HTTPS. Ini cara yang dipakai v1.
  */
 export function AirlineLogo({
   airline,
   logo,
+  code: apiCode,
+  color: apiColor,
   size = 40,
 }: {
   airline: string;
   logo?: string | null;
+  code?: string | null;
+  color?: string | null;
   size?: number;
 }) {
-  const { code, color } = airlineStyle(airline);
+  const { code, color } = airlineStyle(airline, apiCode, apiColor);
   const src = airlineLogoUrl(logo);
   const [failed, setFailed] = useState(false);
 
@@ -78,10 +108,14 @@ export function AirlineLogo({
     );
   }
 
+  // Kode dari FIDS bisa tiga huruf ("SAQ"), bukan dua seperti tebakan lama —
+  // ukuran huruf menyusut mengikuti panjangnya supaya tidak meluber.
+  const fontSize = size * (code.length >= 3 ? 0.26 : 0.3);
+
   return (
     <div
-      className="rounded-xl flex items-center justify-center text-white font-black flex-shrink-0 shadow-sm"
-      style={{ width: size, height: size, backgroundColor: color, fontSize: size * 0.3 }}
+      className="rounded-xl flex items-center justify-center text-white font-black flex-shrink-0 shadow-sm leading-none"
+      style={{ width: size, height: size, backgroundColor: color, fontSize }}
       title={airline}
     >
       {code}
@@ -127,18 +161,60 @@ export function relativeUpdated(iso?: string | null): string {
   return `${Math.round(hours / 24)} hari lalu`;
 }
 
-/** Ringkasan gate / ban bagasi sesuai jenis penerbangan. */
-export function gateLabel(flight: Flight): { label: string; value: string; assigned: boolean } {
+/**
+ * Titik layan penumpang sesuai arah penerbangan:
+ * keberangkatan menuju **Gate**, kedatangan mengambil bagasi di **Conveyor**.
+ *
+ * Istilahnya sengaja "Conveyor", bukan "Ban Bagasi" atau "Belt" — itu kata yang
+ * dipakai papan FIDS bandara dan pengumuman suara, sekaligus nama field yang
+ * dikirim API (`conveyor`). Menyebutnya lain di layar membuat penumpang
+ * mencocokkan dua istilah berbeda untuk benda yang sama.
+ *
+ * - `label` : nama kolom ("Gate" / "Conveyor")
+ * - `bare`  : nomornya saja, untuk baris yang sudah punya label sendiri
+ * - `value` : label + nomor, untuk tampilan mandiri tanpa keterangan kolom
+ */
+export function gateLabel(flight: Flight): {
+  label: string;
+  bare: string;
+  value: string;
+  assigned: boolean;
+} {
   if (flight.flight_type === 'arrival') {
     const assigned = flight.baggage_belt != null;
+    const bare = assigned ? String(flight.baggage_belt) : 'Belum ditentukan';
     return {
-      label: 'Ban Bagasi',
-      value: assigned ? `Belt ${flight.baggage_belt}` : 'Belum ditentukan',
+      label: 'Conveyor',
+      bare,
+      value: assigned ? `Conveyor ${flight.baggage_belt}` : 'Belum ditentukan',
       assigned,
     };
   }
+
   const assigned = !!flight.gate;
-  return { label: 'Gate', value: assigned ? String(flight.gate) : 'Belum ditentukan', assigned };
+  const bare = assigned ? String(flight.gate) : 'Belum ditentukan';
+  return { label: 'Gate', bare, value: assigned ? `Gate ${flight.gate}` : 'Belum ditentukan', assigned };
+}
+
+/**
+ * Konter check-in. Hanya berlaku untuk keberangkatan — penumpang datang tidak
+ * melapor ke konter mana pun, jadi kedatangan selalu mengembalikan `assigned:
+ * false` dengan daftar kosong, bukan "Belum ditentukan" yang menyesatkan.
+ *
+ * FIDS mengirim tiga kolom (konter, konter2, konter3) dan memakai 0 untuk
+ * "tidak dipakai"; penyaringannya sudah dilakukan di lapisan pemetaan.
+ */
+export function counterLabel(flight: Flight): {
+  list: number[];
+  value: string;
+  assigned: boolean;
+} {
+  const list = flight.flight_type === 'departure' ? flight.checkin_counters ?? [] : [];
+  return {
+    list,
+    value: list.length ? `Konter ${list.join(', ')}` : 'Belum ditentukan',
+    assigned: list.length > 0,
+  };
 }
 
 /* ------------------------------------------------------------------ */

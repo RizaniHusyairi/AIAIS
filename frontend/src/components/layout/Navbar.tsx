@@ -8,54 +8,297 @@ import { fetchApi } from '@/lib/api';
 import { Flight } from '@/types';
 import {
   Search, ChevronDown, Phone, Menu, X, Moon, Plane, Home, Building2, Users,
-  Newspaper, Download, MessageSquareWarning, Info, UserRound, MapPin, Clock,
-  CloudSun, Globe, ArrowRight, PlaneTakeoff, Palmtree, Bus, ShieldCheck,
+  Newspaper, MessageSquareWarning, Info, UserRound, MapPin, Clock,
+  CloudSun, Globe, ArrowRight, PlaneTakeoff, ShieldCheck,
+  FileText, ClipboardList, Scale, FolderOpen, TrendingUp, CircleHelp,
+  Megaphone, Store, ExternalLink,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
 /* ------------------------------------------------------------------ */
-/*  Menu definition (Synced with official aptpairport.id structure)  */
+/*  Definisi menu                                                      */
+/*                                                                     */
+/*  Strukturnya mengikuti navbar aptpairport.id (v1.0.0) apa adanya —   */
+/*  sumbernya app/Providers/ViewServiceProvider.php pada repositori     */
+/*  situs lama, termasuk menu Layanan dan Tautan Terkait yang di sana   */
+/*  dibangun dari basis data.                                          */
+/*                                                                     */
+/*  Sebagian halaman belum ada di AIAIS. Item seperti itu ditandai      */
+/*  `soon: true`: tetap tampil supaya susunan menu sama persis dengan   */
+/*  v1, tetapi tidak dapat diklik dan diberi label "Segera" — lebih     */
+/*  jujur daripada tautan yang berujung 404.                           */
+/*                                                                     */
+/*  Satu-satunya tambahan di luar v1 adalah "Peta Rute" di bawah menu   */
+/*  Informasi.                                                         */
 /* ------------------------------------------------------------------ */
-type MenuChild = { name: string; href: string; icon: any; desc: string };
-type MenuItem = { name: string; href: string; icon: any; children?: MenuChild[] };
+
+type MenuNode = {
+  name: string;
+  /** Kosong berarti halamannya belum tersedia (lihat `soon`). */
+  href?: string;
+  icon: LucideIcon;
+  desc?: string;
+  /** Tautan ke luar portal; dibuka di tab baru. */
+  external?: boolean;
+  /** Halaman belum ada di AIAIS — tampil tetapi tidak dapat diklik. */
+  soon?: boolean;
+  /** Tingkat ketiga, mengikuti submenu bersarang milik v1. */
+  children?: MenuNode[];
+};
+
+type MenuItem = { name: string; href: string; icon: LucideIcon; children?: MenuNode[] };
 
 const MENU: MenuItem[] = [
   { name: 'Beranda', href: '/', icon: Home },
+
   {
-    name: 'Layanan Kami',
-    href: '/complaints',
-    icon: Building2,
-    children: [
-      { name: 'Pelayanan Pas Bandara Orang', href: '/complaints#pas-orang', icon: UserRound, desc: 'Permohonan pas masuk area terbatas terminal & airside' },
-      { name: 'Pelayanan Pas Bandara Kendaraan', href: '/complaints#pas-kendaraan', icon: Bus, desc: 'Izin pas sirkulasi kendaraan operasional bandara' },
-      { name: 'Pelayanan Tanda Ijin Mengemudi (TIM)', href: '/complaints#tim', icon: ShieldCheck, desc: 'Izin mengemudi pengemudi Sisi Udara (Airside Driver)' },
-    ],
-  },
-  {
-    name: 'Informasi & Flight',
-    href: '/flights',
-    icon: Plane,
-    children: [
-      { name: 'Jadwal Penerbangan (FIDS)', href: '/flights', icon: Plane, desc: 'Status keberangkatan & kedatangan real-time' },
-      { name: 'Fasilitas Bandara', href: '/facilities', icon: Building2, desc: 'Ruang tunggu, WiFi, Nursery Room & fasilitas umum' },
-      { name: 'Transportasi & Bus DAMRI', href: '/tenants', icon: Bus, desc: 'Moda transportasi darat menuju IKN & Kota Samarinda' },
-      { name: 'Berita & Pengumuman', href: '/news', icon: Newspaper, desc: 'Kabar terbaru & pengumuman resmi operasional' },
-      { name: 'Pariwisata Terdekat', href: '/tourism', icon: Palmtree, desc: 'Destinasi wisata unggulan di sekitar bandara' },
-      { name: 'Pusat Unduhan (Dokumen)', href: '/downloads', icon: Download, desc: 'Regulasi, formulir, dan siaran pers publik' },
-    ],
-  },
-  { name: 'Galeri Kegiatan', href: '/facilities#galeri', icon: Palmtree },
-  {
-    name: 'Profil Bandara',
+    name: 'Informasi Publik',
     href: '/profile',
     icon: Info,
     children: [
-      { name: 'Profil & Visi Misi', href: '/profile', icon: Info, desc: 'Sejarah, visi-misi, dan tata kelola UPBU APT Pranoto' },
-      { name: 'Pejabat Bandara', href: '/profile#pejabat', icon: Users, desc: 'Struktur pimpinan Kantor UPBU Kelas I APT Pranoto' },
-      { name: 'Peta & Lokasi Terminal', href: '/facilities#peta', icon: MapPin, desc: 'Denah sirkulasi terminal dan rute menuju bandara' },
+      { name: 'Profil Bandara', href: '/profile', icon: Info, desc: 'Sejarah, visi-misi, dan tata kelola UPBU APT Pranoto' },
+      { name: 'Struktur Organisasi', icon: Users, desc: 'Bagan organisasi Kantor UPBU Kelas I', soon: true },
+      { name: 'Pejabat Bandara', href: '/profile#pejabat', icon: UserRound, desc: 'Struktur pimpinan Kantor UPBU Kelas I APT Pranoto' },
+      { name: 'Fasilitas Bandara', href: '/facilities', icon: Building2, desc: 'Ruang tunggu, musala, kesehatan, dan fasilitas umum' },
     ],
   },
-  { name: 'FAQ & Pengaduan', href: '/complaints', icon: MessageSquareWarning },
+
+  {
+    name: 'PPID',
+    href: '/ppid',
+    icon: ShieldCheck,
+    children: [
+      { name: 'Profil PPID BLU', href: '/ppid', icon: Info, desc: 'Profil Pejabat Pengelola Informasi dan Dokumentasi' },
+      { name: 'SOP PPID', href: '/ppid/sop', icon: FileText, desc: 'Prosedur operasional standar layanan informasi' },
+      { name: 'Standar Pelayanan', href: '/ppid/standar-pelayanan', icon: ClipboardList, desc: 'Standar & maklumat pelayanan serta survei kepuasan masyarakat' },
+      { name: 'Pengajuan Informasi Publik', href: '/ppid/pengajuan-informasi', icon: MessageSquareWarning, desc: 'Formulir permohonan informasi publik' },
+      { name: 'Regulasi PPID', href: '/ppid/regulasi', icon: Scale, desc: 'Dasar hukum penyelenggaraan PPID' },
+      {
+        // Tingkat ketiga, sama seperti pada v1.
+        name: 'Layanan Informasi',
+        icon: FolderOpen,
+        desc: 'Laporan dan klasifikasi informasi publik',
+        children: [
+          { name: 'Laporan Layanan Informasi', href: '/ppid/laporan-layanan-informasi', icon: FileText },
+          { name: 'Informasi Berkala', href: '/ppid/informasi-berkala', icon: FileText },
+          { name: 'Informasi Serta Merta', href: '/ppid/informasi-serta-merta', icon: FileText },
+          { name: 'Informasi Setiap Saat', href: '/ppid/informasi-setiap-saat', icon: FileText },
+        ],
+      },
+    ],
+  },
+
+  {
+    name: 'Informasi',
+    href: '/flights',
+    icon: Plane,
+    children: [
+      { name: 'Jadwal Penerbangan', href: '/flights', icon: Plane, desc: 'Status keberangkatan & kedatangan real-time' },
+      { name: 'Peta Rute', href: '/peta-rute', icon: MapPin, desc: 'Rute penerbangan hari ini pada satu peta' },
+      { name: 'Berita', href: '/news', icon: Newspaper, desc: 'Kabar terbaru & pengumuman resmi operasional' },
+      { name: 'Kinerja Keuangan', icon: TrendingUp, desc: 'Laporan keuangan Badan Layanan Umum', soon: true },
+      { name: 'FAQ', href: '/faq', icon: CircleHelp, desc: 'Pertanyaan yang sering diajukan' },
+    ],
+  },
+
+  {
+    name: 'Regulasi',
+    href: '/downloads',
+    icon: Scale,
+    children: [
+      { name: 'Surat Keputusan', icon: FileText, desc: 'Keputusan resmi Kepala Kantor UPBU', soon: true },
+      { name: 'Surat Edaran', icon: FileText, desc: 'Edaran resmi operasional bandara', soon: true },
+    ],
+  },
+
+  {
+    name: 'Layanan',
+    href: '/complaints',
+    icon: Building2,
+    children: [
+      { name: 'PAS', href: 'https://pas.aptpairport.id/website/layanan/pas_orang.html', icon: UserRound, desc: 'Pas bandara untuk orang', external: true },
+      { name: 'TIM', href: 'https://pas.aptpairport.id/website/layanan/tim.html', icon: ShieldCheck, desc: 'Tanda Izin Mengemudi sisi udara', external: true },
+      { name: 'Keuangan dan Penagihan', href: 'https://sikeren.aptpairport.id', icon: TrendingUp, desc: 'Sistem keuangan dan penagihan', external: true },
+      { name: 'Beauty Contest', icon: Building2, desc: 'Seleksi mitra usaha bandara', soon: true },
+      { name: 'Extend Advance', icon: ClipboardList, desc: 'Perpanjangan uang muka', soon: true },
+      { name: 'Field Trip', icon: Users, desc: 'Kunjungan edukasi ke area bandara', soon: true },
+      { name: 'Pengajuan Informasi Publik', href: '/ppid/pengajuan-informasi', icon: MessageSquareWarning, desc: 'Permohonan informasi publik' },
+      { name: 'Pengiklanan', icon: Megaphone, desc: 'Pemasangan iklan di area bandara', soon: true },
+      { name: 'Perijinan Usaha', icon: ClipboardList, desc: 'Izin kegiatan usaha di bandara', soon: true },
+      { name: 'Sertifikat OJT', icon: FileText, desc: 'Sertifikat on-the-job training', soon: true },
+      { name: 'Sewa', icon: Building2, desc: 'Sewa ruang dan lahan bandara', soon: true },
+      { name: 'Slot Charter', icon: Plane, desc: 'Pengajuan slot penerbangan charter', soon: true },
+      { name: 'Tenant', icon: Store, desc: 'Pendaftaran tenant komersial', soon: true },
+    ],
+  },
+
+  {
+    name: 'Tautan Terkait',
+    href: '/profile',
+    icon: Globe,
+    children: [
+      { name: 'SIPPN', href: 'https://sippn.menpan.go.id/', icon: Globe, desc: 'Sistem Informasi Pelayanan Publik Nasional', external: true },
+      { name: 'SP4N-LAPOR!', href: 'https://www.lapor.go.id/', icon: MessageSquareWarning, desc: 'Layanan aspirasi dan pengaduan nasional', external: true },
+      { name: 'SIK', href: 'https://sik.dephub.go.id/', icon: Globe, desc: 'Sistem Informasi Kepegawaian Kemenhub', external: true },
+      { name: 'e-Kinerja', href: 'https://e-kinerja.kemenhub.go.id/', icon: TrendingUp, desc: 'Aplikasi kinerja pegawai Kemenhub', external: true },
+      { name: 'Semua Tautan Terkait', icon: FolderOpen, desc: 'Daftar lengkap tautan instansi terkait', soon: true },
+    ],
+  },
 ];
+
+/* ------------------------------------------------------------------ */
+/*  Satu entri di dalam dropdown                                       */
+/*                                                                     */
+/*  Menangani empat bentuk yang ada pada menu v1: tautan biasa, tautan  */
+/*  ke luar portal, item yang halamannya belum tersedia, dan kelompok   */
+/*  bersarang (tingkat ketiga). Gaya visualnya dipertahankan persis     */
+/*  seperti sebelumnya — yang bertambah hanya kemampuan menampilkan     */
+/*  ketiga bentuk selain tautan biasa.                                 */
+/* ------------------------------------------------------------------ */
+function DropdownEntry({ node, nested = false }: { node: MenuNode; nested?: boolean }) {
+  const Icon = node.icon;
+
+  const body = (
+    <>
+      <span className="w-9 h-9 rounded-lg bg-blue-50 group-hover/i:bg-blue-600 flex items-center justify-center flex-shrink-0 transition-colors">
+        <Icon className="w-4 h-4 text-blue-600 group-hover/i:text-white transition-colors" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[13px] font-bold text-slate-900 group-hover/i:text-blue-700 transition-colors">
+          {node.name}
+        </span>
+        {node.desc && (
+          <span className="block text-[11.5px] text-slate-500 leading-snug mt-0.5">{node.desc}</span>
+        )}
+      </span>
+    </>
+  );
+
+  // Tingkat ketiga: judul kelompok + daftar menjorok, tetap di dalam kartu
+  // yang sama supaya tidak perlu panel melayang baru.
+  if (node.children?.length) {
+    return (
+      <div className="mt-1 pt-1 border-t border-dashed border-slate-200">
+        <div className="flex items-center gap-2 px-2.5 pt-2 pb-1">
+          <Icon className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+          <span className="text-[10.5px] font-bold uppercase tracking-wider text-slate-400">
+            {node.name}
+          </span>
+        </div>
+        <div className="pl-3 border-l-2 border-dashed border-blue-100 ml-3.5">
+          {node.children.map((sub) => (
+            <DropdownEntry key={sub.name} node={sub} nested />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Halaman belum ada: tampil tetapi tidak dapat diklik.
+  if (node.soon || !node.href) {
+    return (
+      <div
+        className={`flex items-start gap-3 rounded-xl cursor-default ${nested ? 'p-2' : 'p-2.5'}`}
+        aria-disabled="true"
+      >
+        <span className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
+          <Icon className="w-4 h-4 text-slate-400" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[13px] font-bold text-slate-400">{node.name}</span>
+          {node.desc && (
+            <span className="block text-[11.5px] text-slate-400/80 leading-snug mt-0.5">{node.desc}</span>
+          )}
+        </span>
+        <span className="flex-shrink-0 mt-1 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-slate-100 text-slate-400">
+          Segera
+        </span>
+      </div>
+    );
+  }
+
+  const cls = `group/i flex items-start gap-3 rounded-xl hover:bg-blue-50 transition-colors ${nested ? 'p-2' : 'p-2.5'}`;
+
+  if (node.external) {
+    return (
+      <a href={node.href} target="_blank" rel="noreferrer" className={cls}>
+        {body}
+        <ExternalLink className="w-3.5 h-3.5 text-slate-300 group-hover/i:text-blue-600 flex-shrink-0 mt-2 transition-colors" />
+      </a>
+    );
+  }
+
+  return (
+    <Link href={node.href} className={cls}>
+      {body}
+      <ArrowRight className="w-4 h-4 text-slate-300 group-hover/i:text-blue-600 flex-shrink-0 mt-2 opacity-0 group-hover/i:opacity-100 -translate-x-1 group-hover/i:translate-x-0 transition-all" />
+    </Link>
+  );
+}
+
+/** Padanan `DropdownEntry` untuk drawer mobile; gaya mengikuti daftar yang ada. */
+function MobileEntry({ node, nested = false }: { node: MenuNode; nested?: boolean }) {
+  const Icon = node.icon;
+  const pad = nested ? 'px-2 py-2' : 'px-2 py-2.5';
+
+  if (node.children?.length) {
+    return (
+      <div className="pt-1.5">
+        <div className="flex items-center gap-2 px-2 pb-1">
+          <Icon className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            {node.name}
+          </span>
+        </div>
+        <div className="pl-3 border-l-2 border-dashed border-slate-200 ml-2">
+          {node.children.map((sub) => (
+            <MobileEntry key={sub.name} node={sub} nested />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (node.soon || !node.href) {
+    return (
+      <div className={`flex items-start gap-2.5 rounded-lg ${pad}`} aria-disabled="true">
+        <Icon className="w-4 h-4 text-slate-300 flex-shrink-0 mt-0.5" />
+        <span className="flex-1 min-w-0">
+          <span className="block text-[13px] font-semibold text-slate-400">{node.name}</span>
+          {node.desc && (
+            <span className="block text-[11px] text-slate-400/80 leading-snug">{node.desc}</span>
+          )}
+        </span>
+        <span className="flex-shrink-0 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-slate-100 text-slate-400 mt-0.5">
+          Segera
+        </span>
+      </div>
+    );
+  }
+
+  const inner = (
+    <>
+      <Icon className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+      <span className="flex-1 min-w-0">
+        <span className="block text-[13px] font-semibold text-slate-800">{node.name}</span>
+        {node.desc && <span className="block text-[11px] text-slate-500 leading-snug">{node.desc}</span>}
+      </span>
+    </>
+  );
+
+  const cls = `flex items-start gap-2.5 rounded-lg hover:bg-blue-50 transition-colors ${pad}`;
+
+  return node.external ? (
+    <a href={node.href} target="_blank" rel="noreferrer" className={cls}>
+      {inner}
+      <ExternalLink className="w-3.5 h-3.5 text-slate-300 flex-shrink-0 mt-1" />
+    </a>
+  ) : (
+    <Link href={node.href} className={cls}>
+      {inner}
+    </Link>
+  );
+}
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -185,7 +428,7 @@ export default function Navbar() {
             </Link>
 
             {/* ---- desktop nav ---- */}
-            <nav className="hidden lg:flex items-center gap-0.5">
+            <nav className="hidden xl:flex items-center gap-0.5">
               {MENU.map((item) => {
                 const Icon = item.icon;
                 const active = isActive(item.href);
@@ -199,7 +442,7 @@ export default function Navbar() {
                   >
                     <Link
                       href={item.href}
-                      className={`relative flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-[13.5px] font-semibold transition-colors ${
+                      className={`relative flex items-center gap-1.5 px-2.5 2xl:px-3.5 py-2.5 rounded-xl text-[13.5px] font-semibold transition-colors ${
                         active ? 'text-blue-700' : 'text-slate-600 hover:text-blue-700'
                       }`}
                     >
@@ -221,7 +464,7 @@ export default function Navbar() {
                       {active && (
                         <motion.span
                           layoutId="nav-active-runway"
-                          className="absolute -bottom-0.5 left-3.5 right-3.5 h-[2.5px] rounded-full bg-gradient-to-r from-blue-600 to-cyan-400"
+                          className="absolute -bottom-0.5 left-2.5 right-2.5 2xl:left-3.5 2xl:right-3.5 h-[2.5px] rounded-full bg-gradient-to-r from-blue-600 to-cyan-400"
                           transition={{ type: 'spring', stiffness: 480, damping: 36 }}
                         />
                       )}
@@ -269,34 +512,19 @@ export default function Navbar() {
                               <span className="absolute -right-2 -top-2 w-4 h-4 rounded-full bg-slate-50" />
                             </div>
 
-                            <div className="p-2">
-                              {item.children!.map((c, i) => {
-                                const CIcon = c.icon;
-                                return (
-                                  <motion.div
-                                    key={c.href}
-                                    initial={{ opacity: 0, x: -10 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: 0.06 + i * 0.05 }}
-                                  >
-                                    <Link
-                                      href={c.href}
-                                      className="group/i flex items-start gap-3 p-2.5 rounded-xl hover:bg-blue-50 transition-colors"
-                                    >
-                                      <span className="w-9 h-9 rounded-lg bg-blue-50 group-hover/i:bg-blue-600 flex items-center justify-center flex-shrink-0 transition-colors">
-                                        <CIcon className="w-4 h-4 text-blue-600 group-hover/i:text-white transition-colors" />
-                                      </span>
-                                      <span className="min-w-0">
-                                        <span className="block text-[13px] font-bold text-slate-900 group-hover/i:text-blue-700 transition-colors">
-                                          {c.name}
-                                        </span>
-                                        <span className="block text-[11.5px] text-slate-500 leading-snug mt-0.5">{c.desc}</span>
-                                      </span>
-                                      <ArrowRight className="w-4 h-4 text-slate-300 group-hover/i:text-blue-600 flex-shrink-0 mt-2 opacity-0 group-hover/i:opacity-100 -translate-x-1 group-hover/i:translate-x-0 transition-all" />
-                                    </Link>
-                                  </motion.div>
-                                );
-                              })}
+                            {/* Menu Layanan milik v1 berisi 13 item, jadi daftarnya
+                                dibatasi tingginya dan digulung bila perlu. */}
+                            <div className="p-2 max-h-[70vh] overflow-y-auto no-scrollbar">
+                              {item.children!.map((c, i) => (
+                                <motion.div
+                                  key={c.name}
+                                  initial={{ opacity: 0, x: -10 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  transition={{ delay: 0.06 + i * 0.05 }}
+                                >
+                                  <DropdownEntry node={c} />
+                                </motion.div>
+                              ))}
                             </div>
                           </div>
                         </motion.div>
@@ -318,7 +546,7 @@ export default function Navbar() {
                 {searchOpen ? <X className="w-[18px] h-[18px]" /> : <Search className="w-[18px] h-[18px]" />}
               </motion.button>
 
-              <button className="hidden lg:flex items-center gap-1.5 px-3 h-10 rounded-xl text-[12.5px] font-semibold text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer">
+              <button className="hidden 2xl:flex items-center gap-1.5 px-3 h-10 rounded-xl text-[12.5px] font-semibold text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer">
                 <Globe className="w-4 h-4" /> ID <ChevronDown className="w-3 h-3" />
               </button>
 
@@ -348,7 +576,7 @@ export default function Navbar() {
             {/* ---- mobile toggle ---- */}
             <button
               onClick={() => setMobileOpen((s) => !s)}
-              className="lg:hidden w-10 h-10 rounded-xl text-slate-600 hover:bg-slate-100 flex items-center justify-center cursor-pointer"
+              className="xl:hidden w-10 h-10 rounded-xl text-slate-600 hover:bg-slate-100 flex items-center justify-center cursor-pointer"
               aria-label="Menu"
             >
               {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -392,7 +620,7 @@ export default function Navbar() {
                     { label: 'Fasilitas Terminal', href: '/facilities' },
                     { label: 'Berita Terbaru', href: '/news' },
                     { label: 'Wisata Terdekat', href: '/tourism' },
-                    { label: 'Pengaduan', href: '/complaints' },
+                    { label: 'Chat & Informasi', href: '/complaints' },
                   ].map((s) => (
                     <Link
                       key={s.label}
@@ -455,22 +683,9 @@ export default function Navbar() {
                               className="overflow-hidden pl-4"
                             >
                               <div className="border-l-2 border-dashed border-blue-200 pl-3 py-1 space-y-0.5">
-                                {item.children.map((c) => {
-                                  const CIcon = c.icon;
-                                  return (
-                                    <Link
-                                      key={c.href}
-                                      href={c.href}
-                                      className="flex items-start gap-2.5 px-2 py-2.5 rounded-lg hover:bg-blue-50 transition-colors"
-                                    >
-                                      <CIcon className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
-                                      <span>
-                                        <span className="block text-[13px] font-semibold text-slate-800">{c.name}</span>
-                                        <span className="block text-[11px] text-slate-500 leading-snug">{c.desc}</span>
-                                      </span>
-                                    </Link>
-                                  );
-                                })}
+                                {item.children.map((c) => (
+                                  <MobileEntry key={c.name} node={c} />
+                                ))}
                               </div>
                             </motion.div>
                           )}

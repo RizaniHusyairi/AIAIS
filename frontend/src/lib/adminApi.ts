@@ -109,6 +109,53 @@ export async function adminFetch<T>(
   }
 }
 
+/**
+ * Unduh berkas dari endpoint admin.
+ *
+ * `adminFetch` selalu mem-parsing JSON, jadi tidak bisa dipakai untuk berkas
+ * biner. Tautan `<a href>` biasa juga tidak bisa: endpointnya dilindungi
+ * Sanctum dan header Authorization tidak ikut terkirim pada navigasi biasa.
+ * Karena itu berkasnya diambil sebagai blob lalu diunduh dari memori — tanpa
+ * pernah membuat URL publik untuk scan KTP pemohon.
+ */
+export async function adminDownload(
+  path: string,
+  namaBerkas: string,
+): Promise<{ ok: boolean; message: string }> {
+  const token = getToken();
+  if (!token) return { ok: false, message: 'Sesi tidak ditemukan' };
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin${path}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    });
+
+    if (res.status === 401) {
+      clearSession();
+      if (typeof window !== 'undefined') window.location.href = '/admin/login';
+      return { ok: false, message: 'Sesi berakhir, silakan masuk kembali' };
+    }
+
+    if (!res.ok) return { ok: false, message: 'Berkas tidak dapat diambil' };
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = namaBerkas;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    // Dibebaskan setelah unduhan dimulai supaya blob tidak menetap di memori.
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+
+    return { ok: true, message: 'Berkas diunduh' };
+  } catch {
+    return { ok: false, message: 'Tidak dapat terhubung ke server' };
+  }
+}
+
 export async function logout() {
   await adminFetch('/logout', { method: 'POST' }).catch(() => {});
   clearSession();

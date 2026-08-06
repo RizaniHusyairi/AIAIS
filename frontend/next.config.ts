@@ -39,7 +39,7 @@ process.env.NEXT_PUBLIC_APP_VERSION = APP_VERSION;
 
 const nextConfig: NextConfig = {
   // Izinkan dev server diakses dari perangkat lain di LAN
-  allowedDevOrigins: ["10.10.20.42", "*.local"],
+  allowedDevOrigins: ["10.10.20.127", "10.10.20.42", "10.10.20.*", "*.local", "localhost:3000"],
 
   /**
    * Dokumen Next 16 menandai `env` sebagai `version: legacy`, tetapi kuncinya

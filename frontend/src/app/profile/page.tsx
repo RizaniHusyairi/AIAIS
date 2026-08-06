@@ -2,11 +2,17 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { motion, useInView } from 'framer-motion';
+import { AnimatePresence, motion, useInView } from 'framer-motion';
 import { useSetting } from '@/lib/settings';
+import {
+  OFFICIALS, HEAD_OFFICIAL, ORG_NAME, VISI, MISI, SEJARAH, TIMELINE,
+  STATUS_BLU, TUGAS, FUNGSI, ROUTES, CONTACT, ORG_CHART, MAPS_URL,
+  type Official,
+} from '@/lib/airportProfile';
 import {
   Plane, Compass, Target, Eye, ShieldCheck, Award, MapPin, Ruler, Building2, Users,
   Radio, Flame, ArrowRight, Quote, CheckCircle2, Sparkles, Navigation, Clock, Globe2, Heart,
+  ScrollText, Scale, Route, Network, Phone, Mail, Maximize2, X, GraduationCap, Briefcase,
 } from 'lucide-react';
 
 /* ================================================================
@@ -57,27 +63,19 @@ function FlightArc({ className = '', d = 'M-20 180 Q 380 60 1020 140', delay = 0
 /* ================================================================
    Data
    ================================================================ */
+/**
+ * Spesifikasi teknis. Angka bersumber dari data fasilitas resmi bandara
+ * (lihat provenans di lib/airportProfile.ts).
+ *
+ * Catatan: istilah "PKP-PK" sengaja TIDAK dipakai — halaman publik resmi
+ * hanya menyebut "Kategori 6 ARFF". Sebelumnya berkas ini menulis
+ * "Kategori PKP-PK 7", yang tidak bersumber dari mana pun.
+ */
 const SPECS = [
-  { label: 'Panjang Landas Pacu', value: 2250, suffix: ' m', sub: '2.250 × 45 meter · Boeing 737-800NG', icon: Ruler, color: '#2563eb' },
-  { label: 'Luas Terminal', value: 16400, suffix: ' m²', sub: 'Kapasitas 1,5 juta penumpang / tahun', icon: Building2, color: '#0d9488' },
-  { label: 'Parking Stand', value: 8, suffix: '', sub: 'Apron untuk pesawat narrow-body', icon: Plane, color: '#ea580c' },
-  { label: 'Kategori PKP-PK', value: 7, suffix: '', sub: 'Kesiapsiagaan penanggulangan darurat', icon: Flame, color: '#dc2626' },
-];
-
-const MISI = [
-  'Menyelenggarakan pelayanan jasa kebandarudaraan yang selamat, aman, dan nyaman sesuai standar nasional maupun internasional.',
-  'Meningkatkan kapasitas dan kualitas prasarana terminal serta sisi udara secara berkelanjutan.',
-  'Mengembangkan konektivitas udara Kalimantan Timur sebagai penyangga Ibu Kota Nusantara (IKN).',
-  'Mewujudkan tata kelola yang transparan, akuntabel, dan berorientasi pada kepuasan pengguna jasa.',
-  'Mendorong pemberdayaan ekonomi daerah melalui kemitraan dengan pelaku usaha lokal.',
-];
-
-const TIMELINE = [
-  { year: '2011', title: 'Awal Pembangunan', desc: 'Pembangunan bandara baru Samarinda dimulai untuk menggantikan Bandara Temindung yang terbatas.' },
-  { year: '2018', title: 'Penerbangan Perdana', desc: 'Bandara APT Pranoto resmi melayani penerbangan komersial pertama pada 24 Mei 2018.' },
-  { year: '2019', title: 'Perpanjangan Runway', desc: 'Landas pacu diperpanjang menjadi 2.250 meter, memungkinkan operasi pesawat jet berbadan sempit.' },
-  { year: '2022', title: 'Status BLU', desc: 'Ditetapkan sebagai Badan Layanan Umum untuk tata kelola yang lebih mandiri dan profesional.' },
-  { year: '2024', title: 'Gerbang IKN', desc: 'Berperan sebagai simpul konektivitas udara pendukung Ibu Kota Nusantara.' },
+  { label: 'Panjang Landas Pacu', value: 2250, suffix: ' m', sub: '2.250 × 45 meter · PCN 50 F/C/X/T', icon: Ruler, color: '#2563eb' },
+  { label: 'Luas Terminal', value: 12700, suffix: ' m²', sub: 'Kapasitas 1,5 juta penumpang / tahun', icon: Building2, color: '#0d9488' },
+  { label: 'Parking Stand', value: 8, suffix: '', sub: 'Apron 300 × 123 meter · PCN 63 F/C/X/T', icon: Plane, color: '#ea580c' },
+  { label: 'Kategori ARFF', value: 6, suffix: '', sub: 'Fire Station kesiapsiagaan darurat', icon: Flame, color: '#dc2626' },
 ];
 
 const NILAI = [
@@ -88,19 +86,16 @@ const NILAI = [
 ];
 
 /**
- * Foto dummy pejabat — avatar SVG berlatar transparan (DiceBear).
- * Ganti dengan foto potong (PNG transparan) resmi saat sudah tersedia.
+ * Penyesuaian bingkai foto per orang.
+ *
+ * Foto resmi berbeda-beda rasionya (408×612, 900×900, 495×504), sehingga
+ * tinggi kepala antar kartu tidak seragam tanpa koreksi ini. Murni urusan
+ * tampilan — karena itu tinggal di sini, bukan di modul data.
  */
-const avatar = (seed: string) =>
-  `https://api.dicebear.com/9.x/personas/svg?seed=${encodeURIComponent(seed)}`;
-
-const PEJABAT = [
-  { name: 'Ahmad Syauqi Shahab', role: 'Kepala Kantor UPBU Kelas I', img: avatar('Ahmad Syauqi Shahab') },
-  { name: 'Nina Kurniawati', role: 'Kepala Subbagian Tata Usaha', img: avatar('Nina Kurniawati') },
-  { name: 'Budi Santoso', role: 'Kasi Operasi & Keamanan', img: avatar('Budi Santoso') },
-  { name: 'Rudi Hermawan', role: 'Kasi Pelayanan & Fasilitas', img: avatar('Rudi Hermawan') },
-  { name: 'Dewi Lestari', role: 'Kasi Lalu Lintas Udara', img: avatar('Dewi Lestari') },
-];
+const PHOTO_FIT: Record<string, string> = {
+  murdoko: 'scale-[1.18]',
+  roslan: 'scale-[1.06]',
+};
 
 const rise = {
   hidden: { opacity: 0, y: 26 },
@@ -108,8 +103,164 @@ const rise = {
 };
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.09 } } };
 
+/* ================================================================
+   Dialog profil pejabat
+
+   Dipakai sekali, di halaman ini saja; sengaja tidak digeneralisasi.
+   `Modal` pada components/admin/ui.tsx tidak dipakai ulang: bertema gelap
+   panel admin, mengunci ikon di headernya, dan belum punya jebakan fokus,
+   kunci gulir, maupun peran ARIA.
+   ================================================================ */
+function OfficialDialog({ official, onClose }: { official: Official | null; onClose: () => void }) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const titleId = 'dialog-pejabat-title';
+
+  useEffect(() => {
+    if (!official) return;
+
+    // Kembalikan fokus ke kartu pemicu setelah dialog ditutup.
+    const opener = document.activeElement as HTMLElement | null;
+
+    // Kunci gulir halaman. Lebar scrollbar dikompensasi supaya tata letak
+    // tidak "meloncat" mendatar saat dialog dibuka di desktop.
+    const gap = window.innerWidth - document.documentElement.clientWidth;
+    const prevOverflow = document.body.style.overflow;
+    const prevPad = document.body.style.paddingRight;
+    document.body.style.overflow = 'hidden';
+    if (gap > 0) document.body.style.paddingRight = `${gap}px`;
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+
+      // Jebakan fokus sederhana: putar antar elemen fokusabel di dalam panel.
+      const nodes = panelRef.current?.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      if (!nodes?.length) return;
+      const first = nodes[0];
+      const last = nodes[nodes.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', onKey);
+    // Fokus awal di panel, bukan tombol tutup, agar pembaca layar
+    // membacakan judul dialog lebih dulu.
+    panelRef.current?.focus();
+
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+      document.body.style.paddingRight = prevPad;
+      opener?.focus?.();
+    };
+  }, [official, onClose]);
+
+  return (
+    <AnimatePresence>
+      {official && (
+        <div className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-[#0b1e5b]/70 backdrop-blur-sm"
+          />
+
+          <motion.div
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
+            tabIndex={-1}
+            initial={{ opacity: 0, y: 40, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 24, scale: 0.98 }}
+            transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+            className="relative w-full sm:max-w-2xl max-h-[92vh] flex flex-col bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl outline-none"
+          >
+            {/* kepala */}
+            <div className="flex items-start gap-4 p-5 sm:p-6 border-b border-slate-100">
+              <div className="w-16 h-20 rounded-2xl bg-gradient-to-b from-white to-slate-50 border border-slate-100 overflow-hidden flex-shrink-0">
+                {/* eslint-disable-next-line @next/next/no-img-element -- aset statis lokal */}
+                <img
+                  src={official.photo}
+                  alt={official.name}
+                  className="w-full h-full object-contain object-bottom"
+                />
+              </div>
+              <div className="flex-1 min-w-0 pt-0.5">
+                <h3 id={titleId} className="text-[17px] font-black text-slate-900 leading-snug">
+                  {official.name}
+                </h3>
+                <p className="mt-1 text-[12.5px] text-blue-700 font-semibold leading-snug">
+                  {official.title}
+                </p>
+                <p className="mt-0.5 text-[11.5px] text-slate-400">{ORG_NAME}</p>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Tutup"
+                className="w-9 h-9 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center flex-shrink-0 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* isi */}
+            <div className="overflow-y-auto p-5 sm:p-6 space-y-5">
+              <DialogList icon={Briefcase} title="Riwayat Jabatan" items={official.riwayatJabatan} color="#2563eb" />
+              <DialogList icon={GraduationCap} title="Pendidikan" items={official.pendidikan} color="#0d9488" />
+              <DialogList icon={Award} title="Penghargaan" items={official.penghargaan} color="#d97706" />
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function DialogList({
+  icon: Icon, title, items, color,
+}: {
+  icon: typeof Award; title: string; items: string[]; color: string;
+}) {
+  if (!items.length) return null;
+  return (
+    <div>
+      <div className="flex items-center gap-2">
+        <span className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${color}14` }}>
+          <Icon className="w-3.5 h-3.5" style={{ color }} />
+        </span>
+        <h4 className="text-[12px] font-bold uppercase tracking-wider text-slate-500">{title}</h4>
+      </div>
+      <ul className="mt-2.5 space-y-2 pl-1">
+        {items.map((t) => (
+          <li key={t} className="flex items-start gap-2.5 text-[13px] text-slate-600 leading-relaxed">
+            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-[7px]" style={{ backgroundColor: color }} />
+            {t}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export default function ProfilePage() {
   const heroBg = useSetting('bg_profile');
+  /** Objek, bukan indeks, supaya animasi keluar masih punya konten. */
+  const [openOfficial, setOpenOfficial] = useState<Official | null>(null);
 
   return (
     <div className="bg-slate-50 overflow-hidden">
@@ -249,7 +400,7 @@ export default function ProfilePage() {
           <div className="mt-7 grid grid-cols-3 gap-4">
             {[
               { icon: MapPin, label: 'Lokasi', value: 'Sungai Siring' },
-              { icon: Clock, label: 'Operasional', value: '06.00 – 18.00' },
+              { icon: Clock, label: 'Operasional', value: CONTACT.operationalHours },
               { icon: Award, label: 'Status', value: 'BLU · Kelas I' },
             ].map((f) => {
               const Icon = f.icon;
@@ -331,14 +482,18 @@ export default function ProfilePage() {
                 <Eye className="w-6 h-6 text-cyan-300" />
               </span>
               <h3 className="mt-4 text-[22px] font-black text-white">Visi</h3>
+
+              {/* Kalimat resmi utuh: pembuka menjelaskan dasar penetapan,
+                  lalu pernyataan visinya sendiri (bagian dalam tanda kutip). */}
+              <p className="mt-3 text-blue-100/75 text-[12px] leading-relaxed">{VISI.pembuka}</p>
+
               <Quote className="w-8 h-8 text-white/15 mt-3" />
               <p className="mt-1 text-blue-50 text-[15px] leading-relaxed italic">
-                Terwujudnya penyelenggaraan bandar udara yang <b className="text-cyan-300 not-italic">selamat, aman, dan nyaman</b>,
-                serta menjadi gerbang udara terdepan pendukung pertumbuhan Kalimantan Timur dan Ibu Kota Nusantara.
+                &ldquo;{VISI.pernyataan}&rdquo;
               </p>
 
               <div className="mt-6 pt-5 border-t border-white/10 flex items-center gap-2 text-[11.5px] text-blue-200">
-                <ShieldCheck className="w-4 h-4 text-cyan-300" /> Berlandaskan standar ICAO &amp; regulasi nasional
+                <ShieldCheck className="w-4 h-4 text-cyan-300" /> Kantor UPBU Kelas I A.P.T. Pranoto – Samarinda
               </div>
             </motion.div>
 
@@ -357,12 +512,13 @@ export default function ProfilePage() {
               </div>
 
               <motion.ol variants={container} initial="hidden" whileInView="show" viewport={{ once: true }} className="mt-5 space-y-3.5">
-                {MISI.map((m, i) => (
-                  <motion.li key={i} variants={rise} className="flex gap-3.5 group">
+                {/* Dokumen aslinya berhuruf a–f, bukan bernomor. */}
+                {MISI.map((m) => (
+                  <motion.li key={m.label} variants={rise} className="flex gap-3.5 group">
                     <span className="flex-shrink-0 w-8 h-8 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 text-white text-[12px] font-black flex items-center justify-center shadow-md shadow-blue-600/25 group-hover:scale-110 transition-transform">
-                      {i + 1}
+                      {m.label}
                     </span>
-                    <p className="text-slate-600 text-[13.5px] leading-relaxed pt-1">{m}</p>
+                    <p className="text-slate-600 text-[13.5px] leading-relaxed pt-1">{m.text}</p>
                   </motion.li>
                 ))}
               </motion.ol>
@@ -371,7 +527,73 @@ export default function ProfilePage() {
         </div>
       </section>
 
-      {/* ============ 5. NILAI ============ */}
+      {/* ============ 5. TUGAS & FUNGSI ============ */}
+      <section id="tugas-fungsi" className="max-w-[1400px] mx-auto px-4 sm:px-6 py-16 scroll-mt-24">
+        <motion.div initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center max-w-2xl mx-auto">
+          <span className="inline-flex items-center gap-2 text-blue-600 text-[11px] font-bold uppercase tracking-[0.16em] bg-blue-50 px-3 py-1.5 rounded-full">
+            <ScrollText className="w-3.5 h-3.5" /> Dasar Hukum
+          </span>
+          <h2 className="mt-4 text-3xl font-black text-slate-900 tracking-tight">Tugas &amp; Fungsi</h2>
+          <p className="mt-2.5 text-slate-500 text-[14px] leading-relaxed">
+            Mandat penyelenggaraan bandar udara sesuai peraturan yang berlaku.
+          </p>
+        </motion.div>
+
+        {/* Tugas */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mt-10 bg-white rounded-3xl border border-slate-100 shadow-sm p-7"
+        >
+          <div className="flex items-center gap-3">
+            <span className="w-11 h-11 rounded-2xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+              <Target className="w-5 h-5 text-blue-600" />
+            </span>
+            <div>
+              <h3 className="text-[18px] font-black text-slate-900">Tugas</h3>
+              <span className="inline-block mt-1 bg-blue-50 text-blue-700 text-[10.5px] font-bold px-2.5 py-1 rounded-lg">
+                {TUGAS.dasar}
+              </span>
+            </div>
+          </div>
+          <p className="mt-4 text-slate-600 text-[13.5px] leading-relaxed">{TUGAS.text}</p>
+        </motion.div>
+
+        {/* Fungsi */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mt-5 bg-white rounded-3xl border border-slate-100 shadow-sm p-7"
+        >
+          <div className="flex items-center gap-3">
+            <span className="w-11 h-11 rounded-2xl bg-teal-50 flex items-center justify-center flex-shrink-0">
+              <CheckCircle2 className="w-5 h-5 text-teal-600" />
+            </span>
+            <h3 className="text-[18px] font-black text-slate-900">Fungsi</h3>
+          </div>
+
+          <motion.ol
+            variants={container}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true }}
+            className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3.5"
+          >
+            {FUNGSI.map((f) => (
+              <motion.li key={f.label} variants={rise} className="flex gap-3">
+                <span className="flex-shrink-0 w-7 h-7 rounded-lg bg-blue-50 text-blue-700 text-[11.5px] font-black flex items-center justify-center">
+                  {f.label}
+                </span>
+                <p className="text-slate-600 text-[13px] leading-relaxed pt-0.5">{f.text}</p>
+              </motion.li>
+            ))}
+          </motion.ol>
+        </motion.div>
+      </section>
+
+      {/* ============ 6. NILAI ============ */}
       <section className="max-w-[1400px] mx-auto px-4 sm:px-6 py-16">
         <motion.div initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center max-w-xl mx-auto">
           <span className="inline-flex items-center gap-2 text-blue-600 text-[11px] font-bold uppercase tracking-[0.16em] bg-blue-50 px-3 py-1.5 rounded-full">
@@ -408,8 +630,8 @@ export default function ProfilePage() {
         </motion.div>
       </section>
 
-      {/* ============ 6. SEJARAH ============ */}
-      <section className="relative bg-white py-16 overflow-hidden">
+      {/* ============ 7. SEJARAH ============ */}
+      <section id="sejarah" className="relative bg-white py-16 overflow-hidden scroll-mt-24">
         <div
           className="absolute inset-0 opacity-[0.5]"
           style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, #e2e8f0 1px, transparent 0)', backgroundSize: '26px 26px' }}
@@ -420,7 +642,29 @@ export default function ProfilePage() {
             <span className="inline-flex items-center gap-2 text-blue-600 text-[11px] font-bold uppercase tracking-[0.16em] bg-blue-50 px-3 py-1.5 rounded-full">
               <Radio className="w-3.5 h-3.5" /> Jejak Perjalanan
             </span>
-            <h2 className="mt-4 text-3xl font-black text-slate-900 tracking-tight">Sejarah Singkat</h2>
+            <h2 className="mt-4 text-3xl font-black text-slate-900 tracking-tight">Sejarah dan Letak Geografis</h2>
+            <p className="mt-2.5 text-slate-500 text-[14px]">Dari Temindung ke gerbang udara baru Samarinda</p>
+          </motion.div>
+
+          {/* Narasi resmi. Linimasa di bawahnya hanya memuat peristiwa yang
+              punya dasar pada sumber; entri 2011 dan 2019 yang sebelumnya ada
+              di sini dihapus karena tidak bersumber. */}
+          <motion.div
+            variants={container}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true }}
+            className="mt-10 max-w-[760px] mx-auto space-y-4"
+          >
+            {SEJARAH.map((p, i) => (
+              <motion.p
+                key={i}
+                variants={rise}
+                className={`text-slate-600 leading-relaxed ${i === 0 ? 'text-[15px] font-medium text-slate-700' : 'text-[13.5px]'}`}
+              >
+                {p}
+              </motion.p>
+            ))}
           </motion.div>
 
           <div className="relative mt-12">
@@ -466,39 +710,271 @@ export default function ProfilePage() {
         </div>
       </section>
 
-      {/* ============ 7. PEJABAT ============ */}
+      {/* ============ 8. STATUS & PENETAPAN BLU ============ */}
+      <section id="blu" className="relative bg-gradient-to-br from-[#0b1e5b] to-[#123a8f] py-20 overflow-hidden scroll-mt-24">
+        <FlightArc className="absolute inset-x-0 top-10 w-full h-40 text-white/15" d="M-20 150 Q 420 50 1020 130" />
+        <div className="absolute -right-24 bottom-0 w-72 h-72 rounded-full bg-cyan-400/10 blur-3xl" />
+
+        <div className="relative max-w-[1000px] mx-auto px-4 sm:px-6 text-center">
+          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
+            <span className="inline-flex items-center gap-2 bg-white/12 border border-white/20 text-cyan-200 text-[11px] font-bold uppercase tracking-[0.16em] px-3.5 py-2 rounded-full">
+              <Scale className="w-3.5 h-3.5" /> Dasar Penetapan
+            </span>
+            <h2 className="mt-4 text-3xl sm:text-4xl font-black text-white tracking-tight">Status &amp; Penetapan</h2>
+            <p className="mt-2.5 text-blue-100/80 text-[14px]">Dasar hukum pengelolaan keuangan</p>
+
+            <p className="mt-8 text-cyan-300 text-[19px] sm:text-[22px] font-black tracking-tight">
+              {STATUS_BLU.dasar}
+            </p>
+
+            <p className="mt-4 max-w-2xl mx-auto text-blue-50 text-[14px] leading-relaxed">
+              {STATUS_BLU.text}
+            </p>
+          </motion.div>
+
+          <motion.div
+            variants={container}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true }}
+            className="mt-9 flex flex-wrap items-center justify-center gap-3"
+          >
+            <motion.span variants={rise} className="inline-flex items-center gap-2 bg-cyan-400/15 border border-cyan-300/30 text-cyan-100 text-[12.5px] font-bold px-4 py-2.5 rounded-2xl">
+              <Plane className="w-4 h-4" /> A.P.T. Pranoto (Samarinda)
+            </motion.span>
+            {STATUS_BLU.bersama.map((b) => (
+              <motion.span
+                key={b}
+                variants={rise}
+                className="inline-flex items-center gap-2 bg-white/[0.07] border border-white/15 text-blue-100 text-[12.5px] px-4 py-2.5 rounded-2xl"
+              >
+                {b}
+              </motion.span>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ============ 9. RUTE PENERBANGAN ============ */}
+      <section id="rute" className="max-w-[1400px] mx-auto px-4 sm:px-6 py-16 scroll-mt-24">
+        <motion.div initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center max-w-xl mx-auto">
+          <span className="inline-flex items-center gap-2 text-blue-600 text-[11px] font-bold uppercase tracking-[0.16em] bg-blue-50 px-3 py-1.5 rounded-full">
+            <Route className="w-3.5 h-3.5" /> Konektivitas
+          </span>
+          <h2 className="mt-4 text-3xl font-black text-slate-900 tracking-tight">Rute Penerbangan</h2>
+          <p className="mt-2.5 text-slate-500 text-[14px] leading-relaxed">
+            Kota tujuan yang terhubung langsung dari Samarinda.
+          </p>
+        </motion.div>
+
+        <motion.div variants={container} initial="hidden" whileInView="show" viewport={{ once: true }} className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-5">
+          {[
+            { title: 'Rute Reguler', desc: 'Layanan penerbangan berjadwal harian.', items: ROUTES.reguler, color: '#2563eb', bg: '#eff6ff', icon: Plane },
+            { title: 'Rute Perintis', desc: 'Melayani wilayah pedalaman dan kepulauan Kalimantan Timur.', items: ROUTES.perintis, color: '#0d9488', bg: '#f0fdfa', icon: Compass },
+          ].map((c) => {
+            const Icon = c.icon;
+            return (
+              <motion.div
+                key={c.title}
+                variants={rise}
+                whileHover={{ y: -6 }}
+                className="relative overflow-hidden bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-slate-300/40 p-6 transition-shadow"
+              >
+                <Plane className="absolute -right-3 -top-3 w-20 h-20 rotate-[25deg]" style={{ color: c.bg }} />
+                <span className="relative w-12 h-12 rounded-2xl flex items-center justify-center" style={{ backgroundColor: c.bg }}>
+                  <Icon className="w-6 h-6" style={{ color: c.color }} />
+                </span>
+                <h3 className="relative mt-4 text-[17px] font-black text-slate-900">{c.title}</h3>
+                <p className="relative mt-1 text-[12.5px] text-slate-500 leading-relaxed">{c.desc}</p>
+
+                <div className="relative mt-4 flex flex-wrap gap-2">
+                  {c.items.map((d) => (
+                    <span
+                      key={d}
+                      className="text-[12.5px] font-semibold px-3 py-1.5 rounded-full"
+                      style={{ backgroundColor: c.bg, color: c.color }}
+                    >
+                      {d}
+                    </span>
+                  ))}
+                </div>
+              </motion.div>
+            );
+          })}
+        </motion.div>
+
+        <motion.p
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          className="mt-6 text-center text-[12px] text-slate-400 leading-relaxed"
+        >
+          Rute dapat berubah mengikuti jadwal maskapai.{' '}
+          <Link href="/flights" className="text-blue-600 font-semibold hover:underline">
+            Lihat jadwal penerbangan hari ini
+          </Link>
+          .
+        </motion.p>
+      </section>
+
+      {/* ============ 10. PEJABAT ============ */}
       <section id="pejabat" className="max-w-[1400px] mx-auto px-4 sm:px-6 py-16 scroll-mt-24">
         <motion.div initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center max-w-xl mx-auto">
           <span className="inline-flex items-center gap-2 text-blue-600 text-[11px] font-bold uppercase tracking-[0.16em] bg-blue-50 px-3 py-1.5 rounded-full">
             <Users className="w-3.5 h-3.5" /> Struktur Pimpinan
           </span>
           <h2 className="mt-4 text-3xl font-black text-slate-900 tracking-tight">Pejabat Bandara</h2>
-          <p className="mt-2.5 text-slate-500 text-[14px]">Jajaran pimpinan Kantor UPBU Kelas I APT Pranoto Samarinda.</p>
+          <p className="mt-2.5 text-slate-500 text-[14px]">Jajaran pimpinan {ORG_NAME}.</p>
         </motion.div>
 
         <motion.div variants={container} initial="hidden" whileInView="show" viewport={{ once: true }} className="mt-10 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5">
-          {PEJABAT.map((p, i) => (
-            <motion.div key={p.name} variants={rise} whileHover={{ y: -8 }} className="group relative">
-              <div className="relative rounded-3xl overflow-hidden bg-gradient-to-b from-blue-50 to-slate-100 aspect-[3/4]">
-                <div className="absolute inset-x-4 top-6 h-40 rounded-full bg-gradient-to-tr from-blue-400 via-cyan-300 to-amber-300 blur-2xl opacity-50 group-hover:opacity-70 transition-opacity" />
-                <img src={p.img} alt={p.name} className="relative w-full h-full object-contain p-4 pb-10 group-hover:scale-105 transition-transform duration-500" />
-                <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#0b1e5b]/85 to-transparent" />
-                {i === 0 && (
+          {OFFICIALS.map((p) => (
+            <motion.button
+              key={p.slug}
+              type="button"
+              onClick={() => setOpenOfficial(p)}
+              aria-haspopup="dialog"
+              variants={rise}
+              whileHover={{ y: -8 }}
+              className="group relative text-left cursor-pointer rounded-3xl focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+            >
+              {/* Bingkai putih, tanpa glow: foto resmi punya latar berbeda-beda
+                  (satu di antaranya JPEG berlatar putih opak), sehingga latar
+                  biru + blur akan menampakkan kotak putih di baliknya. */}
+              <div className="relative rounded-3xl overflow-hidden bg-gradient-to-b from-white to-slate-50 border border-slate-100 aspect-[3/4]">
+                {/* eslint-disable-next-line @next/next/no-img-element -- aset statis lokal */}
+                <img
+                  src={p.photo}
+                  alt={p.name}
+                  loading="lazy"
+                  className={`relative w-full h-full object-contain object-bottom p-3 pb-8 group-hover:scale-105 transition-transform duration-500 ${PHOTO_FIT[p.slug] ?? ''}`}
+                />
+                <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#0b1e5b]/90 via-[#0b1e5b]/55 to-transparent" />
+
+                {p.slug === HEAD_OFFICIAL.slug && (
                   <span className="absolute top-3 left-3 bg-amber-400 text-[#0b1e5b] text-[9.5px] font-black uppercase tracking-wider px-2 py-1 rounded-full">
                     Kepala Kantor
                   </span>
                 )}
+
                 <div className="absolute inset-x-0 bottom-0 p-3.5">
-                  <p className="text-white font-black text-[13px] leading-tight line-clamp-2">{p.name}</p>
-                  <p className="text-cyan-200 text-[10.5px] mt-0.5 line-clamp-2">{p.role}</p>
+                  <p className="text-white font-black text-[12.5px] leading-tight line-clamp-2">{p.name}</p>
+                  <p className="text-cyan-200 text-[10.5px] mt-0.5 line-clamp-2">{p.shortTitle}</p>
+                  <span className="mt-1.5 inline-flex items-center gap-1 text-cyan-300/90 text-[9.5px] font-semibold">
+                    Baca profil selengkapnya
+                    <ArrowRight className="w-3 h-3 -translate-x-0.5 group-hover:translate-x-0 transition-transform" />
+                  </span>
                 </div>
               </div>
-            </motion.div>
+            </motion.button>
           ))}
         </motion.div>
+
+        <OfficialDialog official={openOfficial} onClose={() => setOpenOfficial(null)} />
       </section>
 
-      {/* ============ 8. CTA ============ */}
+      {/* ============ 11. STRUKTUR ORGANISASI & LOKASI ============ */}
+      <section className="max-w-[1400px] mx-auto px-4 sm:px-6 pb-4">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
+          {/* bagan */}
+          <motion.div
+            id="struktur"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="lg:col-span-3 bg-white rounded-3xl border border-slate-100 shadow-sm p-5 scroll-mt-24"
+          >
+            <div className="flex items-center gap-2.5">
+              <span className="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+                <Network className="w-5 h-5 text-blue-600" />
+              </span>
+              <h2 className="text-[17px] font-black text-slate-900">Struktur Organisasi</h2>
+            </div>
+
+            {/* Bagan berukuran 1280×901 dan tidak terbaca inline di layar
+                sempit; tautan buka-ukuran-penuh memberi zoom bawaan browser. */}
+            <a
+              href={ORG_CHART.src}
+              target="_blank"
+              rel="noreferrer"
+              className="group relative mt-4 block rounded-2xl overflow-hidden border border-slate-100"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- aset statis lokal */}
+              <img src={ORG_CHART.src} alt="Bagan struktur organisasi Bandara APT Pranoto" loading="lazy" className="w-full h-auto" />
+              <span className="absolute top-3 right-3 inline-flex items-center gap-1.5 bg-white/95 backdrop-blur text-slate-700 group-hover:text-blue-700 text-[11.5px] font-bold px-3 py-1.5 rounded-full shadow-sm transition-colors">
+                <Maximize2 className="w-3.5 h-3.5" /> Buka ukuran penuh
+              </span>
+            </a>
+
+            <p className="mt-3 text-[11px] text-slate-400 leading-relaxed">{ORG_CHART.caption}</p>
+          </motion.div>
+
+          {/* lokasi & kontak */}
+          <motion.div
+            id="lokasi"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="lg:col-span-2 bg-white rounded-3xl border border-slate-100 shadow-sm p-6 scroll-mt-24"
+          >
+            <div className="flex items-center gap-2.5">
+              <span className="w-10 h-10 rounded-2xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
+                <MapPin className="w-5 h-5 text-emerald-600" />
+              </span>
+              <h2 className="text-[17px] font-black text-slate-900">Lokasi &amp; Kontak</h2>
+            </div>
+
+            <div className="mt-5 space-y-4">
+              <div className="border-l-2 border-blue-100 pl-3">
+                <p className="text-[10.5px] uppercase tracking-wider text-slate-400 font-bold">Alamat</p>
+                <p className="mt-0.5 text-[13px] text-slate-700 leading-relaxed">{CONTACT.address}</p>
+              </div>
+
+              <a href={`tel:${CONTACT.phoneHref}`} className="block border-l-2 border-blue-100 pl-3 group">
+                <p className="text-[10.5px] uppercase tracking-wider text-slate-400 font-bold">Telepon</p>
+                <p className="mt-0.5 text-[13px] font-semibold text-slate-700 group-hover:text-blue-700 transition-colors flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5 text-blue-600" /> {CONTACT.phone}
+                </p>
+              </a>
+
+              <a href={`mailto:${CONTACT.email}`} className="block border-l-2 border-blue-100 pl-3 group">
+                <p className="text-[10.5px] uppercase tracking-wider text-slate-400 font-bold">Email</p>
+                <p className="mt-0.5 text-[13px] font-semibold text-slate-700 group-hover:text-blue-700 transition-colors break-all flex items-center gap-1.5">
+                  <Mail className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" /> {CONTACT.email}
+                </p>
+              </a>
+
+              <div className="border-l-2 border-blue-100 pl-3">
+                <p className="text-[10.5px] uppercase tracking-wider text-slate-400 font-bold">Jam Operasional</p>
+                <p className="mt-0.5 text-[13px] text-slate-700 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-blue-600" /> {CONTACT.operationalHours}
+                </p>
+              </div>
+
+              <div className="border-l-2 border-blue-100 pl-3">
+                <p className="text-[10.5px] uppercase tracking-wider text-slate-400 font-bold">Koordinat</p>
+                <p className="mt-0.5 text-[13px] text-slate-700 tabular-nums flex items-center gap-1.5">
+                  <Navigation className="w-3.5 h-3.5 text-blue-600" />
+                  {CONTACT.lat.toFixed(5)}, {CONTACT.lon.toFixed(5)}
+                </p>
+              </div>
+            </div>
+
+            {/* Tautan keluar, bukan peta tersemat: portal harus tetap berguna
+                di jaringan bandara tanpa jalur ke internet. */}
+            <a
+              href={MAPS_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-5 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[13px] py-3 rounded-2xl shadow-lg shadow-blue-600/20 transition-colors"
+            >
+              <MapPin className="w-4 h-4" /> Buka di Google Maps
+            </a>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ============ 12. CTA ============ */}
       <section className="max-w-[1400px] mx-auto px-4 sm:px-6 pb-20">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
