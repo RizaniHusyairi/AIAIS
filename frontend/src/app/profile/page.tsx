@@ -6,13 +6,14 @@ import { AnimatePresence, motion, useInView } from 'framer-motion';
 import { useSetting } from '@/lib/settings';
 import {
   OFFICIALS, HEAD_OFFICIAL, ORG_NAME, VISI, MISI, SEJARAH, TIMELINE,
-  STATUS_BLU, TUGAS, FUNGSI, ROUTES, CONTACT, ORG_CHART, MAPS_URL,
+  STATUS_BLU, TUGAS, FUNGSI, ROUTES, CONTACT, MAPS_URL,
   type Official,
 } from '@/lib/airportProfile';
+import OrgChart from '@/components/profile/OrgChart';
 import {
   Plane, Compass, Target, Eye, ShieldCheck, Award, MapPin, Ruler, Building2, Users,
   Radio, Flame, ArrowRight, Quote, CheckCircle2, Sparkles, Navigation, Clock, Globe2, Heart,
-  ScrollText, Scale, Route, Network, Phone, Mail, Maximize2, X, GraduationCap, Briefcase,
+  ScrollText, Scale, Route, Phone, Mail, X, GraduationCap, Briefcase,
 } from 'lucide-react';
 
 /* ================================================================
@@ -873,43 +874,26 @@ export default function ProfilePage() {
         <OfficialDialog official={openOfficial} onClose={() => setOpenOfficial(null)} />
       </section>
 
-      {/* ============ 11. STRUKTUR ORGANISASI & LOKASI ============ */}
+      {/* ============ 11. STRUKTUR ORGANISASI ============ */}
+      {/*
+        Bagan ini dulu berupa gambar raster 1280×901 yang dibuka di tab baru.
+        Kini isinya dirender sebagai data: dapat dicari, terbaca di ponsel,
+        terjangkau pembaca layar, dan tiap unitnya bertaut ke dialog pejabat.
+        Sumber dan aturan transkripsinya ada di lib/orgStructure.ts.
+      */}
+      <motion.section
+        id="struktur"
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        className="max-w-[1400px] mx-auto px-4 sm:px-6 pb-8 scroll-mt-24"
+      >
+        <OrgChart onOpenOfficial={setOpenOfficial} />
+      </motion.section>
+
+      {/* ============ 11b. LOKASI & KONTAK ============ */}
       <section className="max-w-[1400px] mx-auto px-4 sm:px-6 pb-4">
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
-          {/* bagan */}
-          <motion.div
-            id="struktur"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="lg:col-span-3 bg-white rounded-3xl border border-slate-100 shadow-sm p-5 scroll-mt-24"
-          >
-            <div className="flex items-center gap-2.5">
-              <span className="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-                <Network className="w-5 h-5 text-blue-600" />
-              </span>
-              <h2 className="text-[17px] font-black text-slate-900">Struktur Organisasi</h2>
-            </div>
-
-            {/* Bagan berukuran 1280×901 dan tidak terbaca inline di layar
-                sempit; tautan buka-ukuran-penuh memberi zoom bawaan browser. */}
-            <a
-              href={ORG_CHART.src}
-              target="_blank"
-              rel="noreferrer"
-              className="group relative mt-4 block rounded-2xl overflow-hidden border border-slate-100"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element -- aset statis lokal */}
-              <img src={ORG_CHART.src} alt="Bagan struktur organisasi Bandara APT Pranoto" loading="lazy" className="w-full h-auto" />
-              <span className="absolute top-3 right-3 inline-flex items-center gap-1.5 bg-white/95 backdrop-blur text-slate-700 group-hover:text-blue-700 text-[11.5px] font-bold px-3 py-1.5 rounded-full shadow-sm transition-colors">
-                <Maximize2 className="w-3.5 h-3.5" /> Buka ukuran penuh
-              </span>
-            </a>
-
-            <p className="mt-3 text-[11px] text-slate-400 leading-relaxed">{ORG_CHART.caption}</p>
-          </motion.div>
-
-          {/* lokasi & kontak */}
           <motion.div
             id="lokasi"
             initial={{ opacity: 0, y: 20 }}

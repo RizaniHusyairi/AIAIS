@@ -16,11 +16,12 @@
  *   jumlah butir Misi (5 vs 6), dan daftar rute semuanya berbeda.
  *   Bila terjadi selisih, YANG TAYANG DI aptpairport.id YANG MENANG.
  *
- *   Gambar bagan struktur organisasi (public/profil/struktur-organisasi.jpg)
- *   berasal dari repo legacy dan bertanggal lebih awal daripada halaman
- *   pejabat: pada bagan tertulis "MURDOKO, A.Md", sedangkan halaman tayang
- *   menulis "MURDOKO, S.H.". Nama dan gelar di berkas ini mengikuti halaman
- *   tayang; bagannya ditampilkan dengan keterangan bahwa ia arsip.
+ *   Bagan struktur organisasi (public/profil/struktur-organisasi.jpg) berasal
+ *   dari repo legacy dan bertanggal lebih awal daripada halaman pejabat: pada
+ *   bagan tertulis "MURDOKO, A.Md", sedangkan halaman tayang menulis
+ *   "MURDOKO, S.H.". Nama dan gelar di berkas ini mengikuti halaman tayang.
+ *   Isi bagan itu sendiri sudah ditranskrip ke `lib/orgStructure.ts` dan
+ *   dirender sebagai data, bukan gambar.
  *
  *   Seluruh teks bertanda "verbatim" disalin apa adanya. JANGAN merapikan
  *   ejaan, tanda baca, atau kapitalisasinya — ini kutipan dokumen resmi,
@@ -270,12 +271,12 @@ export const CONTACT = {
   lon: AIRPORTS[HOME_IATA].lon,
 } as const;
 
-export const ORG_CHART = {
-  src: '/profil/struktur-organisasi.jpg',
-  /** Wajib ditampilkan: bagan lebih lama daripada daftar pejabat di atasnya. */
-  caption:
-    'Bagan arsip struktur organisasi. Gelar sebagian pejabat pada bagan dapat berbeda dengan data terkini di atas; yang berlaku adalah data pejabat pada halaman ini.',
-} as const;
+/*
+ * `ORG_CHART` (gambar bagan struktur organisasi) sudah tidak ada di sini.
+ * Bagannya kini dirender sebagai data terstruktur di `lib/orgStructure.ts`,
+ * bukan sebagai berkas gambar. Berkas `public/profil/struktur-organisasi.jpg`
+ * tetap disimpan sebagai arsip sumber transkripsinya.
+ */
 
 /** Tautan peta eksternal; tanpa peta tersemat agar tetap berguna tanpa internet. */
 export const MAPS_URL = `https://www.google.com/maps/search/?api=1&query=${CONTACT.lat},${CONTACT.lon}`;

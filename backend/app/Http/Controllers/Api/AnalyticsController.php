@@ -14,22 +14,36 @@ class AnalyticsController extends Controller
 {
     public function dashboard()
     {
-        $totalVisitors = VisitorLog::count() + 1420; // total traffic
-        $todayVisitors = VisitorLog::whereDate('created_at', now())->count() + 185;
+        // Angka ini juga tayang di footer portal untuk dilihat publik, jadi
+        // seluruhnya dihitung apa adanya dari `visitor_logs`. Sebelumnya
+        // ditambah konstanta (+1420 dan +185) dan `top_pages`/`device_stats`
+        // adalah larik tetap — dasbor menampilkan lalu lintas yang tidak
+        // pernah terjadi, dan kini akan bertentangan dengan angka di footer.
+        $totalVisitors = VisitorLog::count();
+        $todayVisitors = VisitorLog::whereDate('created_at', now())->count();
 
-        $topPages = [
-            ['page' => 'Jadwal Penerbangan (FIDS)', 'views' => 14200],
-            ['page' => 'Beranda / Homepage', 'views' => 9850],
-            ['page' => 'Fasilitas & Layanan', 'views' => 4300],
-            ['page' => 'Direktori Tenant & Resto', 'views' => 2750],
-            ['page' => 'Pengaduan Online', 'views' => 1890],
-        ];
+        $topPages = VisitorLog::select('page_url', DB::raw('COUNT(*) as views'))
+            ->groupBy('page_url')
+            ->orderByDesc('views')
+            ->limit(5)
+            ->get()
+            ->map(fn ($row) => ['page' => $row->page_url, 'views' => (int) $row->views])
+            ->all();
 
-        $deviceStats = [
-            ['device' => 'Mobile (Smartphone)', 'percentage' => 68],
-            ['device' => 'Desktop', 'percentage' => 27],
-            ['device' => 'Tablet', 'percentage' => 5],
-        ];
+        $deviceRows = VisitorLog::select('device', DB::raw('COUNT(*) as total'))
+            ->groupBy('device')
+            ->orderByDesc('total')
+            ->get();
+
+        // Persentase dibulatkan terhadap total baris; saat belum ada kunjungan
+        // sama sekali, daftarnya kosong — bukan 0% untuk tiap perangkat.
+        $deviceTotal = (int) $deviceRows->sum('total');
+        $deviceStats = $deviceRows
+            ->map(fn ($row) => [
+                'device' => $row->device,
+                'percentage' => $deviceTotal > 0 ? (int) round($row->total / $deviceTotal * 100) : 0,
+            ])
+            ->all();
 
         $flightStats = [
             'total' => Flight::count(),
@@ -49,8 +63,13 @@ class AnalyticsController extends Controller
             'overview' => [
                 'total_visitors' => $totalVisitors,
                 'today_visitors' => $todayVisitors,
-                'bounce_rate' => '24.5%',
-                'avg_session_duration' => '3m 45s',
+                // Keduanya null, bukan angka. `visitor_logs` mencatat satu
+                // baris per halaman tanpa penanda sesi, sehingga rasio pentalan
+                // dan durasi sesi tidak dapat dihitung darinya. Nilai tetap
+                // '24.5%' dan '3m 45s' yang dulu ada di sini adalah karangan;
+                // dasbor sudah menampilkan '-' bila nilainya kosong.
+                'bounce_rate' => null,
+                'avg_session_duration' => null,
             ],
             'top_pages' => $topPages,
             'device_stats' => $deviceStats,

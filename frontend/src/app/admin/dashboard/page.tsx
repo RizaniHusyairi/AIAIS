@@ -15,7 +15,9 @@ import {
 } from 'lucide-react';
 
 type Analytics = {
-  overview: { total_visitors: number; today_visitors: number; bounce_rate: string; avg_session_duration: string };
+  // `bounce_rate` dan `avg_session_duration` bernilai null: skema visitor_logs
+  // tidak menyimpan penanda sesi sehingga keduanya tidak dapat dihitung.
+  overview: { total_visitors: number; today_visitors: number; bounce_rate: string | null; avg_session_duration: string | null };
   top_pages: { page: string; views: number }[];
   device_stats: { device: string; percentage: number }[];
   flight_stats: { total: number; boarding: number; landed: number; delayed: number };

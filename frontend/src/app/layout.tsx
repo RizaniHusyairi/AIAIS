@@ -3,6 +3,8 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import PwaRegister from "@/components/pwa/PwaRegister";
 import MobileRedirect from "@/components/pwa/MobileRedirect";
+import VisitorPing from "@/components/layout/VisitorPing";
+import ChatLauncher from "@/components/layout/ChatLauncher";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -40,9 +42,15 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col bg-slate-50 text-slate-900 font-sans selection:bg-blue-500 selection:text-white">
         <PwaRegister />
         <MobileRedirect />
+        {/* Mencatat kunjungan halaman publik; tidak menampilkan apa pun.
+            Terpisah dari <Footer /> karena footer tidak tampil di PWA
+            sedangkan kunjungannya tetap dihitung. */}
+        <VisitorPing />
         <Navbar />
         <main className="flex-grow">{children}</main>
         <Footer />
+        {/* Peluncur Pusat Bantuan; menyembunyikan dirinya di /admin dan /app. */}
+        <ChatLauncher />
       </body>
     </html>
   );

@@ -100,6 +100,9 @@ export interface Tenant {
   description?: string;
 }
 
+export type ComplaintStatus = 'submitted' | 'in_progress' | 'resolved' | 'rejected';
+
+/** Bentuk penuh — hanya dikembalikan endpoint admin. */
 export interface Complaint {
   id: number;
   ticket_number: string;
@@ -109,10 +112,32 @@ export interface Complaint {
   category: string;
   subject: string;
   description: string;
-  status: 'submitted' | 'in_progress' | 'resolved' | 'rejected';
-  admin_response?: string;
-  responded_at?: string;
+  /** Lintasan berkas mentah; pakai `attachment_url` untuk menampilkannya. */
+  attachment?: string | null;
+  /** `$appends` dari backend; null bila berkasnya tidak ada di cakram. */
+  attachment_url?: string | null;
+  status: ComplaintStatus;
+  admin_response?: string | null;
+  responded_at?: string | null;
   created_at: string;
+}
+
+/**
+ * Bentuk pelacakan publik — SENGAJA tanpa identitas pelapor.
+ *
+ * Nomor tiket dapat ditebak, jadi `Complaint::publicView()` di backend tidak
+ * pernah mengirim nama, surel, maupun telepon. Tipe ini mencerminkan itu;
+ * jangan menambahkan medan identitas ke sini.
+ */
+export interface ComplaintTracking {
+  ticket_number: string;
+  category: string;
+  subject: string;
+  status: ComplaintStatus;
+  submitted_at: string;
+  admin_response?: string | null;
+  responded_at?: string | null;
+  attachment_url?: string | null;
 }
 
 /**
@@ -156,6 +181,24 @@ export interface DocumentItem {
   download_count: number;
 }
 
+/**
+ * Surat resmi pada menu Regulasi.
+ *
+ * `file_url` bernilai null bila berkasnya tidak ada di cakram — daftar publik
+ * sudah menyaringnya, tetapi daftar admin sengaja tetap memuatnya agar
+ * petugas melihat surat mana yang berkasnya hilang.
+ */
+export interface Letter {
+  id: number;
+  type: 'keputusan' | 'edaran';
+  number: string;
+  title: string;
+  issue_date: string;
+  file_path: string;
+  file_url: string | null;
+  has_file: boolean;
+}
+
 export interface ChatMessage {
   id: number;
   chat_thread_id: number;
@@ -166,6 +209,16 @@ export interface ChatMessage {
   created_at: string;
 }
 
+export type ChatStatus = 'open' | 'active' | 'resolved' | 'closed';
+
+/**
+ * Percakapan bantuan.
+ *
+ * `visitor_email` dan `visitor_phone` HANYA terisi pada respons admin —
+ * `ChatThread::publicView()` di backend sengaja tidak mengirimkannya kepada
+ * pengunjung, karena nomor tiket dapat ditebak. Jangan menampilkan kedua
+ * medan itu di halaman publik; nilainya memang akan selalu kosong di sana.
+ */
 export interface ChatThread {
   id: number;
   ticket_number: string;
@@ -174,9 +227,30 @@ export interface ChatThread {
   visitor_phone?: string | null;
   category: string;
   subject: string;
-  status: 'open' | 'active' | 'resolved' | 'closed';
+  status: ChatStatus;
   last_activity_at: string;
   created_at: string;
   messages?: ChatMessage[];
+  /** Penanda respons polling delta: `messages` hanya berisi pesan baru. */
+  is_delta?: boolean;
+  /** Hanya pada daftar admin. */
+  unread_count?: number;
+  message_count?: number;
+  last_message?: ChatMessage | null;
+}
+
+/** Penilaian kepuasan atas satu tiket yang penanganannya sudah selesai. */
+export interface RatingSummary {
+  /** null bila belum ada penilaian sama sekali — bukan nol bintang. */
+  average: number | null;
+  total: number;
+  distribution: { score: number; total: number }[];
+  latest_comments: {
+    ticket_number: string;
+    channel: 'chat' | 'complaint';
+    score: number;
+    comment: string;
+    created_at: string;
+  }[];
 }
 

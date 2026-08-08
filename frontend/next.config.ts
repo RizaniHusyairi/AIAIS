@@ -39,7 +39,10 @@ process.env.NEXT_PUBLIC_APP_VERSION = APP_VERSION;
 
 const nextConfig: NextConfig = {
   // Izinkan dev server diakses dari perangkat lain di LAN
-  allowedDevOrigins: ["10.10.20.127", "10.10.20.42", "10.10.20.*", "*.local", "localhost:3000"],
+  // Subnet ditulis dengan pola, bukan alamat tunggal: IP mesin pengembang
+  // diberikan DHCP dan sudah beberapa kali berpindah subnet, sehingga daftar
+  // alamat persis selalu tertinggal.
+  allowedDevOrigins: ["10.10.20.*", "10.133.63.*", "192.168.*", "*.local", "localhost:3000"],
 
   /**
    * Dokumen Next 16 menandai `env` sebagai `version: legacy`, tetapi kuncinya

@@ -7,7 +7,7 @@ import { StatusBar, AppHeader, listContainer, listItem } from '@/components/pwa/
 import { Search, MessageCircle, PackageSearch, Calendar, Plane, Briefcase, CircleHelp, ChevronRight, Palmtree } from 'lucide-react';
 
 const SERVICES = [
-  { name: 'Pengaduan & Saran', desc: 'Sampaikan keluhan atau saran Anda', icon: MessageCircle, color: '#2563eb', bg: '#eff6ff', href: '/app/layanan' },
+  { name: 'Pusat Bantuan', desc: 'Tanya petugas, adukan, atau lacak tiket', icon: MessageCircle, color: '#2563eb', bg: '#eff6ff', href: '/app/layanan/bantuan' },
   { name: 'Lost & Found', desc: 'Layanan barang hilang', icon: PackageSearch, color: '#059669', bg: '#ecfdf5', href: '/app/layanan' },
   { name: 'Booking Fasilitas', desc: 'Pesan ruang meeting & fasilitas', icon: Calendar, color: '#7c3aed', bg: '#f5f3ff', href: '/app/layanan' },
   { name: 'Informasi Penerbangan', desc: 'Jadwal & status penerbangan', icon: Plane, color: '#0891b2', bg: '#ecfeff', href: '/app/penerbangan' },

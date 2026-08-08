@@ -1,15 +1,30 @@
 'use client';
 
-import React, { useEffect, useMemo, useState, useRef } from 'react';
+/**
+ * Helpdesk — chat dan pengaduan dalam satu halaman.
+ *
+ * Sebelumnya halaman ini hanya melayani chat meski namanya "Pengaduan", dan
+ * modul Complaint beserta seluruh endpoint-nya tidak punya antarmuka sama
+ * sekali: pengaduan yang masuk tidak akan pernah terlihat petugas. Tab kedua
+ * di bawah menutup lubang itu.
+ *
+ * Catatan penting soal data: `GET /admin/chat` kini TIDAK lagi memuat seluruh
+ * pesan tiap percakapan — hanya pesan terakhir dan jumlah yang belum dibaca.
+ * Isi lengkapnya diambil `GET /admin/chat/{id}` saat satu percakapan dibuka.
+ * Bentuk lama memuat semua pesan dari semua percakapan setiap lima detik.
+ */
+
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { adminFetch } from '@/lib/adminApi';
-import { ChatThread, ChatMessage } from '@/types';
+import type { ChatThread, Complaint, RatingSummary } from '@/types';
 import {
-  PageHeader, Panel, Btn, Badge, Field, Toast, ToastMsg,
-  Loading, EmptyState, StatCard, stagger,
+  PageHeader, Panel, Btn, Badge, Modal, ConfirmDialog, Toast, ToastMsg,
+  Loading, EmptyState, StatCard, Table, Row, Cell, SearchBox, stagger,
 } from '@/components/admin/ui';
 import {
-  MessageSquare, RefreshCw, CheckCircle2, Clock, AlertTriangle, Reply, Mail, Phone, Ticket,
-  Send, User, Headphones, Check, Search, Filter, Sparkles, MessageCircle, X
+  MessageSquare, RefreshCw, CheckCircle2, Clock, AlertTriangle, Send, User,
+  Headphones, Search, MessageCircle, Trash2, Star, FileWarning, Paperclip,
+  Mail, Phone, ExternalLink, Reply,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -18,6 +33,9 @@ const STATUS_META: Record<string, { label: string; color: string }> = {
   active: { label: 'Sedang Berlangsung', color: '#38bdf8' },
   resolved: { label: 'Selesai', color: '#34d399' },
   closed: { label: 'Ditutup', color: '#94a3b8' },
+  submitted: { label: 'Baru Masuk', color: '#38bdf8' },
+  in_progress: { label: 'Ditindaklanjuti', color: '#fbbf24' },
+  rejected: { label: 'Ditolak', color: '#fb7185' },
 };
 
 const CANNED_RESPONSES = [
@@ -27,240 +45,410 @@ const CANNED_RESPONSES = [
   'Layanan parkir inap 24 jam beroperasi setiap hari dengan tarif Rp75.000/24 jam dilengkapi gratis shuttle car.',
 ];
 
-export default function AdminChatPage() {
+const jam = (iso?: string | null) =>
+  iso ? new Date(iso).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '';
+
+const tanggal = (iso?: string | null) =>
+  iso ? new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+
+type Tab = 'chat' | 'complaint';
+
+export default function AdminHelpdeskPage() {
+  const [tab, setTab] = useState<Tab>('chat');
+  const [toast, setToast] = useState<ToastMsg>(null);
+  const [rating, setRating] = useState<RatingSummary | null>(null);
+
+  /* ---------------- chat ---------------- */
   const [threads, setThreads] = useState<ChatThread[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingThreads, setLoadingThreads] = useState(true);
   const [q, setQ] = useState('');
   const [statusTab, setStatusTab] = useState<'all' | 'open' | 'active' | 'resolved'>('all');
 
   const [activeThread, setActiveThread] = useState<ChatThread | null>(null);
   const [replyText, setReplyText] = useState('');
-  const [newStatus, setNewStatus] = useState<'open' | 'active' | 'resolved' | 'closed'>('active');
   const [sending, setSending] = useState(false);
-  const [toast, setToast] = useState<ToastMsg>(null);
-
+  const [hapusChat, setHapusChat] = useState<number | null>(null);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
-  const loadThreads = async (autoSelectActive = false) => {
-    setLoading(true);
-    const res = await adminFetch<ChatThread[]>('/chat');
-    const raw: any = res.data;
-    const list: ChatThread[] = Array.isArray(raw) ? raw : raw?.data ?? [];
-    setThreads(list);
-    setLoading(false);
+  /* ---------------- pengaduan ---------------- */
+  const [complaints, setComplaints] = useState<Complaint[]>([]);
+  const [loadingComplaints, setLoadingComplaints] = useState(true);
+  const [qAduan, setQAduan] = useState('');
+  const [aduanTerbuka, setAduanTerbuka] = useState<Complaint | null>(null);
+  const [tanggapan, setTanggapan] = useState('');
+  const [statusAduan, setStatusAduan] = useState<'in_progress' | 'resolved' | 'rejected'>('resolved');
+  const [menyimpanAduan, setMenyimpanAduan] = useState(false);
+  const [hapusAduan, setHapusAduan] = useState<number | null>(null);
 
-    if (autoSelectActive && activeThread) {
-      const updated = list.find((t) => t.id === activeThread.id);
-      if (updated) setActiveThread(updated);
-    }
+  /* ---------------- pemuatan ---------------- */
+
+  const loadThreads = async () => {
+    const res = await adminFetch<ChatThread[]>('/chat');
+    setThreads(Array.isArray(res.data) ? res.data : []);
+    setLoadingThreads(false);
+  };
+
+  const loadComplaints = async () => {
+    const res = await adminFetch<Complaint[]>('/complaints');
+    setComplaints(Array.isArray(res.data) ? res.data : []);
+    setLoadingComplaints(false);
+  };
+
+  const loadRating = async () => {
+    const res = await adminFetch<RatingSummary>('/ratings/summary');
+    if (res.ok && res.data) setRating(res.data);
+  };
+
+  /** Isi lengkap satu percakapan; daftar hanya membawa pesan terakhir. */
+  const bukaThread = async (t: ChatThread) => {
+    setActiveThread(t);
+    setReplyText('');
+
+    const res = await adminFetch<ChatThread>(`/chat/${t.id}`);
+    if (res.ok && res.data) setActiveThread(res.data);
+  };
+
+  const muatSemua = () => {
+    loadThreads();
+    loadComplaints();
+    loadRating();
+    if (activeThread) bukaThread(activeThread);
   };
 
   useEffect(() => {
     loadThreads();
-    const interval = setInterval(() => loadThreads(true), 5000);
-    return () => clearInterval(interval);
+    loadComplaints();
+    loadRating();
   }, []);
+
+  // Denyut hanya menyegarkan DAFTAR; percakapan yang sedang dibuka ikut
+  // disegarkan agar balasan pengunjung muncul tanpa memuat ulang halaman.
+  useEffect(() => {
+    const t = setInterval(() => {
+      loadThreads();
+      if (activeThread) {
+        adminFetch<ChatThread>(`/chat/${activeThread.id}`).then((res) => {
+          if (res.ok && res.data) setActiveThread(res.data);
+        });
+      }
+    }, 8000);
+    return () => clearInterval(t);
+  }, [activeThread?.id]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [activeThread?.messages]);
+  }, [activeThread?.messages?.length]);
 
-  const visibleThreads = useMemo(() => {
-    const s = q.toLowerCase();
-    return threads.filter((t) => {
-      const matchTab = statusTab === 'all' || t.status === statusTab;
-      const matchQ = !q || [t.ticket_number, t.visitor_name, t.subject, t.category].some((v) => String(v ?? '').toLowerCase().includes(s));
-      return matchTab && matchQ;
-    });
-  }, [threads, q, statusTab]);
+  /* ---------------- aksi chat ---------------- */
 
-  const stats = useMemo(() => ({
-    total: threads.length,
-    pending: threads.filter((t) => t.status === 'open').length,
-    active: threads.filter((t) => t.status === 'active').length,
-    resolved: threads.filter((t) => t.status === 'resolved').length,
-  }), [threads]);
-
-  const selectThread = (t: ChatThread) => {
-    setActiveThread(t);
-    setNewStatus(t.status === 'open' ? 'active' : t.status);
-    setReplyText('');
-  };
-
-  const handleSendReply = async (e: React.FormEvent) => {
+  const kirimBalasan = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeThread || !replyText.trim() || sending) return;
 
     setSending(true);
-    const res = await adminFetch(`/chat/${activeThread.id}/reply`, {
+    const res = await adminFetch<ChatThread>(`/chat/${activeThread.id}/reply`, {
       method: 'POST',
-      body: { message: replyText.trim(), status: newStatus },
+      body: { message: replyText.trim(), status: activeThread.status === 'open' ? 'active' : activeThread.status },
     });
     setSending(false);
 
     if (res.ok && res.data) {
       setReplyText('');
-      setToast({ text: 'Tanggapan admin berhasil dikirim', kind: 'success' });
-      loadThreads(true);
+      setActiveThread(res.data);
+      setToast({ text: 'Tanggapan berhasil dikirim', kind: 'success' });
+      loadThreads();
     } else {
       setToast({ text: res.message || 'Gagal mengirim tanggapan', kind: 'error' });
     }
   };
 
-  const handleUpdateStatus = async (status: 'open' | 'active' | 'resolved' | 'closed') => {
+  const ubahStatus = async (status: string) => {
     if (!activeThread) return;
-    setNewStatus(status);
 
-    const res = await adminFetch(`/chat/${activeThread.id}/status`, {
+    const res = await adminFetch<ChatThread>(`/chat/${activeThread.id}/status`, {
       method: 'PUT',
       body: { status },
     });
 
-    if (res.ok) {
-      setToast({ text: `Status percakapan diubah ke ${STATUS_META[status]?.label}`, kind: 'success' });
-      loadThreads(true);
+    if (res.ok && res.data) {
+      setActiveThread({ ...activeThread, status: res.data.status });
+      setToast({ text: `Status diubah ke ${STATUS_META[status]?.label ?? status}`, kind: 'success' });
+      loadThreads();
     }
   };
+
+  const jalankanHapusChat = async () => {
+    if (hapusChat == null) return;
+    const res = await adminFetch(`/chat/${hapusChat}`, { method: 'DELETE' });
+    setHapusChat(null);
+
+    if (res.ok) {
+      if (activeThread?.id === hapusChat) setActiveThread(null);
+      setToast({ text: 'Percakapan dihapus', kind: 'success' });
+      loadThreads();
+    } else setToast({ text: res.message, kind: 'error' });
+  };
+
+  /* ---------------- aksi pengaduan ---------------- */
+
+  const bukaAduan = (c: Complaint) => {
+    setAduanTerbuka(c);
+    setTanggapan(c.admin_response ?? '');
+    setStatusAduan(c.status === 'submitted' ? 'in_progress' : (c.status as 'in_progress' | 'resolved' | 'rejected'));
+  };
+
+  const simpanAduan = async () => {
+    if (!aduanTerbuka) return;
+
+    if (!tanggapan.trim()) {
+      setToast({ text: 'Tanggapan wajib diisi sebelum status diubah.', kind: 'error' });
+      return;
+    }
+
+    setMenyimpanAduan(true);
+    const res = await adminFetch<Complaint>(`/complaints/${aduanTerbuka.id}/resolve`, {
+      method: 'PUT',
+      body: { status: statusAduan, admin_response: tanggapan.trim() },
+    });
+    setMenyimpanAduan(false);
+
+    if (res.ok) {
+      setAduanTerbuka(null);
+      setToast({ text: 'Pengaduan berhasil diperbarui', kind: 'success' });
+      loadComplaints();
+    } else setToast({ text: res.message, kind: 'error' });
+  };
+
+  const jalankanHapusAduan = async () => {
+    if (hapusAduan == null) return;
+    const res = await adminFetch(`/complaints/${hapusAduan}`, { method: 'DELETE' });
+    setHapusAduan(null);
+
+    if (res.ok) {
+      setToast({ text: 'Pengaduan dihapus', kind: 'success' });
+      loadComplaints();
+    } else setToast({ text: res.message, kind: 'error' });
+  };
+
+  /* ---------------- turunan ---------------- */
+
+  const visibleThreads = useMemo(() => {
+    const s = q.toLowerCase();
+    return threads.filter((t) => {
+      const cocokTab = statusTab === 'all' || t.status === statusTab;
+      const cocokQ = !q || [t.ticket_number, t.visitor_name, t.subject, t.category]
+        .some((v) => String(v ?? '').toLowerCase().includes(s));
+      return cocokTab && cocokQ;
+    });
+  }, [threads, q, statusTab]);
+
+  const visibleComplaints = useMemo(() => {
+    const s = qAduan.toLowerCase();
+    return complaints.filter((c) => !qAduan || [c.ticket_number, c.reporter_name, c.subject, c.category]
+      .some((v) => String(v ?? '').toLowerCase().includes(s)));
+  }, [complaints, qAduan]);
+
+  const stats = useMemo(() => ({
+    total: threads.length + complaints.length,
+    pending: threads.filter((t) => t.status === 'open').length
+      + complaints.filter((c) => c.status === 'submitted').length,
+    active: threads.filter((t) => t.status === 'active').length
+      + complaints.filter((c) => c.status === 'in_progress').length,
+    resolved: threads.filter((t) => t.status === 'resolved').length
+      + complaints.filter((c) => c.status === 'resolved').length,
+  }), [threads, complaints]);
+
+  /* ================================================================ */
 
   return (
     <>
       <Toast msg={toast} onDone={() => setToast(null)} />
 
       <PageHeader
-        icon={MessageCircle}
-        title="Helpdesk Chat, Kritik & Informasi"
-        subtitle="Kelola dan tanggapi percakapan langsung dari pengunjung bandara secara real-time"
+        icon={Headphones}
+        title="Helpdesk Pusat Bantuan"
+        subtitle="Percakapan langsung dan pengaduan resmi dari pengunjung bandara"
         action={
-          <Btn variant="ghost" onClick={() => loadThreads(true)}>
+          <Btn variant="ghost" onClick={muatSemua}>
             <RefreshCw className="w-4 h-4" /> Muat Ulang
           </Btn>
         }
       />
 
-      {/* Summary Cards */}
-      <motion.div variants={stagger} initial="hidden" animate="show" className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-        <StatCard label="Total Sesi Percakapan" value={stats.total} icon={MessageSquare} accent="#3b82f6" />
-        <StatCard label="Menunggu Balasan" value={stats.pending} icon={AlertTriangle} accent="#fbbf24" />
-        <StatCard label="Sedang Berlangsung" value={stats.active} icon={Clock} accent="#38bdf8" />
+      <motion.div variants={stagger} initial="hidden" animate="show" className="grid grid-cols-2 xl:grid-cols-5 gap-4">
+        <StatCard label="Total Tiket" value={stats.total} icon={MessageSquare} accent="#3b82f6" />
+        <StatCard label="Menunggu" value={stats.pending} icon={AlertTriangle} accent="#fbbf24" />
+        <StatCard label="Ditangani" value={stats.active} icon={Clock} accent="#38bdf8" />
         <StatCard label="Selesai" value={stats.resolved} icon={CheckCircle2} accent="#34d399" />
+        {/* Rata-rata kepuasan; '—' bila belum ada satu pun penilaian —
+            bukan nol, karena nol berarti "dinilai buruk". */}
+        <StatCard
+          label="Kepuasan (SKM)"
+          value={rating?.average != null ? `${rating.average.toFixed(2)} / 5` : '—'}
+          icon={Star}
+          accent="#f59e0b"
+          hint={rating ? `${rating.total} penilaian` : undefined}
+        />
       </motion.div>
 
-      {/* Helpdesk Split Screen Messenger Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[720px] mt-4">
-        {/* Left 5 Cols: Thread List */}
-        <Panel className="lg:col-span-5 flex flex-col overflow-hidden h-full">
-          <div className="p-4 border-b border-white/8 space-y-3 flex-shrink-0">
-            <div className="relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Cari tiket, nama, atau topik..."
-                className="w-full pl-9 pr-4 py-2 bg-slate-900/60 border border-white/10 rounded-xl text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-            </div>
+      {/* pemilih tab */}
+      <div className="flex gap-1 bg-slate-900/80 p-1 rounded-xl border border-white/5 mt-4 w-fit">
+        {([
+          { id: 'chat' as Tab, label: 'Chat', icon: MessageCircle, count: threads.length },
+          { id: 'complaint' as Tab, label: 'Pengaduan', icon: FileWarning, count: complaints.length },
+        ]).map((t) => {
+          const on = tab === t.id;
+          const Icon = t.icon;
+          return (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                on ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5" /> {t.label}
+              <span className={`px-1.5 py-0.5 rounded text-[10px] tabular-nums ${on ? 'bg-white/20' : 'bg-white/5'}`}>
+                {t.count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
 
-            {/* Status Tabs */}
-            <div className="flex gap-1 bg-slate-900/80 p-1 rounded-xl border border-white/5 overflow-x-auto no-scrollbar">
-              {(['all', 'open', 'active', 'resolved'] as const).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setStatusTab(tab)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors flex-1 text-center ${
-                    statusTab === tab ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  {tab === 'all' ? 'Semua' : tab === 'open' ? 'Menunggu' : tab === 'active' ? 'Berlangsung' : 'Selesai'}
-                </button>
-              ))}
-            </div>
-          </div>
+      {/* ============ TAB CHAT ============ */}
+      {tab === 'chat' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[720px] mt-4">
+          <Panel className="lg:col-span-5 flex flex-col overflow-hidden h-full">
+            <div className="p-4 border-b border-white/8 space-y-3 flex-shrink-0">
+              <div className="relative">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  placeholder="Cari tiket, nama, atau topik..."
+                  className="w-full pl-9 pr-4 py-2 bg-slate-900/60 border border-white/10 rounded-xl text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
 
-          {/* Threads Scroll List */}
-          <div className="flex-1 overflow-y-auto divide-y divide-white/5">
-            {loading && threads.length === 0 ? (
-              <Loading />
-            ) : visibleThreads.length > 0 ? (
-              visibleThreads.map((t) => {
-                const isSelected = activeThread?.id === t.id;
-                const hasUnread = t.messages?.some((m) => m.sender_type === 'visitor' && !m.is_read);
-
-                return (
+              <div className="flex gap-1 bg-slate-900/80 p-1 rounded-xl border border-white/5 overflow-x-auto no-scrollbar">
+                {(['all', 'open', 'active', 'resolved'] as const).map((t) => (
                   <button
-                    key={t.id}
-                    onClick={() => selectThread(t)}
-                    className={`w-full text-left p-4 transition-colors flex items-start gap-3 relative ${
-                      isSelected ? 'bg-blue-600/15 border-l-4 border-blue-500' : 'hover:bg-white/4'
+                    key={t}
+                    onClick={() => setStatusTab(t)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors flex-1 text-center cursor-pointer ${
+                      statusTab === t ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
                     }`}
                   >
-                    <div className="w-9 h-9 rounded-xl bg-slate-800 text-blue-400 flex items-center justify-center flex-shrink-0 font-bold text-xs mt-0.5 border border-white/10">
-                      {t.visitor_name.charAt(0).toUpperCase()}
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-mono text-[11px] font-bold text-blue-400">
-                          {t.ticket_number}
-                        </span>
-                        <span className="text-[10px] text-slate-500">
-                          {new Date(t.last_activity_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
-
-                      <h4 className="font-bold text-xs text-slate-200 truncate mt-0.5">
-                        {t.subject}
-                      </h4>
-
-                      <p className="text-[11px] text-slate-400 truncate mt-0.5">
-                        {t.visitor_name} • <span className="text-slate-500">{t.category}</span>
-                      </p>
-                    </div>
-
-                    {hasUnread && (
-                      <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse flex-shrink-0 mt-1" title="Pesan Belum Dibaca"></span>
-                    )}
+                    {t === 'all' ? 'Semua' : t === 'open' ? 'Menunggu' : t === 'active' ? 'Berlangsung' : 'Selesai'}
                   </button>
-                );
-              })
-            ) : (
-              <EmptyState text="Tidak ada percakapan" hint="Ubah tab filter atau kata kunci pencarian." />
-            )}
-          </div>
-        </Panel>
+                ))}
+              </div>
+            </div>
 
-        {/* Right 7 Cols: Chat Window & Reply */}
-        <Panel className="lg:col-span-7 flex flex-col overflow-hidden h-full">
-          {activeThread ? (
-            <div className="flex flex-col h-full">
-              {/* Header Chat Window */}
-              <div className="p-4 border-b border-white/8 flex items-center justify-between gap-3 bg-slate-900/60 flex-shrink-0">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono text-xs font-bold text-blue-400 bg-blue-950 px-2 py-0.5 rounded border border-blue-800/60">
-                      {activeThread.ticket_number}
-                    </span>
-                    <Badge
-                      text={STATUS_META[activeThread.status]?.label ?? activeThread.status}
-                      color={STATUS_META[activeThread.status]?.color}
-                    />
-                    <span className="text-xs text-slate-400">• {activeThread.category}</span>
+            <div className="flex-1 overflow-y-auto divide-y divide-white/5">
+              {loadingThreads && threads.length === 0 ? (
+                <Loading />
+              ) : visibleThreads.length > 0 ? (
+                visibleThreads.map((t) => {
+                  const dipilih = activeThread?.id === t.id;
+                  // Dari `withCount` di backend, bukan lagi dari memindai
+                  // seluruh pesan yang dulu ikut terkirim.
+                  const belumDibaca = (t.unread_count ?? 0) > 0;
+
+                  return (
+                    <div
+                      key={t.id}
+                      className={`w-full transition-colors flex items-start gap-3 relative ${
+                        dipilih ? 'bg-blue-600/15 border-l-4 border-blue-500' : 'hover:bg-white/4'
+                      }`}
+                    >
+                      <button onClick={() => bukaThread(t)} className="flex-1 text-left p-4 flex items-start gap-3 min-w-0 cursor-pointer">
+                        <div className="w-9 h-9 rounded-xl bg-slate-800 text-blue-400 flex items-center justify-center flex-shrink-0 font-bold text-xs mt-0.5 border border-white/10">
+                          {t.visitor_name.charAt(0).toUpperCase()}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-mono text-[11px] font-bold text-blue-400">{t.ticket_number}</span>
+                            <span className="text-[10px] text-slate-500">{jam(t.last_activity_at)}</span>
+                          </div>
+
+                          <h4 className="font-bold text-xs text-slate-200 truncate mt-0.5">{t.subject}</h4>
+
+                          {t.last_message && (
+                            <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                              {t.last_message.sender_type === 'admin' ? 'Anda: ' : ''}{t.last_message.message}
+                            </p>
+                          )}
+
+                          <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                            {t.visitor_name} • <span className="text-slate-500">{t.category}</span>
+                          </p>
+                        </div>
+
+                        {belumDibaca && (
+                          <span
+                            className="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center flex-shrink-0 mt-1 text-[10px] font-black text-white tabular-nums"
+                            title={`${t.unread_count} pesan belum dibaca`}
+                          >
+                            {t.unread_count}
+                          </span>
+                        )}
+                      </button>
+
+                      <button
+                        onClick={() => setHapusChat(t.id)}
+                        title="Hapus percakapan"
+                        className="p-2 mr-2 mt-3 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer flex-shrink-0"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  );
+                })
+              ) : (
+                <EmptyState text="Tidak ada percakapan" hint="Ubah tab filter atau kata kunci pencarian." />
+              )}
+            </div>
+          </Panel>
+
+          <Panel className="lg:col-span-7 flex flex-col overflow-hidden h-full">
+            {activeThread ? (
+              <div className="flex flex-col h-full">
+                <div className="p-4 border-b border-white/8 flex items-start justify-between gap-3 bg-slate-900/60 flex-shrink-0">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono text-xs font-bold text-blue-400 bg-blue-950 px-2 py-0.5 rounded border border-blue-800/60">
+                        {activeThread.ticket_number}
+                      </span>
+                      <Badge
+                        text={STATUS_META[activeThread.status]?.label ?? activeThread.status}
+                        color={STATUS_META[activeThread.status]?.color}
+                      />
+                      <span className="text-xs text-slate-400">• {activeThread.category}</span>
+                    </div>
+
+                    <h3 className="font-bold text-sm text-slate-100 mt-1 truncate">{activeThread.subject}</h3>
+
+                    {/* Kontak pengunjung hanya tampil di panel petugas —
+                        endpoint publik tidak pernah mengirimkannya. */}
+                    <p className="text-xs text-slate-400 mt-0.5 flex flex-wrap items-center gap-x-3">
+                      <span className="font-semibold text-slate-200">{activeThread.visitor_name}</span>
+                      {activeThread.visitor_phone && (
+                        <span className="inline-flex items-center gap-1"><Phone className="w-3 h-3" />{activeThread.visitor_phone}</span>
+                      )}
+                      {activeThread.visitor_email && (
+                        <span className="inline-flex items-center gap-1"><Mail className="w-3 h-3" />{activeThread.visitor_email}</span>
+                      )}
+                    </p>
                   </div>
 
-                  <h3 className="font-bold text-sm text-slate-100 mt-1 truncate">
-                    {activeThread.subject}
-                  </h3>
-                  <p className="text-xs text-slate-400">
-                    Pengunjung: <strong className="text-slate-200">{activeThread.visitor_name}</strong> {activeThread.visitor_phone ? `(${activeThread.visitor_phone})` : ''} {activeThread.visitor_email ? `• ${activeThread.visitor_email}` : ''}
-                  </p>
-                </div>
-
-                {/* Status Toggle Actions */}
-                <div className="flex items-center gap-1.5 flex-shrink-0">
                   <select
                     value={activeThread.status}
-                    onChange={(e) => handleUpdateStatus(e.target.value as any)}
-                    className="bg-slate-900 border border-white/15 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none font-semibold"
+                    onChange={(e) => ubahStatus(e.target.value)}
+                    className="bg-slate-900 border border-white/15 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none font-semibold flex-shrink-0 cursor-pointer"
                   >
                     <option value="open">Menunggu</option>
                     <option value="active">Berlangsung</option>
@@ -268,98 +456,250 @@ export default function AdminChatPage() {
                     <option value="closed">Ditutup</option>
                   </select>
                 </div>
-              </div>
 
-              {/* Chat Stream Messages */}
-              <div className="flex-1 p-4 overflow-y-auto space-y-3.5 bg-slate-950/40">
-                {activeThread.messages && activeThread.messages.length > 0 ? (
-                  activeThread.messages.map((msg) => {
-                    const isAdmin = msg.sender_type === 'admin';
-                    return (
-                      <div
-                        key={msg.id}
-                        className={`flex items-end gap-2.5 ${isAdmin ? 'justify-end' : 'justify-start'}`}
-                      >
-                        {!isAdmin && (
-                          <div className="w-7 h-7 rounded-full bg-slate-700 text-slate-300 flex items-center justify-center flex-shrink-0 text-xs font-bold">
-                            <User className="w-3.5 h-3.5" />
-                          </div>
-                        )}
+                <div className="flex-1 p-4 overflow-y-auto space-y-3.5 bg-slate-950/40">
+                  {activeThread.messages && activeThread.messages.length > 0 ? (
+                    activeThread.messages.map((msg) => {
+                      const dariPetugas = msg.sender_type === 'admin';
+                      return (
+                        <div key={msg.id} className={`flex items-end gap-2.5 ${dariPetugas ? 'justify-end' : 'justify-start'}`}>
+                          {!dariPetugas && (
+                            <div className="w-7 h-7 rounded-full bg-slate-700 text-slate-300 flex items-center justify-center flex-shrink-0">
+                              <User className="w-3.5 h-3.5" />
+                            </div>
+                          )}
 
-                        <div
-                          className={`max-w-[80%] rounded-2xl p-3.5 text-xs space-y-1 ${
-                            isAdmin
-                              ? 'bg-blue-600 text-white rounded-br-none'
-                              : 'bg-slate-900 border border-white/10 text-slate-200 rounded-bl-none'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between gap-4 text-[10px] opacity-75 pb-0.5 border-b border-white/10">
-                            <span className="font-bold">{msg.sender_name}</span>
-                            <span>{new Date(msg.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
+                          <div
+                            className={`max-w-[80%] rounded-2xl p-3.5 text-xs space-y-1 ${
+                              dariPetugas
+                                ? 'bg-blue-600 text-white rounded-br-none'
+                                : 'bg-slate-900 border border-white/10 text-slate-200 rounded-bl-none'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-4 text-[10px] opacity-75 pb-0.5 border-b border-white/10">
+                              <span className="font-bold">{msg.sender_name}</span>
+                              <span>{jam(msg.created_at)}</span>
+                            </div>
+                            <p className="leading-relaxed whitespace-pre-wrap font-normal text-xs">{msg.message}</p>
                           </div>
-                          <p className="leading-relaxed whitespace-pre-wrap font-normal text-xs">{msg.message}</p>
+
+                          {dariPetugas && (
+                            <div className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center flex-shrink-0 text-[10px] font-bold">
+                              CS
+                            </div>
+                          )}
                         </div>
+                      );
+                    })
+                  ) : (
+                    <p className="text-center text-slate-500 text-xs py-10">Memuat pesan...</p>
+                  )}
+                  <div ref={chatEndRef} />
+                </div>
 
-                        {isAdmin && (
-                          <div className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center flex-shrink-0 text-xs font-bold">
-                            CS
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })
-                ) : (
-                  <p className="text-center text-slate-500 text-xs py-10">Tidak ada rincian pesan.</p>
-                )}
-                <div ref={chatEndRef} />
-              </div>
+                <div className="p-2 bg-slate-900/90 border-t border-white/8 flex items-center gap-1.5 overflow-x-auto no-scrollbar flex-shrink-0">
+                  <span className="text-[10px] font-bold uppercase text-slate-500 pl-2 whitespace-nowrap">Template:</span>
+                  {CANNED_RESPONSES.map((r, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setReplyText(r)}
+                      className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] rounded-lg whitespace-nowrap border border-white/5 transition-colors cursor-pointer"
+                    >
+                      + Template {i + 1}
+                    </button>
+                  ))}
+                </div>
 
-              {/* Quick Canned Responses Bar */}
-              <div className="p-2 bg-slate-900/90 border-t border-white/8 flex items-center gap-1.5 overflow-x-auto no-scrollbar flex-shrink-0">
-                <span className="text-[10px] font-bold uppercase text-slate-500 pl-2 whitespace-nowrap">Template Balasan:</span>
-                {CANNED_RESPONSES.map((res, i) => (
+                <form onSubmit={kirimBalasan} className="p-3 border-t border-white/8 bg-slate-900/60 flex items-center gap-2 flex-shrink-0">
+                  <textarea
+                    rows={2}
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    placeholder="Ketik balasan resmi Customer Service..."
+                    className="flex-1 bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
+                  />
+
                   <button
-                    key={i}
-                    type="button"
-                    onClick={() => setReplyText(res)}
-                    className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] rounded-lg whitespace-nowrap border border-white/5 transition-colors"
+                    type="submit"
+                    disabled={!replyText.trim() || sending}
+                    className="px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl flex items-center gap-2 transition-colors disabled:opacity-40 flex-shrink-0 cursor-pointer"
                   >
-                    + Template {i + 1}
+                    {sending ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    <span>Kirim</span>
                   </button>
-                ))}
+                </form>
               </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full p-8 text-center space-y-3 text-slate-500">
+                <Headphones className="w-12 h-12 text-slate-600" />
+                <h3 className="font-bold text-sm text-slate-300">Pilih Percakapan di Sisi Kiri</h3>
+                <p className="text-xs max-w-xs">
+                  Klik salah satu sesi percakapan pengunjung untuk membaca dan membalas pesan.
+                </p>
+              </div>
+            )}
+          </Panel>
+        </div>
+      )}
 
-              {/* Admin Reply Form */}
-              <form onSubmit={handleSendReply} className="p-3 border-t border-white/8 bg-slate-900/60 flex items-center gap-2 flex-shrink-0">
-                <textarea
-                  rows={2}
-                  value={replyText}
-                  onChange={(e) => setReplyText(e.target.value)}
-                  placeholder="Ketik balasan resmi Customer Service..."
-                  className="flex-1 bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
-                />
+      {/* ============ TAB PENGADUAN ============ */}
+      {tab === 'complaint' && (
+        <Panel className="mt-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-white/8">
+            <h2 className="text-[13.5px] font-bold text-white">Pengaduan Resmi</h2>
+            <SearchBox value={qAduan} onChange={setQAduan} placeholder="Cari tiket, pelapor, atau subjek..." />
+          </div>
 
-                <button
-                  type="submit"
-                  disabled={!replyText.trim() || sending}
-                  className="px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl flex items-center gap-2 transition-colors disabled:opacity-40 flex-shrink-0"
-                >
-                  {sending ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                  <span>Kirim</span>
-                </button>
-              </form>
-            </div>
+          {loadingComplaints ? (
+            <Loading />
+          ) : visibleComplaints.length === 0 ? (
+            <EmptyState
+              text="Belum ada pengaduan"
+              hint="Pengaduan yang dikirim pengunjung lewat Pusat Bantuan akan muncul di sini."
+            />
           ) : (
-            <div className="flex flex-col items-center justify-center h-full p-8 text-center space-y-3 text-slate-500">
-              <Headphones className="w-12 h-12 text-slate-600" />
-              <h3 className="font-bold text-sm text-slate-300">Pilih Percakapan di Sisi Kiri</h3>
-              <p className="text-xs max-w-xs">
-                Klik salah satu sesi percakapan pengunjung dari panel kiri untuk membaca dan membalas pesan.
-              </p>
-            </div>
+            <Table head={['Tiket', 'Subjek', 'Kategori', 'Pelapor', 'Masuk', 'Status', 'Aksi']}>
+              {visibleComplaints.map((c) => (
+                <Row key={c.id}>
+                  <Cell className="whitespace-nowrap">
+                    <span className="font-mono text-[11px] font-bold text-blue-400">{c.ticket_number}</span>
+                  </Cell>
+
+                  <Cell className="max-w-[260px]">
+                    <span className="font-bold text-white text-[12.5px] line-clamp-2">{c.subject}</span>
+                    {c.attachment_url && (
+                      <span className="mt-1 inline-flex items-center gap-1 text-[10.5px] text-amber-300">
+                        <Paperclip className="w-3 h-3" /> ada lampiran
+                      </span>
+                    )}
+                  </Cell>
+
+                  <Cell><Badge text={c.category} color="#38bdf8" /></Cell>
+
+                  <Cell className="max-w-[180px]">
+                    <span className="block truncate text-[12px] text-slate-200">{c.reporter_name}</span>
+                    <span className="block truncate text-[10.5px] text-slate-500">{c.reporter_phone}</span>
+                  </Cell>
+
+                  <Cell className="whitespace-nowrap text-[11.5px]">{tanggal(c.created_at)}</Cell>
+
+                  <Cell>
+                    <Badge
+                      text={STATUS_META[c.status]?.label ?? c.status}
+                      color={STATUS_META[c.status]?.color ?? '#94a3b8'}
+                    />
+                  </Cell>
+
+                  <Cell>
+                    <div className="flex gap-1.5">
+                      <button
+                        onClick={() => bukaAduan(c)}
+                        title="Tanggapi"
+                        className="w-8 h-8 rounded-lg bg-white/5 hover:bg-cyan-500/20 text-slate-300 hover:text-cyan-300 flex items-center justify-center transition-colors cursor-pointer"
+                      >
+                        <Reply className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => setHapusAduan(c.id)}
+                        title="Hapus"
+                        className="w-8 h-8 rounded-lg bg-white/5 hover:bg-rose-500/20 text-slate-300 hover:text-rose-300 flex items-center justify-center transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </Cell>
+                </Row>
+              ))}
+            </Table>
           )}
         </Panel>
-      </div>
+      )}
+
+      {/* ---------- dialog tanggapan pengaduan ---------- */}
+      <Modal
+        open={aduanTerbuka !== null}
+        onClose={() => setAduanTerbuka(null)}
+        title={`Tanggapi ${aduanTerbuka?.ticket_number ?? ''}`}
+        footer={
+          <>
+            <Btn variant="ghost" onClick={() => setAduanTerbuka(null)}>Batal</Btn>
+            <Btn onClick={simpanAduan} disabled={menyimpanAduan}>
+              {menyimpanAduan ? 'Menyimpan...' : 'Simpan Tanggapan'}
+            </Btn>
+          </>
+        }
+      >
+        {aduanTerbuka && (
+          <div className="space-y-4">
+            <div className="rounded-xl bg-slate-900/60 border border-white/8 p-4 space-y-2">
+              <p className="text-[13px] font-bold text-white">{aduanTerbuka.subject}</p>
+              <p className="text-[12px] text-slate-300 leading-relaxed whitespace-pre-wrap">
+                {aduanTerbuka.description}
+              </p>
+
+              <div className="pt-2 border-t border-white/8 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-400">
+                <span>{aduanTerbuka.reporter_name}</span>
+                <span className="inline-flex items-center gap-1"><Mail className="w-3 h-3" />{aduanTerbuka.reporter_email}</span>
+                <span className="inline-flex items-center gap-1"><Phone className="w-3 h-3" />{aduanTerbuka.reporter_phone}</span>
+              </div>
+
+              {aduanTerbuka.attachment_url && (
+                <a
+                  href={aduanTerbuka.attachment_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 text-[11.5px] font-bold text-cyan-300 hover:text-cyan-200"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" /> Lihat foto terlampir
+                </a>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                Status <span className="text-rose-400">*</span>
+              </label>
+              <select
+                value={statusAduan}
+                onChange={(e) => setStatusAduan(e.target.value as typeof statusAduan)}
+                className="w-full bg-[#0a1428] border border-white/10 rounded-xl px-3.5 py-2.5 text-[12.5px] text-slate-100 focus:outline-none focus:border-cyan-400/50 cursor-pointer"
+              >
+                <option value="in_progress">Sedang ditindaklanjuti</option>
+                <option value="resolved">Selesai</option>
+                <option value="rejected">Tidak dapat ditindaklanjuti</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                Tanggapan <span className="text-rose-400">*</span>
+              </label>
+              <textarea
+                rows={5}
+                value={tanggapan}
+                onChange={(e) => setTanggapan(e.target.value)}
+                placeholder="Tanggapan ini terbaca pelapor saat melacak nomor tiketnya."
+                className="w-full bg-[#0a1428] border border-white/10 rounded-xl px-3.5 py-2.5 text-[12.5px] text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-cyan-400/50 resize-none"
+              />
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <ConfirmDialog
+        open={hapusChat !== null}
+        onCancel={() => setHapusChat(null)}
+        onConfirm={jalankanHapusChat}
+        message="Percakapan ini beserta seluruh pesannya akan dihapus permanen. Lanjutkan?"
+      />
+
+      <ConfirmDialog
+        open={hapusAduan !== null}
+        onCancel={() => setHapusAduan(null)}
+        onConfirm={jalankanHapusAduan}
+        message="Pengaduan ini beserta lampirannya akan dihapus permanen. Lanjutkan?"
+      />
     </>
   );
 }

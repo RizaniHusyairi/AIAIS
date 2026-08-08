@@ -16,9 +16,14 @@ function toAppRoute(pathname: string): string {
     const slug = pathname.replace(/^\/news\/?/, '').split('/')[0];
     return slug ? `/app/berita/${slug}` : '/app/berita';
   }
+  if (pathname.startsWith('/layanan')) return '/app/layanan';
   if (pathname.startsWith('/tenants')) return '/app/layanan';
-  if (pathname.startsWith('/complaints')) return '/app/layanan';
+  // Pusat Bantuan punya layar PWA sendiri. Sebelumnya rute ini mendarat di
+  // /app/layanan, yang kartunya menunjuk ke dirinya sendiri — pengguna ponsel
+  // terkunci dari fitur bantuan tanpa ada yang menyadarinya.
+  if (pathname.startsWith('/complaints')) return '/app/layanan/bantuan';
   if (pathname.startsWith('/downloads')) return '/app/layanan';
+  if (pathname.startsWith('/regulasi')) return '/app/layanan';
   if (pathname.startsWith('/profile')) return '/app/profil';
   return '/app';
 }

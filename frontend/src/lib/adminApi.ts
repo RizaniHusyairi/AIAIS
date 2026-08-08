@@ -110,6 +110,55 @@ export async function adminFetch<T>(
 }
 
 /**
+ * Kirim `FormData` (unggahan berkas) ke endpoint admin.
+ *
+ * `adminFetch` selalu men-JSON-kan badan permintaan, sehingga tidak bisa
+ * membawa berkas. Di sini `Content-Type` sengaja TIDAK diisi: peramban yang
+ * menentukannya sendiri berikut `boundary` multipart — mengisinya manual
+ * membuat Laravel gagal mengurai bagian berkasnya.
+ *
+ * Laravel tidak mengurai multipart pada permintaan PUT, jadi pembaruan yang
+ * menyertakan berkas dikirim sebagai POST ke `/letters/{id}`.
+ */
+export async function adminUpload<T>(path: string, form: FormData): Promise<ApiResult<T>> {
+  const token = getToken();
+  if (!token) return { ok: false, data: null, message: 'Sesi tidak ditemukan', status: 401 };
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin${path}`, {
+      method: 'POST',
+      headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+      body: form,
+      cache: 'no-store',
+    });
+
+    if (res.status === 401) {
+      clearSession();
+      if (typeof window !== 'undefined') window.location.href = '/admin/login';
+      return { ok: false, data: null, message: 'Sesi berakhir, silakan masuk kembali', status: 401 };
+    }
+
+    const json = await res.json().catch(() => null);
+
+    if (res.ok && json?.success !== false) {
+      return { ok: true, data: (json?.data ?? null) as T, message: json?.message ?? 'Berhasil', status: res.status };
+    }
+
+    const errors = json?.errors ?? json?.data;
+    const detail = errors && typeof errors === 'object' ? Object.values(errors).flat().join(' ') : '';
+
+    return {
+      ok: false,
+      data: null,
+      message: [json?.message, detail].filter(Boolean).join(' — ') || 'Permintaan gagal',
+      status: res.status,
+    };
+  } catch {
+    return { ok: false, data: null, message: 'Tidak dapat terhubung ke server', status: 0 };
+  }
+}
+
+/**
  * Unduh berkas dari endpoint admin.
  *
  * `adminFetch` selalu mem-parsing JSON, jadi tidak bisa dipakai untuk berkas

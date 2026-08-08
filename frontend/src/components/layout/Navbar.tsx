@@ -14,6 +14,7 @@ import {
   Megaphone, Store, ExternalLink,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { RELATED_LINKS } from '@/lib/relatedLinks';
 
 /* ------------------------------------------------------------------ */
 /*  Definisi menu                                                      */
@@ -57,7 +58,7 @@ const MENU: MenuItem[] = [
     icon: Info,
     children: [
       { name: 'Profil Bandara', href: '/profile', icon: Info, desc: 'Sejarah, visi-misi, dan tata kelola UPBU APT Pranoto' },
-      { name: 'Struktur Organisasi', icon: Users, desc: 'Bagan organisasi Kantor UPBU Kelas I', soon: true },
+      { name: 'Struktur Organisasi', href: '/profile#struktur', icon: Users, desc: 'Bagan organisasi Kantor UPBU Kelas I' },
       { name: 'Pejabat Bandara', href: '/profile#pejabat', icon: UserRound, desc: 'Struktur pimpinan Kantor UPBU Kelas I APT Pranoto' },
       { name: 'Fasilitas Bandara', href: '/facilities', icon: Building2, desc: 'Ruang tunggu, musala, kesehatan, dan fasilitas umum' },
     ],
@@ -103,45 +104,56 @@ const MENU: MenuItem[] = [
 
   {
     name: 'Regulasi',
-    href: '/downloads',
+    href: '/regulasi/surat-keputusan',
     icon: Scale,
     children: [
-      { name: 'Surat Keputusan', icon: FileText, desc: 'Keputusan resmi Kepala Kantor UPBU', soon: true },
-      { name: 'Surat Edaran', icon: FileText, desc: 'Edaran resmi operasional bandara', soon: true },
+      { name: 'Surat Keputusan', href: '/regulasi/surat-keputusan', icon: FileText, desc: 'Keputusan resmi Kepala Kantor UPBU' },
+      { name: 'Surat Edaran', href: '/regulasi/surat-edaran', icon: FileText, desc: 'Edaran resmi operasional bandara' },
     ],
   },
 
   {
+    // Induknya kini `/layanan`, bukan `/complaints`: menu ini punya halaman
+    // daftar sendiri, dan sembilan layanan pengajuan v1 sudah tayang di sini.
     name: 'Layanan',
-    href: '/complaints',
+    href: '/layanan',
     icon: Building2,
     children: [
       { name: 'PAS', href: 'https://pas.aptpairport.id/website/layanan/pas_orang.html', icon: UserRound, desc: 'Pas bandara untuk orang', external: true },
       { name: 'TIM', href: 'https://pas.aptpairport.id/website/layanan/tim.html', icon: ShieldCheck, desc: 'Tanda Izin Mengemudi sisi udara', external: true },
       { name: 'Keuangan dan Penagihan', href: 'https://sikeren.aptpairport.id', icon: TrendingUp, desc: 'Sistem keuangan dan penagihan', external: true },
-      { name: 'Beauty Contest', icon: Building2, desc: 'Seleksi mitra usaha bandara', soon: true },
-      { name: 'Extend Advance', icon: ClipboardList, desc: 'Perpanjangan uang muka', soon: true },
-      { name: 'Field Trip', icon: Users, desc: 'Kunjungan edukasi ke area bandara', soon: true },
+      { name: 'Beauty Contest', href: '/layanan/beauty-contest', icon: Building2, desc: 'Seleksi mitra usaha bandara' },
+      { name: 'Extend Advance', href: '/layanan/extend-advance', icon: ClipboardList, desc: 'Perpanjangan uang muka' },
+      { name: 'Field Trip', href: '/layanan/field-trip', icon: Users, desc: 'Kunjungan edukasi ke area bandara' },
       { name: 'Pengajuan Informasi Publik', href: '/ppid/pengajuan-informasi', icon: MessageSquareWarning, desc: 'Permohonan informasi publik' },
-      { name: 'Pengiklanan', icon: Megaphone, desc: 'Pemasangan iklan di area bandara', soon: true },
-      { name: 'Perijinan Usaha', icon: ClipboardList, desc: 'Izin kegiatan usaha di bandara', soon: true },
-      { name: 'Sertifikat OJT', icon: FileText, desc: 'Sertifikat on-the-job training', soon: true },
-      { name: 'Sewa', icon: Building2, desc: 'Sewa ruang dan lahan bandara', soon: true },
-      { name: 'Slot Charter', icon: Plane, desc: 'Pengajuan slot penerbangan charter', soon: true },
-      { name: 'Tenant', icon: Store, desc: 'Pendaftaran tenant komersial', soon: true },
+      { name: 'Pengiklanan', href: '/layanan/pengiklanan', icon: Megaphone, desc: 'Pemasangan iklan di area bandara' },
+      { name: 'Perijinan Usaha', href: '/layanan/perijinan-usaha', icon: ClipboardList, desc: 'Izin kegiatan usaha di bandara' },
+      { name: 'Sertifikat OJT', href: '/layanan/sertifikat-ojt', icon: FileText, desc: 'Sertifikat on-the-job training' },
+      { name: 'Sewa', href: '/layanan/sewa', icon: Building2, desc: 'Sewa ruang dan lahan bandara' },
+      { name: 'Slot Charter', href: '/layanan/slot-charter', icon: Plane, desc: 'Pengajuan slot penerbangan charter' },
+      { name: 'Tenant', href: '/layanan/tenant', icon: Store, desc: 'Pendaftaran tenant komersial' },
     ],
   },
 
   {
+    // Induknya kini halaman `/tautan-terkait`, bukan `/profile`.
+    //
+    // Empat tautan di bawah dibangkitkan dari `lib/relatedLinks.ts` — sumber
+    // yang sama dengan halaman dan footer. Sebelumnya URL-nya ditulis ulang
+    // di tiga tempat, dan URL SIPPN di sini sudah menyimpang dari yang tayang
+    // (beranda nasional, bukan halaman instansi bandara ini).
     name: 'Tautan Terkait',
-    href: '/profile',
+    href: '/tautan-terkait',
     icon: Globe,
     children: [
-      { name: 'SIPPN', href: 'https://sippn.menpan.go.id/', icon: Globe, desc: 'Sistem Informasi Pelayanan Publik Nasional', external: true },
-      { name: 'SP4N-LAPOR!', href: 'https://www.lapor.go.id/', icon: MessageSquareWarning, desc: 'Layanan aspirasi dan pengaduan nasional', external: true },
-      { name: 'SIK', href: 'https://sik.dephub.go.id/', icon: Globe, desc: 'Sistem Informasi Kepegawaian Kemenhub', external: true },
-      { name: 'e-Kinerja', href: 'https://e-kinerja.kemenhub.go.id/', icon: TrendingUp, desc: 'Aplikasi kinerja pegawai Kemenhub', external: true },
-      { name: 'Semua Tautan Terkait', icon: FolderOpen, desc: 'Daftar lengkap tautan instansi terkait', soon: true },
+      ...RELATED_LINKS.map((l) => ({
+        name: l.name,
+        href: l.url,
+        icon: l.slug === 'lapor' ? MessageSquareWarning : l.slug === 'e-kinerja' ? TrendingUp : Globe,
+        desc: l.description,
+        external: true,
+      })),
+      { name: 'Semua Tautan Terkait', href: '/tautan-terkait', icon: FolderOpen, desc: 'Daftar lengkap tautan instansi terkait' },
     ],
   },
 ];
@@ -620,7 +632,7 @@ export default function Navbar() {
                     { label: 'Fasilitas Terminal', href: '/facilities' },
                     { label: 'Berita Terbaru', href: '/news' },
                     { label: 'Wisata Terdekat', href: '/tourism' },
-                    { label: 'Chat & Informasi', href: '/complaints' },
+                    { label: 'Pusat Bantuan', href: '/complaints' },
                   ].map((s) => (
                     <Link
                       key={s.label}

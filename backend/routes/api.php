@@ -11,6 +11,9 @@ use App\Http\Controllers\Api\ComplaintController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\InformationRequestController;
 use App\Http\Controllers\Api\DocumentController;
+use App\Http\Controllers\Api\LetterController;
+use App\Http\Controllers\Api\VisitorController;
+use App\Http\Controllers\Api\RatingController;
 use App\Http\Controllers\Api\AnalyticsController;
 use App\Http\Controllers\Api\SettingController;
 use App\Http\Controllers\Api\VersionController;
@@ -51,14 +54,23 @@ Route::prefix(config('api.version'))->group(function () {
     Route::get('/facilities', [FacilityController::class, 'index']);
     Route::get('/tenants', [TenantController::class, 'index']);
 
-    // Complaints & Feedback
-    Route::post('/complaints', [ComplaintController::class, 'store']);
+    // Pusat Bantuan — pengaduan formal, chat, dan penilaian kepuasan.
+    //
+    // Ketiganya sengaja terbuka tanpa autentikasi: mengadu dan bertanya
+    // kepada penyelenggara layanan publik tidak boleh mensyaratkan akun.
+    // Karena itu semuanya dibatasi laju, dan respons publiknya melewati
+    // `publicView()` supaya nomor tiket yang tertebak tidak membocorkan
+    // identitas pelapor lain.
+    Route::post('/complaints', [ComplaintController::class, 'store'])->middleware('throttle:10,1');
     Route::get('/complaints/track/{ticket}', [ComplaintController::class, 'track']);
 
-    // Live Chat & Informasi / Kritik & Saran
-    Route::post('/chat/start', [ChatController::class, 'start']);
+    Route::post('/chat/start', [ChatController::class, 'start'])->middleware('throttle:20,1');
     Route::get('/chat/{ticket_number}', [ChatController::class, 'show']);
-    Route::post('/chat/{ticket_number}/message', [ChatController::class, 'sendVisitorMessage']);
+    Route::post('/chat/{ticket_number}/message', [ChatController::class, 'sendVisitorMessage'])
+        ->middleware('throttle:20,1');
+
+    // Penilaian kepuasan; hanya tiket yang penanganannya selesai yang dilayani.
+    Route::post('/ratings', [RatingController::class, 'store'])->middleware('throttle:10,1');
 
     // Permohonan Informasi Publik (UU 14/2008).
     // Sengaja terbuka tanpa autentikasi: mengajukan permohonan informasi
@@ -69,6 +81,16 @@ Route::prefix(config('api.version'))->group(function () {
 
     // Downloads
     Route::get('/documents', [DocumentController::class, 'index']);
+
+    // Regulasi — Surat Keputusan & Surat Edaran (`?type=keputusan|edaran`).
+    // Hanya surat yang berkasnya ada yang dikembalikan; lihat controllernya.
+    Route::get('/letters', [LetterController::class, 'index']);
+
+    // Kunjungan portal. `POST /visits` adalah satu-satunya endpoint publik
+    // yang menulis tanpa autentikasi, jadi lajunya dibatasi. Statistiknya
+    // terbuka karena memang ditayangkan pada footer portal.
+    Route::post('/visits', [VisitorController::class, 'store'])->middleware('throttle:60,1');
+    Route::get('/visitor-stats', [VisitorController::class, 'stats']);
 
     // Protected Admin Routes — wajib token Sanctum
     Route::prefix('admin')->middleware('auth:sanctum')->group(function () {
@@ -114,14 +136,30 @@ Route::prefix(config('api.version'))->group(function () {
         Route::put('/documents/{id}', [DocumentController::class, 'update']);
         Route::delete('/documents/{id}', [DocumentController::class, 'destroy']);
 
-        // Complaints Management
+        // Regulasi Management. `store`/`update` menerima multipart (berkas PDF)
+        // maupun JSON dengan `file_url`, jadi POST dipakai pula untuk ubah —
+        // lihat catatan pada halaman admin regulasi di frontend.
+        Route::get('/letters', [LetterController::class, 'adminIndex']);
+        Route::post('/letters', [LetterController::class, 'store']);
+        Route::post('/letters/{id}', [LetterController::class, 'update']);
+        Route::put('/letters/{id}', [LetterController::class, 'update']);
+        Route::delete('/letters/{id}', [LetterController::class, 'destroy']);
+
+        // Pengaduan Management
         Route::get('/complaints', [ComplaintController::class, 'index']);
         Route::put('/complaints/{id}/resolve', [ComplaintController::class, 'resolve']);
+        Route::delete('/complaints/{id}', [ComplaintController::class, 'destroy']);
 
-        // Chat Helpdesk Management
+        // Chat Helpdesk Management. `adminIndex` sengaja tidak memuat seluruh
+        // pesan — isinya diambil `adminShow` saat satu percakapan dibuka.
         Route::get('/chat', [ChatController::class, 'adminIndex']);
+        Route::get('/chat/{id}', [ChatController::class, 'adminShow']);
         Route::post('/chat/{id}/reply', [ChatController::class, 'adminReply']);
         Route::put('/chat/{id}/status', [ChatController::class, 'adminUpdateStatus']);
+        Route::delete('/chat/{id}', [ChatController::class, 'destroy']);
+
+        // Ringkasan kepuasan layanan (SKM)
+        Route::get('/ratings/summary', [RatingController::class, 'summary']);
 
         // Permohonan Informasi Publik. Unduhan berkas hanya lewat sini —
         // scan KTP pemohon tidak punya URL publik.

@@ -10,7 +10,6 @@ use App\Models\Facility;
 use App\Models\Tenant;
 use App\Models\Complaint;
 use App\Models\Document;
-use App\Models\VisitorLog;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
@@ -267,16 +266,11 @@ class AirportDatabaseSeeder extends Seeder
             Document::create($doc);
         }
 
-        // 9. Visitor Logs
-        for ($i = 0; $i < 50; $i++) {
-            VisitorLog::create([
-                'ip_address' => '180.252.' . rand(1, 250) . '.' . rand(1, 250),
-                'page_url' => ['/', '/flights', '/facilities', '/news', '/tenants'][rand(0, 4)],
-                'user_agent' => 'Mozilla/5.0 Chrome/126.0.0.0 Safari/537.36',
-                'device' => ['Desktop', 'Mobile', 'Tablet'][rand(0, 2)],
-                'browser' => ['Chrome', 'Safari', 'Edge', 'Firefox'][rand(0, 3)],
-                'created_at' => now()->subHours(rand(1, 100)),
-            ]);
-        }
+        // 9. Kunjungan — SENGAJA TIDAK DITABURI.
+        //
+        // Seeder ini dulu membuat 50 kunjungan karangan. Angka `visitor_logs`
+        // kini ditayangkan di footer portal untuk dilihat publik dan dicatat
+        // dari permintaan sungguhan lewat VisitorController, sehingga baris
+        // palsu berarti memajang jumlah pengunjung yang tidak pernah ada.
     }
 }
