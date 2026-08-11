@@ -28,6 +28,18 @@ function toAppRoute(pathname: string): string {
   return '/app';
 }
 
+/*
+ * `/aplikasi` sengaja TIDAK dipetakan di sini dan tidak didaftarkan pada
+ * `matcher` di bawah.
+ *
+ * Halaman itu untuk pegawai, bukan penumpang, dan tidak punya padanan layar
+ * PWA. Melemparnya ke `/app/layanan` akan menyembunyikannya dari pengguna
+ * ponsel — persis kekeliruan yang dulu menimpa `/complaints` (lihat catatan
+ * di atas). Karena `matcher` bersifat daftar-putih, cukup dengan tidak
+ * mendaftarkannya: ponsel menerima halamannya apa adanya, dan halaman itu
+ * memang dirancang responsif.
+ */
+
 /* Phones only (Android phones carry "Mobile"; tablets/desktop keep the responsive site) */
 const PHONE_UA = /iPhone|iPod|Android.*Mobile|Windows Phone|BlackBerry|IEMobile|Opera Mini/i;
 

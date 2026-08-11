@@ -134,3 +134,35 @@
   background-color: #2563eb;
   border-radius: 2px;
 }
+
+/* ================================================================
+   Kursor pesawat — halaman /aplikasi
+   ================================================================
+   Menyembunyikan kursor bawaan butuh `!important`: stylesheet peramban
+   menetapkan `cursor: pointer` pada <a>, dan itu mengalahkan warisan
+   `cursor: none` dari <html>. Atribut di bawah dipasang & dilepas oleh
+   `components/effects/PlaneCursor.tsx`, sehingga halaman lain tidak
+   pernah tersentuh — termasuk saat komponennya memutuskan tidak aktif
+   (layar sentuh atau prefers-reduced-motion). */
+html[data-plane-cursor],
+html[data-plane-cursor] * {
+  cursor: none !important;
+}
+
+/* Cincin bidik: muncul hanya ketika pesawat berada di atas elemen yang
+   dapat diklik. Perputarannya lambat — penanda, bukan pemuat. */
+.pc-reticle {
+  opacity: 0;
+  /* Pemusatan ikut ditulis di sini (bukan lewat utilitas Tailwind) supaya
+     tidak bertumpuk dengan transform milik animasi di bawah. */
+  transform: translate(-50%, -50%);
+  transition: opacity 300ms ease;
+  animation: pc-reticle-spin 9s linear infinite;
+}
+[data-lock] .pc-reticle {
+  opacity: 1;
+}
+@keyframes pc-reticle-spin {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to   { transform: translate(-50%, -50%) rotate(360deg); }
+}

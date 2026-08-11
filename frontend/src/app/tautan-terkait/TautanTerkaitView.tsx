@@ -18,6 +18,7 @@ import PpidHero, { FlightArc } from '@/components/ppid/PpidHero';
 import {
   RELATED_LINK_GROUPS, TAUTAN_PENGANTAR, TOTAL_RELATED_LINKS,
 } from '@/lib/relatedLinks';
+import { hostOf } from '@/lib/url';
 import {
   Globe, ExternalLink, ShieldCheck, Users, ArrowRight, Info, MessageSquareWarning,
 } from 'lucide-react';
@@ -33,15 +34,6 @@ const GROUP_META: Record<string, { icon: typeof Globe; accent: string; tint: str
   'pelayanan-publik': { icon: MessageSquareWarning, accent: '#2563eb', tint: 'bg-blue-50' },
   'aplikasi-pegawai': { icon: Users, accent: '#7c3aed', tint: 'bg-violet-50' },
 };
-
-/** Nama host untuk ditampilkan, agar tujuan tautan terbaca sebelum diklik. */
-function hostOf(url: string): string {
-  try {
-    return new URL(url).host.replace(/^www\./, '');
-  } catch {
-    return url;
-  }
-}
 
 export default function TautanTerkaitView() {
   return (

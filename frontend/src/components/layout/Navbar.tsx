@@ -11,10 +11,11 @@ import {
   Newspaper, MessageSquareWarning, Info, UserRound, MapPin, Clock,
   CloudSun, Globe, ArrowRight, PlaneTakeoff, ShieldCheck,
   FileText, ClipboardList, Scale, FolderOpen, TrendingUp, CircleHelp,
-  Megaphone, Store, ExternalLink,
+  Megaphone, Store, ExternalLink, LayoutGrid,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { RELATED_LINKS } from '@/lib/relatedLinks';
+import { usesOwnChrome } from '@/lib/layoutChrome';
 
 /* ------------------------------------------------------------------ */
 /*  Definisi menu                                                      */
@@ -122,6 +123,10 @@ const MENU: MenuItem[] = [
       { name: 'PAS', href: 'https://pas.aptpairport.id/website/layanan/pas_orang.html', icon: UserRound, desc: 'Pas bandara untuk orang', external: true },
       { name: 'TIM', href: 'https://pas.aptpairport.id/website/layanan/tim.html', icon: ShieldCheck, desc: 'Tanda Izin Mengemudi sisi udara', external: true },
       { name: 'Keuangan dan Penagihan', href: 'https://sikeren.aptpairport.id', icon: TrendingUp, desc: 'Sistem keuangan dan penagihan', external: true },
+      // Pusat Bantuan naik ke menu sejak tombol utama navbar dialihkan ke
+      // Portal Aplikasi. Tanpa entri ini, kanal pengaduan hanya tersisa di
+      // footer — terlalu dalam untuk sesuatu yang sifatnya mendesak.
+      { name: 'Pusat Bantuan', href: '/complaints', icon: MessageSquareWarning, desc: 'Pengaduan, pertanyaan, dan chat petugas' },
       { name: 'Beauty Contest', href: '/layanan/beauty-contest', icon: Building2, desc: 'Seleksi mitra usaha bandara' },
       { name: 'Extend Advance', href: '/layanan/extend-advance', icon: ClipboardList, desc: 'Perpanjangan uang muka' },
       { name: 'Field Trip', href: '/layanan/field-trip', icon: Users, desc: 'Kunjungan edukasi ke area bandara' },
@@ -356,8 +361,8 @@ export default function Navbar() {
     setSearchOpen(false);
   }, [pathname]);
 
-  // The PWA (/app) and the admin panel (/admin) use their own chrome.
-  if (pathname?.startsWith('/app') || pathname?.startsWith('/admin')) return null;
+  // Rute yang membawa chrome-nya sendiri (PWA, panel admin, Portal Aplikasi).
+  if (usesOwnChrome(pathname)) return null;
 
   const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.startsWith(href));
 
@@ -570,12 +575,15 @@ export default function Navbar() {
                 <Moon className="w-[18px] h-[18px]" />
               </motion.button>
 
+              {/* Tombol utama menuju Portal Aplikasi (sistem kedinasan pegawai).
+                  Sebelumnya tempat ini ditempati "Kontak Kami"; Pusat Bantuan
+                  kini dicapai lewat dropdown Layanan dan footer. */}
               <Link
-                href="/complaints"
+                href="/aplikasi"
                 className="group relative overflow-hidden ml-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[13px] px-5 h-10 rounded-full shadow-lg shadow-blue-600/25 flex items-center gap-2 transition-colors"
               >
-                <Phone className="w-4 h-4" />
-                <span className="relative">Kontak Kami</span>
+                <LayoutGrid className="w-4 h-4" />
+                <span className="relative">Portal Aplikasi</span>
                 <motion.span
                   className="absolute inset-0 pointer-events-none"
                   initial={false}
@@ -735,10 +743,10 @@ export default function Navbar() {
                 )}
 
                 <Link
-                  href="/complaints"
+                  href="/aplikasi"
                   className="flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold text-[14px] py-3.5 rounded-full shadow-lg shadow-blue-600/25"
                 >
-                  <Phone className="w-4 h-4" /> Kontak Kami
+                  <LayoutGrid className="w-4 h-4" /> Portal Aplikasi
                 </Link>
               </div>
             </div>

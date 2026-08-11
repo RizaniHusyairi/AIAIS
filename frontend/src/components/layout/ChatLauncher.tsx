@@ -18,6 +18,7 @@ import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { MessageCircle } from 'lucide-react';
 import { getChat, savedTicket, TICKET_KEY } from '@/lib/helpdesk';
+import { usesOwnChrome } from '@/lib/layoutChrome';
 
 /** Jeda pemeriksaan balasan baru. Cukup jarang — ini hanya lencana. */
 const POLL_MS = 45_000;
@@ -27,7 +28,7 @@ export default function ChatLauncher() {
   const [ticket, setTicket] = useState<string | null>(null);
   const [unread, setUnread] = useState(0);
 
-  const tersembunyi = !pathname || pathname.startsWith('/admin') || pathname.startsWith('/app');
+  const tersembunyi = !pathname || usesOwnChrome(pathname);
 
   /** Baca ulang tiket dari penyimpanan. */
   const segarkanTiket = useCallback(() => setTicket(savedTicket()), []);

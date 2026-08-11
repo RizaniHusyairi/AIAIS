@@ -26,6 +26,7 @@ import { VERSION_LABEL } from '@/lib/version';
 import { CONTACT, MAPS_URL } from '@/lib/airportProfile';
 import { RELATED_LINKS } from '@/lib/relatedLinks';
 import { useVisitorStats, useFlightSummary } from '@/lib/visitors';
+import { usesOwnChrome } from '@/lib/layoutChrome';
 import { splitPlace, shortTime } from '@/lib/place';
 import {
   MapPin, Phone, Mail, Clock, ExternalLink, PlaneTakeoff, PlaneLanding,
@@ -211,8 +212,8 @@ export default function Footer() {
   const stats = useVisitorStats();
   const flights = useFlightSummary();
 
-  // Footer publik disembunyikan di dalam PWA (/app) dan panel admin.
-  if (pathname?.startsWith('/app') || pathname?.startsWith('/admin')) return null;
+  // Footer publik disembunyikan pada rute yang membawa chrome-nya sendiri.
+  if (usesOwnChrome(pathname)) return null;
 
   const berikutnya = flights?.next ?? null;
   const tujuanBerikutnya = berikutnya
