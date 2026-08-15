@@ -117,8 +117,8 @@ export default function AdminAnnouncementsPage() {
       </motion.div>
 
       <Panel>
-        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-white/8">
-          <h2 className="text-[13.5px] font-bold text-white">Daftar Pengumuman</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-[var(--adm-line)]">
+          <h2 className="text-[13.5px] font-bold text-[var(--adm-fg)]">Daftar Pengumuman</h2>
           <SearchBox value={q} onChange={setQ} placeholder="Cari pengumuman..." />
         </div>
 
@@ -133,8 +133,8 @@ export default function AdminAnnouncementsPage() {
               return (
                 <Row key={a.id}>
                   <Cell className="max-w-[420px]">
-                    <p className="font-bold text-white text-[12.5px]">{a.title}</p>
-                    <p className="text-slate-400 text-[11.5px] mt-0.5 line-clamp-2">{a.content}</p>
+                    <p className="font-bold text-[var(--adm-fg)] text-[12.5px]">{a.title}</p>
+                    <p className="text-[var(--adm-muted)] text-[11.5px] mt-0.5 line-clamp-2">{a.content}</p>
                   </Cell>
                   <Cell><Badge text={p.label} color={p.color} /></Cell>
                   <Cell>{a.target_audience || 'Umum'}</Cell>
@@ -145,10 +145,10 @@ export default function AdminAnnouncementsPage() {
                   </Cell>
                   <Cell>
                     <div className="flex gap-1.5">
-                      <button onClick={() => openEdit(a)} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-cyan-500/20 text-slate-300 hover:text-cyan-300 flex items-center justify-center transition-colors cursor-pointer" title="Ubah">
+                      <button onClick={() => openEdit(a)} className="w-8 h-8 rounded-lg bg-[var(--adm-hover)] hover:bg-cyan-500/20 text-[var(--adm-body)] hover:text-[var(--adm-accent)] flex items-center justify-center transition-colors cursor-pointer" title="Ubah">
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={() => setDelId(a.id)} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-rose-500/20 text-slate-300 hover:text-rose-300 flex items-center justify-center transition-colors cursor-pointer" title="Hapus">
+                      <button onClick={() => setDelId(a.id)} className="w-8 h-8 rounded-lg bg-[var(--adm-hover)] hover:bg-rose-500/20 text-[var(--adm-body)] hover:text-rose-300 flex items-center justify-center transition-colors cursor-pointer" title="Hapus">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>

@@ -16,11 +16,14 @@
  * dijalankan React dan mengumumkan jumlah hasil lewat `aria-live`.
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import PpidHero, { FlightArc } from '@/components/ppid/PpidHero';
-import { SERTA_MERTA_PENGANTAR, INFO_SERTA_MERTA } from '@/lib/publicInfoData';
+import { SERTA_MERTA_PENGANTAR } from '@/lib/publicInfoData';
+import { slugify } from '@/lib/ppidGroups';
+import { fetchApi } from '@/lib/api';
+import type { ImmediateInformation } from '@/types';
 import {
   Search, SearchX, ExternalLink, TriangleAlert, Radio, Megaphone, ArrowRight, Info,
 } from 'lucide-react';
@@ -38,16 +41,41 @@ function serial(index: number): string {
 
 export default function InformasiSertaMertaView() {
   const [q, setQ] = useState('');
+  const [items, setItems] = useState<ImmediateInformation[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let batal = false;
+
+    fetchApi<ImmediateInformation[]>('/immediate-information').then((res) => {
+      if (batal) return;
+      setItems(Array.isArray(res.data) ? res.data : []);
+      setLoading(false);
+    });
+
+    return () => { batal = true; };
+  }, []);
+
+  /** Bentuk yang dipakai kartu; `slug` dulu ditulis tangan di data statis. */
+  const maklumat = useMemo(
+    () => items.map((it) => ({
+      slug: `${slugify(it.uraian)}-${it.id}`,
+      uraian: it.uraian,
+      keterangan: it.keterangan,
+      url: it.link_url,
+    })),
+    [items],
+  );
 
   const hasil = useMemo(() => {
     const s = q.trim().toLowerCase();
     // Indeks asli dipertahankan supaya nomor seri tidak berubah saat disaring.
-    const withIndex = INFO_SERTA_MERTA.map((it, i) => ({ ...it, index: i }));
+    const withIndex = maklumat.map((it, i) => ({ ...it, index: i }));
     if (!s) return withIndex;
     return withIndex.filter(
       (it) => it.uraian.toLowerCase().includes(s) || it.keterangan.toLowerCase().includes(s),
     );
-  }, [q]);
+  }, [q, maklumat]);
 
   return (
     <div className="bg-slate-50">
@@ -103,9 +131,11 @@ export default function InformasiSertaMertaView() {
             Pemberitahuan Serta Merta
           </motion.h2>
           <motion.p variants={rise} className="mt-2 text-[13.5px] text-slate-500 max-w-2xl leading-relaxed" aria-live="polite">
-            {q.trim()
-              ? `${hasil.length} dari ${INFO_SERTA_MERTA.length} maklumat cocok dengan pencarian.`
-              : `${INFO_SERTA_MERTA.length} maklumat, urut dari yang terbaru. Ketuk kartu untuk membaca selengkapnya.`}
+            {loading
+              ? 'Memuat maklumat...'
+              : q.trim()
+                ? `${hasil.length} dari ${maklumat.length} maklumat cocok dengan pencarian.`
+                : `${maklumat.length} maklumat, urut dari yang terbaru. Ketuk kartu untuk membaca selengkapnya.`}
           </motion.p>
         </motion.div>
 

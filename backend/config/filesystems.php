@@ -47,6 +47,45 @@ return [
             'report' => false,
         ],
 
+        /*
+         * Unggahan warisan portal v1.
+         *
+         * v1 mendefinisikan ulang disk `public` Laravel-nya ke
+         * public_path('uploads'), sehingga seluruh nilai kolom berkas di basis
+         * data menunjuk relatif terhadap direktori itu. Karena v2 dipasang di
+         * server yang sama dan memakai basis data yang sama, berkasnya cukup
+         * dilayani di tempat — tidak ada yang perlu disalin, dan unggahan lama
+         * tetap terbaca apa adanya.
+         *
+         * Berkas BARU tetap ditulis ke disk `public` v2 dengan nama UUID.
+         */
+        'legacy' => [
+            'driver' => 'local',
+            'root' => env('LEGACY_UPLOADS_PATH', storage_path('app/legacy')),
+            'url' => env('LEGACY_UPLOADS_URL', '/uploads'),
+            'visibility' => 'public',
+            'throw' => false,
+            'report' => false,
+        ],
+
+        /*
+         * Aset statis warisan v1 di luar direktori unggahan.
+         *
+         * Sebagian kolom berkas v1 tidak menunjuk hasil unggahan melainkan aset
+         * yang ikut dikirim bersama kode — mis. `facilities.image_path` berisi
+         * "assets_landing/img/fasilitas/checkin.jpg". Lintasan itu relatif
+         * terhadap public/ milik v1, satu tingkat di atas akar disk `legacy`,
+         * sehingga perlu disknya sendiri.
+         */
+        'legacy_public' => [
+            'driver' => 'local',
+            'root' => env('LEGACY_PUBLIC_PATH', storage_path('app/legacy-public')),
+            'url' => env('LEGACY_PUBLIC_URL', ''),
+            'visibility' => 'public',
+            'throw' => false,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

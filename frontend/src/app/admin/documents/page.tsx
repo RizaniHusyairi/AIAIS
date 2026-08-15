@@ -105,8 +105,8 @@ export default function AdminDocumentsPage() {
       </motion.div>
 
       <Panel>
-        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-white/8">
-          <h2 className="text-[13.5px] font-bold text-white">Pusat Unduhan</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-[var(--adm-line)]">
+          <h2 className="text-[13.5px] font-bold text-[var(--adm-fg)]">Pusat Unduhan</h2>
           <SearchBox value={q} onChange={setQ} placeholder="Cari dokumen..." />
         </div>
 
@@ -118,7 +118,7 @@ export default function AdminDocumentsPage() {
           <Table head={['Judul Dokumen', 'Kategori', 'Tipe', 'Ukuran', 'Unduhan', 'Aksi']}>
             {visible.map((d) => (
               <Row key={d.id}>
-                <Cell className="max-w-[340px]"><span className="font-bold text-white text-[12.5px] line-clamp-2">{d.title}</span></Cell>
+                <Cell className="max-w-[340px]"><span className="font-bold text-[var(--adm-fg)] text-[12.5px] line-clamp-2">{d.title}</span></Cell>
                 <Cell><Badge text={d.category} color="#38bdf8" /></Cell>
                 <Cell><Badge text={(d.file_type ?? '-').toUpperCase()} color={TYPE_COLOR[(d.file_type ?? '').toUpperCase()] ?? '#94a3b8'} /></Cell>
                 <Cell className="whitespace-nowrap">{d.file_size}</Cell>
@@ -126,14 +126,14 @@ export default function AdminDocumentsPage() {
                 <Cell>
                   <div className="flex gap-1.5">
                     {d.file_url && (
-                      <a href={d.file_url} target="_blank" rel="noreferrer" className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 flex items-center justify-center transition-colors" title="Buka berkas">
+                      <a href={d.file_url} target="_blank" rel="noreferrer" className="w-8 h-8 rounded-lg bg-[var(--adm-hover)] hover:bg-[var(--adm-hover)] text-[var(--adm-body)] flex items-center justify-center transition-colors" title="Buka berkas">
                         <ExternalLink className="w-3.5 h-3.5" />
                       </a>
                     )}
-                    <button onClick={() => openEdit(d)} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-cyan-500/20 text-slate-300 hover:text-cyan-300 flex items-center justify-center transition-colors cursor-pointer" title="Ubah">
+                    <button onClick={() => openEdit(d)} className="w-8 h-8 rounded-lg bg-[var(--adm-hover)] hover:bg-cyan-500/20 text-[var(--adm-body)] hover:text-[var(--adm-accent)] flex items-center justify-center transition-colors cursor-pointer" title="Ubah">
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
-                    <button onClick={() => setDelId(d.id)} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-rose-500/20 text-slate-300 hover:text-rose-300 flex items-center justify-center transition-colors cursor-pointer" title="Hapus">
+                    <button onClick={() => setDelId(d.id)} className="w-8 h-8 rounded-lg bg-[var(--adm-hover)] hover:bg-rose-500/20 text-[var(--adm-body)] hover:text-rose-300 flex items-center justify-center transition-colors cursor-pointer" title="Hapus">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>

@@ -3,9 +3,15 @@
 /**
  * Standar Pelayanan — dokumen dan survei kepuasan masyarakat.
  *
- * Seluruh teks dan metadata dokumen berasal dari `lib/serviceStandardData.ts`;
- * lihat provenans di sana, termasuk alasan tombol dokumen tidak menautkan ke
- * mana pun untuk saat ini.
+ * Daftar dokumennya diambil dari API (`/service-standards`) supaya petugas
+ * dapat menyuntingnya sendiri; teks pengantar dan ajakan SKM tetap di
+ * `lib/serviceStandardData.ts` karena ditulis untuk v2, bukan data.
+ *
+ * Dokumen yang belum terbit TETAP ditampilkan, dengan penanda "belum
+ * tersedia". Keberadaan ketiga jenis dokumen ini wajib diumumkan menurut
+ * UU 25/2009 — menyembunyikan yang belum terbit membuat pengunjung mengira
+ * dokumennya tidak pernah ada, dan memasang tombol yang berujung 404 (seperti
+ * v1) lebih buruk lagi.
  *
  * Hero-nya memakai pola yang sama persis dengan `/ppid` dan `/ppid/sop` —
  * gradien, partikel, busur rute, tipografi judul, dan lengkungan pemisah yang
@@ -16,14 +22,18 @@
  * tiket.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import PpidHero, { FlightArc } from '@/components/ppid/PpidHero';
 import {
-  SP_PENGANTAR, SP_DASAR_HUKUM, SKM, SP_GROUPS, formatTanggal,
-  SP_TOTAL_DOKUMEN, SP_TERSEDIA, type ServiceDoc, type ServiceDocGroup,
+  SP_PENGANTAR, SP_DASAR_HUKUM, formatTanggal,
+  type ServiceDoc, type ServiceDocGroup,
 } from '@/lib/serviceStandardData';
+import type { SkmKey } from '@/lib/settingsShared';
+import { slugify } from '@/lib/ppidGroups';
+import { fetchApi } from '@/lib/api';
+import type { ServiceStandard as ServiceStandardData } from '@/types';
 import {
   ClipboardList, ChevronDown, ExternalLink, Download, FileText, Scale,
   Star, Info, ShieldCheck, ArrowRight, CalendarDays, Hash, FileClock,
@@ -202,12 +212,82 @@ function GroupPanel({
    Halaman
    ================================================================ */
 
-export default function StandarPelayananView() {
-  // Kelompok pertama terbuka sejak awal supaya halaman tidak tampak kosong.
-  const [terbuka, setTerbuka] = useState<string[]>([SP_GROUPS[0]?.slug].filter(Boolean) as string[]);
+/**
+ * Kalimat pengantar tiap kelompok, dikunci pada NAMA jenis di basis data.
+ *
+ * Kalimatnya ditulis untuk v2 dan tidak ada padanannya di tabel warisan v1,
+ * jadi tetap tinggal di kode. Jenis yang belum punya entri tampil tanpa
+ * pengantar, bukan gagal.
+ */
+const GROUP_LEAD: Record<string, string> = {
+  'Standar Pelayanan': 'Tolok ukur yang dipakai menilai penyelenggaraan pelayanan bandara.',
+  'Maklumat Pelayanan': 'Pernyataan kesanggupan bandara menyelenggarakan pelayanan sesuai standar.',
+  'Survei Kepuasan Masyarakat': 'Hasil pengukuran kepuasan pengguna jasa sebagai bahan evaluasi.',
+};
+
+export default function StandarPelayananView({ skm }: { skm: Record<SkmKey, string> }) {
+  // Blok SKM datang sebagai prop dari Server Component, BUKAN lewat
+  // `useSetting` — lihat alasannya di ../page.tsx.
+  const skmAktif = skm.skm_is_active !== '0';
+
+  const [items, setItems] = useState<ServiceStandardData[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // null berarti "pengguna belum menyentuh akordeon", sehingga kelompok
+  // pertama terbuka sendiri. Disimpan begitu, bukan disetel lewat efek —
+  // menyetel keadaan dari dalam efek memicu render berantai.
+  const [terbuka, setTerbuka] = useState<string[] | null>(null);
+
+  useEffect(() => {
+    let batal = false;
+
+    fetchApi<ServiceStandardData[]>('/service-standards').then((res) => {
+      if (batal) return;
+      setItems(Array.isArray(res.data) ? res.data : []);
+      setLoading(false);
+    });
+
+    return () => { batal = true; };
+  }, []);
+
+  /** Kelompokkan per jenis, mempertahankan urutan alur dari backend. */
+  const groups = useMemo<ServiceDocGroup[]>(() => {
+    const out: ServiceDocGroup[] = [];
+
+    for (const s of items) {
+      let g = out.find((x) => x.title === s.type);
+
+      if (!g) {
+        g = { slug: slugify(s.type), title: s.type, lead: GROUP_LEAD[s.type] ?? '', docs: [] };
+        out.push(g);
+      }
+
+      g.docs.push({
+        slug: `${g.slug}-${s.id}`,
+        title: s.title,
+        number: s.document_number ?? undefined,
+        description: s.description ?? '',
+        published: s.published_date,
+        url: s.document_url,
+      });
+    }
+
+    return out;
+  }, [items]);
+
+  const total = items.length;
+  const tersedia = items.filter((s) => s.has_document).length;
+
+  /** Kelompok pertama terbuka sampai pengguna mengubahnya sendiri. */
+  const bawaan = groups[0] ? [groups[0].slug] : [];
+  const terbukaKini = terbuka ?? bawaan;
 
   const toggle = (slug: string) =>
-    setTerbuka((now) => (now.includes(slug) ? now.filter((s) => s !== slug) : [...now, slug]));
+    setTerbuka((now) => {
+      const dasar = now ?? bawaan;
+
+      return dasar.includes(slug) ? dasar.filter((s) => s !== slug) : [...dasar, slug];
+    });
 
   return (
     <div className="bg-slate-50">
@@ -221,6 +301,9 @@ export default function StandarPelayananView() {
       {/* ============================================================ */}
       {/*  SURVEI KEPUASAN MASYARAKAT                                  */}
       {/* ============================================================ */}
+      {/* Petugas dapat menonaktifkan ajakan ini dari panel — mis. saat periode
+          surveinya ditutup Kemenhub dan tautannya sementara tidak melayani. */}
+      {skmAktif && (
       <section className="max-w-[1400px] mx-auto px-4 sm:px-6 -mt-8 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
@@ -236,22 +319,23 @@ export default function StandarPelayananView() {
             </div>
 
             <div className="min-w-0 flex-1">
-              <h2 className="text-xl sm:text-2xl font-black text-white leading-tight">{SKM.title}</h2>
-              <p className="mt-1.5 text-[13.5px] text-amber-50/95 leading-relaxed max-w-2xl">{SKM.text}</p>
+              <h2 className="text-xl sm:text-2xl font-black text-white leading-tight">{skm.skm_title}</h2>
+              <p className="mt-1.5 text-[13.5px] text-amber-50/95 leading-relaxed max-w-2xl">{skm.skm_text}</p>
             </div>
 
             <a
-              href={SKM.url}
+              href={skm.skm_url}
               target="_blank"
               rel="noreferrer"
               className="flex-shrink-0 inline-flex items-center gap-2 bg-white text-orange-600 hover:bg-amber-50 font-bold text-[13.5px] px-5 py-3.5 rounded-full shadow-lg shadow-orange-900/20 transition-colors"
             >
-              {SKM.label}
+              {skm.skm_label}
               <ExternalLink className="w-3.5 h-3.5" />
             </a>
           </div>
         </motion.div>
       </section>
+      )}
 
       {/* ============================================================ */}
       {/*  DASAR HUKUM                                                 */}
@@ -260,13 +344,13 @@ export default function StandarPelayananView() {
         <motion.div variants={container} initial="hidden" whileInView="show" viewport={{ once: true }} className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           {[
             { icon: Scale, title: 'Dasar Hukum', text: SP_DASAR_HUKUM, tone: 'blue' as const },
-            { icon: ClipboardList, title: 'Dokumen Terdaftar', text: `${SP_TOTAL_DOKUMEN} dokumen dalam ${SP_GROUPS.length} kelompok`, tone: 'teal' as const },
+            { icon: ClipboardList, title: 'Dokumen Terdaftar', text: `${total} dokumen dalam ${groups.length} kelompok`, tone: 'teal' as const },
             {
               icon: FileClock,
               title: 'Berkas Dapat Diunduh',
-              text: SP_TERSEDIA === 0
+              text: tersedia === 0
                 ? 'Belum ada berkas yang diterbitkan'
-                : `${SP_TERSEDIA} dari ${SP_TOTAL_DOKUMEN} berkas tersedia`,
+                : `${tersedia} dari ${total} berkas tersedia`,
               tone: 'amber' as const,
             },
           ].map((c) => {
@@ -302,19 +386,32 @@ export default function StandarPelayananView() {
           </motion.p>
 
           <motion.div variants={container} className="mt-8 space-y-4">
-            {SP_GROUPS.map((g, i) => (
-              <GroupPanel
-                key={g.slug}
-                group={g}
-                index={i}
-                open={terbuka.includes(g.slug)}
-                onToggle={() => toggle(g.slug)}
-              />
-            ))}
+            {loading ? (
+              [0, 1, 2].map((i) => (
+                <div key={i} className="h-[84px] rounded-3xl bg-white ring-1 ring-slate-200/70 animate-pulse" />
+              ))
+            ) : groups.length === 0 ? (
+              <div className="rounded-3xl bg-white ring-1 ring-slate-200/70 px-6 py-10 text-center">
+                <p className="text-[13.5px] font-bold text-slate-700">Belum ada dokumen yang terdaftar.</p>
+                <p className="mt-1 text-[12.5px] text-slate-500">
+                  Daftar standar pelayanan sedang dimutakhirkan.
+                </p>
+              </div>
+            ) : (
+              groups.map((g, i) => (
+                <GroupPanel
+                  key={g.slug}
+                  group={g}
+                  index={i}
+                  open={terbukaKini.includes(g.slug)}
+                  onToggle={() => toggle(g.slug)}
+                />
+              ))
+            )}
           </motion.div>
 
           {/* Keterangan jujur soal ketersediaan berkas */}
-          {SP_TERSEDIA < SP_TOTAL_DOKUMEN && (
+          {tersedia < total && (
             <motion.div
               variants={rise}
               className="mt-6 flex items-start gap-4 bg-blue-50/60 ring-1 ring-blue-100 rounded-2xl px-5 py-4"

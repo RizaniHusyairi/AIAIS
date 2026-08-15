@@ -106,8 +106,8 @@ export default function AdminFacilitiesPage() {
       </motion.div>
 
       <Panel>
-        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-white/8">
-          <h2 className="text-[13.5px] font-bold text-white">Daftar Fasilitas</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-[var(--adm-line)]">
+          <h2 className="text-[13.5px] font-bold text-[var(--adm-fg)]">Daftar Fasilitas</h2>
           <SearchBox value={q} onChange={setQ} placeholder="Cari fasilitas / lokasi..." />
         </div>
 
@@ -120,8 +120,8 @@ export default function AdminFacilitiesPage() {
             {visible.map((f) => (
               <Row key={f.id}>
                 <Cell className="max-w-[280px]">
-                  <p className="font-bold text-white text-[12.5px]">{f.name}</p>
-                  {f.description && <p className="text-slate-400 text-[11.5px] mt-0.5 line-clamp-1">{f.description}</p>}
+                  <p className="font-bold text-[var(--adm-fg)] text-[12.5px]">{f.name}</p>
+                  {f.description && <p className="text-[var(--adm-muted)] text-[11.5px] mt-0.5 line-clamp-1">{f.description}</p>}
                 </Cell>
                 <Cell><Badge text={f.category} color="#34d399" /></Cell>
                 <Cell className="max-w-[230px]"><span className="truncate block">{f.location_description}</span></Cell>
@@ -132,10 +132,10 @@ export default function AdminFacilitiesPage() {
                 </Cell>
                 <Cell>
                   <div className="flex gap-1.5">
-                    <button onClick={() => openEdit(f)} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-cyan-500/20 text-slate-300 hover:text-cyan-300 flex items-center justify-center transition-colors cursor-pointer" title="Ubah">
+                    <button onClick={() => openEdit(f)} className="w-8 h-8 rounded-lg bg-[var(--adm-hover)] hover:bg-cyan-500/20 text-[var(--adm-body)] hover:text-[var(--adm-accent)] flex items-center justify-center transition-colors cursor-pointer" title="Ubah">
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
-                    <button onClick={() => setDelId(f.id)} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-rose-500/20 text-slate-300 hover:text-rose-300 flex items-center justify-center transition-colors cursor-pointer" title="Hapus">
+                    <button onClick={() => setDelId(f.id)} className="w-8 h-8 rounded-lg bg-[var(--adm-hover)] hover:bg-rose-500/20 text-[var(--adm-body)] hover:text-rose-300 flex items-center justify-center transition-colors cursor-pointer" title="Hapus">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -168,7 +168,7 @@ export default function AdminFacilitiesPage() {
           <Field label="Lokasi" required value={form.location_description} onChange={(v) => setForm({ ...form, location_description: v })} placeholder="Lantai 1, dekat area kedatangan" />
           <Field label="Deskripsi" type="textarea" rows={3} value={form.description} onChange={(v) => setForm({ ...form, description: v })} />
 
-          <InfoNote>Nama ikon mengikuti pustaka <span className="text-cyan-300 font-semibold">Lucide</span> (contoh: <code className="text-cyan-300">wifi</code>, <code className="text-cyan-300">moon-star</code>, <code className="text-cyan-300">baby</code>). Dikosongkan pun tetap aman.</InfoNote>
+          <InfoNote>Nama ikon mengikuti pustaka <span className="text-[var(--adm-accent)] font-semibold">Lucide</span> (contoh: <code className="text-[var(--adm-accent)]">wifi</code>, <code className="text-[var(--adm-accent)]">moon-star</code>, <code className="text-[var(--adm-accent)]">baby</code>). Dikosongkan pun tetap aman.</InfoNote>
 
           <Field label="Sedang beroperasi" type="checkbox" value={!!form.is_operational} onChange={(v) => setForm({ ...form, is_operational: v })} />
         </div>

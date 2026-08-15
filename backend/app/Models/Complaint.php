@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\ResolvesFileUrl;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Pengaduan publik — jalur formal berlampiran bukti.
@@ -12,10 +12,14 @@ use Illuminate\Support\Facades\Storage;
  * Berbeda dari `ChatThread` yang bersifat percakapan, satu pengaduan adalah
  * satu berkas kasus: dikirim sekali, boleh menyertakan foto, lalu dijawab
  * petugas dan ditutup dengan status akhir.
+ *
+ * Tabelnya milik portal v1, diselaraskan lewat penggantian nama kolom saat
+ * cutover — bukan penambahan kolom kembar — sehingga pengaduan lama tetap
+ * membawa nama, surel, dan isi laporannya.
  */
 class Complaint extends Model
 {
-    use HasFactory;
+    use HasFactory, ResolvesFileUrl;
 
     /**
      * Kategori yang dikenali; dipakai pula sebagai aturan validasi.
@@ -69,11 +73,7 @@ class Complaint extends Model
      */
     public function getAttachmentUrlAttribute(): ?string
     {
-        if (empty($this->attachment) || ! Storage::disk('public')->exists($this->attachment)) {
-            return null;
-        }
-
-        return Storage::disk('public')->url($this->attachment);
+        return $this->fileUrl($this->attachment);
     }
 
     /**

@@ -4,16 +4,16 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Migrasi data portal v1 (aptpairport.id)
+    | Warisan portal v1 (aptpairport.id)
     |--------------------------------------------------------------------------
     |
-    | Dipakai hanya oleh command `aiais:import-*` dan App\Services\Legacy\*.
-    | Tidak ada satu pun kode runtime portal yang membaca berkas ini.
+    | Portal v2 berjalan di atas basis data dan direktori unggahan portal v1.
+    | Berkas ini menampung hal-hal yang lahir dari keadaan itu.
     |
     */
 
     /*
-     * Akar salinan `public/uploads` produksi v1.
+     * Akar direktori `public/uploads` v1, sama dengan root disk `legacy`.
      *
      * v1 mendefinisikan ulang disk `public` Laravel-nya ke public_path('uploads'),
      * jadi SEMUA nilai kolom berkas di basis data v1 relatif terhadap direktori
@@ -24,16 +24,19 @@ return [
     'uploads_path' => env('LEGACY_UPLOADS_PATH'),
 
     /*
-     * Kapan dump produksi diambil. Dicatat pada setiap baris `legacy_imports`
-     * supaya bisa dijawab "baris ini berasal dari potret basis data yang mana".
+     * Basis data yang isinya tidak tergantikan.
+     *
+     * Portal v2 berjalan di atas basis data portal v1 yang sudah berisi
+     * bertahun-tahun data operasional, dan tidak ada salinan v2 yang bisa
+     * dipakai memulihkannya. Selama nama basis data yang aktif ada di daftar
+     * ini, command perusak (migrate:fresh, migrate:rollback, db:wipe, dan
+     * kawan-kawannya) ditolak — tak peduli APP_ENV-nya apa, karena kekeliruan
+     * yang paling mungkin terjadi justru menjalankannya dari mesin
+     * pengembangan yang kebetulan menunjuk basis data produksi.
      */
-    'dump_taken_at' => env('LEGACY_DUMP_TAKEN_AT'),
-
-    /*
-     * Basis data yang dianggap salinan pengembangan, bukan produksi. Command
-     * impor menolak berjalan di atasnya kecuali diberi --allow-dev-db, karena
-     * sebagian tabelnya (letters, news) berisi data karangan.
-     */
-    'dev_databases' => ['db_apt'],
+    'protected_databases' => [
+        'db_apt',
+        'db_apt_prod',
+    ],
 
 ];

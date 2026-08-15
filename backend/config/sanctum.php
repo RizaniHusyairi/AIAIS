@@ -50,7 +50,17 @@ return [
     |
     */
 
-    'expiration' => null,
+    /*
+     * 8 jam — kira-kira satu hari kerja, sehingga petugas tidak diminta masuk
+     * ulang di tengah pekerjaan, tetapi token yang tertinggal di perangkat
+     * bersama tidak berlaku selamanya seperti sebelumnya (`null`).
+     *
+     * Dihitung dari `created_at` token, bukan dari pemakaian terakhir. Karena
+     * itu menyalakan nilai ini SEKALIGUS membatalkan seluruh token yang sudah
+     * lebih tua dari 8 jam — semua sesi admin yang sedang berjalan akan diminta
+     * masuk kembali satu kali.
+     */
+    'expiration' => env('SANCTUM_EXPIRATION', 480),
 
     /*
     |--------------------------------------------------------------------------

@@ -1,5 +1,6 @@
 'use client';
 
+import SafeHtml from '@/components/SafeHtml';
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -246,11 +247,13 @@ export default function BeritaDetailScreen() {
         </motion.div>
 
         {/* content */}
-        <motion.div
-          variants={listItem}
-          className="article-content text-[14px] bg-white rounded-2xl p-4 shadow-sm shadow-slate-200/60 border border-slate-100"
-          dangerouslySetInnerHTML={{ __html: article.content }}
-        />
+        {/* Isi artikel disaring lebih dulu — lihat components/SafeHtml.tsx. */}
+        <motion.div variants={listItem}>
+          <SafeHtml
+            className="article-content text-[14px] bg-white rounded-2xl p-4 shadow-sm shadow-slate-200/60 border border-slate-100"
+            html={article.content}
+          />
+        </motion.div>
 
         {/* reactions */}
         <motion.div variants={listItem} className="bg-white rounded-2xl p-4 shadow-sm shadow-slate-200/60 border border-slate-100 space-y-3">

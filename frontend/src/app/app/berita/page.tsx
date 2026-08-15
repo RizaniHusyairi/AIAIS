@@ -59,7 +59,7 @@ export default function BeritaScreen() {
         <StatusBar />
         <div className="flex items-center justify-between px-4 h-14">
           <Link href="/app" className="flex items-center gap-2">
-            <img src="/icon-app.svg" alt="APT Pranoto" className="w-8 h-8 rounded-lg" />
+            <img src="/icon-192.png" alt="APT Pranoto" className="w-8 h-8 rounded-lg" />
             <div className="leading-none">
               <p className="font-black text-slate-900 text-[13px] tracking-tight">APT PRANOTO</p>
               <p className="font-semibold text-slate-500 text-[11px] -mt-0.5">SAMARINDA</p>

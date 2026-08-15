@@ -292,7 +292,7 @@ export default function AdminHelpdeskPage() {
       </motion.div>
 
       {/* pemilih tab */}
-      <div className="flex gap-1 bg-slate-900/80 p-1 rounded-xl border border-white/5 mt-4 w-fit">
+      <div className="flex gap-1 bg-[var(--adm-inset)] p-1 rounded-xl border border-[var(--adm-line)] mt-4 w-fit">
         {([
           { id: 'chat' as Tab, label: 'Chat', icon: MessageCircle, count: threads.length },
           { id: 'complaint' as Tab, label: 'Pengaduan', icon: FileWarning, count: complaints.length },
@@ -304,11 +304,11 @@ export default function AdminHelpdeskPage() {
               key={t.id}
               onClick={() => setTab(t.id)}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-                on ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+                on ? 'bg-blue-600 text-white' : 'text-[var(--adm-muted)] hover:text-[var(--adm-fg)]'
               }`}
             >
               <Icon className="w-3.5 h-3.5" /> {t.label}
-              <span className={`px-1.5 py-0.5 rounded text-[10px] tabular-nums ${on ? 'bg-white/20' : 'bg-white/5'}`}>
+              <span className={`px-1.5 py-0.5 rounded text-[10px] tabular-nums ${on ? 'bg-[var(--adm-hover)]' : 'bg-[var(--adm-hover)]'}`}>
                 {t.count}
               </span>
             </button>
@@ -320,25 +320,25 @@ export default function AdminHelpdeskPage() {
       {tab === 'chat' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[720px] mt-4">
           <Panel className="lg:col-span-5 flex flex-col overflow-hidden h-full">
-            <div className="p-4 border-b border-white/8 space-y-3 flex-shrink-0">
+            <div className="p-4 border-b border-[var(--adm-line)] space-y-3 flex-shrink-0">
               <div className="relative">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Search className="w-4 h-4 text-[var(--adm-muted)] absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
                   placeholder="Cari tiket, nama, atau topik..."
-                  className="w-full pl-9 pr-4 py-2 bg-slate-900/60 border border-white/10 rounded-xl text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full pl-9 pr-4 py-2 bg-[var(--adm-inset)] border border-[var(--adm-line)] rounded-xl text-xs text-[var(--adm-body)] placeholder-[var(--adm-dim)] focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               </div>
 
-              <div className="flex gap-1 bg-slate-900/80 p-1 rounded-xl border border-white/5 overflow-x-auto no-scrollbar">
+              <div className="flex gap-1 bg-[var(--adm-inset)] p-1 rounded-xl border border-[var(--adm-line)] overflow-x-auto no-scrollbar">
                 {(['all', 'open', 'active', 'resolved'] as const).map((t) => (
                   <button
                     key={t}
                     onClick={() => setStatusTab(t)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors flex-1 text-center cursor-pointer ${
-                      statusTab === t ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+                      statusTab === t ? 'bg-blue-600 text-white' : 'text-[var(--adm-muted)] hover:text-[var(--adm-fg)]'
                     }`}
                   >
                     {t === 'all' ? 'Semua' : t === 'open' ? 'Menunggu' : t === 'active' ? 'Berlangsung' : 'Selesai'}
@@ -347,7 +347,7 @@ export default function AdminHelpdeskPage() {
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto divide-y divide-white/5">
+            <div className="flex-1 overflow-y-auto divide-y divide-[var(--adm-line)]">
               {loadingThreads && threads.length === 0 ? (
                 <Loading />
               ) : visibleThreads.length > 0 ? (
@@ -361,36 +361,36 @@ export default function AdminHelpdeskPage() {
                     <div
                       key={t.id}
                       className={`w-full transition-colors flex items-start gap-3 relative ${
-                        dipilih ? 'bg-blue-600/15 border-l-4 border-blue-500' : 'hover:bg-white/4'
+                        dipilih ? 'bg-blue-600/15 border-l-4 border-blue-500' : 'hover:bg-[var(--adm-hover)]'
                       }`}
                     >
                       <button onClick={() => bukaThread(t)} className="flex-1 text-left p-4 flex items-start gap-3 min-w-0 cursor-pointer">
-                        <div className="w-9 h-9 rounded-xl bg-slate-800 text-blue-400 flex items-center justify-center flex-shrink-0 font-bold text-xs mt-0.5 border border-white/10">
+                        <div className="w-9 h-9 rounded-xl bg-[var(--adm-inset)] text-blue-400 flex items-center justify-center flex-shrink-0 font-bold text-xs mt-0.5 border border-[var(--adm-line)]">
                           {t.visitor_name.charAt(0).toUpperCase()}
                         </div>
 
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2">
                             <span className="font-mono text-[11px] font-bold text-blue-400">{t.ticket_number}</span>
-                            <span className="text-[10px] text-slate-500">{jam(t.last_activity_at)}</span>
+                            <span className="text-[10px] text-[var(--adm-dim)]">{jam(t.last_activity_at)}</span>
                           </div>
 
-                          <h4 className="font-bold text-xs text-slate-200 truncate mt-0.5">{t.subject}</h4>
+                          <h4 className="font-bold text-xs text-[var(--adm-body)] truncate mt-0.5">{t.subject}</h4>
 
                           {t.last_message && (
-                            <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                            <p className="text-[11px] text-[var(--adm-dim)] truncate mt-0.5">
                               {t.last_message.sender_type === 'admin' ? 'Anda: ' : ''}{t.last_message.message}
                             </p>
                           )}
 
-                          <p className="text-[11px] text-slate-400 truncate mt-0.5">
-                            {t.visitor_name} • <span className="text-slate-500">{t.category}</span>
+                          <p className="text-[11px] text-[var(--adm-muted)] truncate mt-0.5">
+                            {t.visitor_name} • <span className="text-[var(--adm-dim)]">{t.category}</span>
                           </p>
                         </div>
 
                         {belumDibaca && (
                           <span
-                            className="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center flex-shrink-0 mt-1 text-[10px] font-black text-white tabular-nums"
+                            className="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center flex-shrink-0 mt-1 text-[10px] font-black text-[var(--adm-fg)] tabular-nums"
                             title={`${t.unread_count} pesan belum dibaca`}
                           >
                             {t.unread_count}
@@ -401,7 +401,7 @@ export default function AdminHelpdeskPage() {
                       <button
                         onClick={() => setHapusChat(t.id)}
                         title="Hapus percakapan"
-                        className="p-2 mr-2 mt-3 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer flex-shrink-0"
+                        className="p-2 mr-2 mt-3 rounded-lg text-[var(--adm-dim)] hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer flex-shrink-0"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -417,7 +417,7 @@ export default function AdminHelpdeskPage() {
           <Panel className="lg:col-span-7 flex flex-col overflow-hidden h-full">
             {activeThread ? (
               <div className="flex flex-col h-full">
-                <div className="p-4 border-b border-white/8 flex items-start justify-between gap-3 bg-slate-900/60 flex-shrink-0">
+                <div className="p-4 border-b border-[var(--adm-line)] flex items-start justify-between gap-3 bg-[var(--adm-inset)] flex-shrink-0">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-mono text-xs font-bold text-blue-400 bg-blue-950 px-2 py-0.5 rounded border border-blue-800/60">
@@ -427,15 +427,15 @@ export default function AdminHelpdeskPage() {
                         text={STATUS_META[activeThread.status]?.label ?? activeThread.status}
                         color={STATUS_META[activeThread.status]?.color}
                       />
-                      <span className="text-xs text-slate-400">• {activeThread.category}</span>
+                      <span className="text-xs text-[var(--adm-muted)]">• {activeThread.category}</span>
                     </div>
 
-                    <h3 className="font-bold text-sm text-slate-100 mt-1 truncate">{activeThread.subject}</h3>
+                    <h3 className="font-bold text-sm text-[var(--adm-fg)] mt-1 truncate">{activeThread.subject}</h3>
 
                     {/* Kontak pengunjung hanya tampil di panel petugas —
                         endpoint publik tidak pernah mengirimkannya. */}
-                    <p className="text-xs text-slate-400 mt-0.5 flex flex-wrap items-center gap-x-3">
-                      <span className="font-semibold text-slate-200">{activeThread.visitor_name}</span>
+                    <p className="text-xs text-[var(--adm-muted)] mt-0.5 flex flex-wrap items-center gap-x-3">
+                      <span className="font-semibold text-[var(--adm-body)]">{activeThread.visitor_name}</span>
                       {activeThread.visitor_phone && (
                         <span className="inline-flex items-center gap-1"><Phone className="w-3 h-3" />{activeThread.visitor_phone}</span>
                       )}
@@ -448,7 +448,7 @@ export default function AdminHelpdeskPage() {
                   <select
                     value={activeThread.status}
                     onChange={(e) => ubahStatus(e.target.value)}
-                    className="bg-slate-900 border border-white/15 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none font-semibold flex-shrink-0 cursor-pointer"
+                    className="bg-[var(--adm-inset)] border border-[var(--adm-line)] text-[var(--adm-body)] text-xs rounded-lg px-2.5 py-1.5 focus:outline-none font-semibold flex-shrink-0 cursor-pointer"
                   >
                     <option value="open">Menunggu</option>
                     <option value="active">Berlangsung</option>
@@ -457,14 +457,14 @@ export default function AdminHelpdeskPage() {
                   </select>
                 </div>
 
-                <div className="flex-1 p-4 overflow-y-auto space-y-3.5 bg-slate-950/40">
+                <div className="flex-1 p-4 overflow-y-auto space-y-3.5 bg-[var(--adm-bg)]">
                   {activeThread.messages && activeThread.messages.length > 0 ? (
                     activeThread.messages.map((msg) => {
                       const dariPetugas = msg.sender_type === 'admin';
                       return (
                         <div key={msg.id} className={`flex items-end gap-2.5 ${dariPetugas ? 'justify-end' : 'justify-start'}`}>
                           {!dariPetugas && (
-                            <div className="w-7 h-7 rounded-full bg-slate-700 text-slate-300 flex items-center justify-center flex-shrink-0">
+                            <div className="w-7 h-7 rounded-full bg-[var(--adm-hover)] text-[var(--adm-body)] flex items-center justify-center flex-shrink-0">
                               <User className="w-3.5 h-3.5" />
                             </div>
                           )}
@@ -473,10 +473,10 @@ export default function AdminHelpdeskPage() {
                             className={`max-w-[80%] rounded-2xl p-3.5 text-xs space-y-1 ${
                               dariPetugas
                                 ? 'bg-blue-600 text-white rounded-br-none'
-                                : 'bg-slate-900 border border-white/10 text-slate-200 rounded-bl-none'
+                                : 'bg-[var(--adm-inset)] border border-[var(--adm-line)] text-[var(--adm-body)] rounded-bl-none'
                             }`}
                           >
-                            <div className="flex items-center justify-between gap-4 text-[10px] opacity-75 pb-0.5 border-b border-white/10">
+                            <div className="flex items-center justify-between gap-4 text-[10px] opacity-75 pb-0.5 border-b border-[var(--adm-line)]">
                               <span className="font-bold">{msg.sender_name}</span>
                               <span>{jam(msg.created_at)}</span>
                             </div>
@@ -492,32 +492,32 @@ export default function AdminHelpdeskPage() {
                       );
                     })
                   ) : (
-                    <p className="text-center text-slate-500 text-xs py-10">Memuat pesan...</p>
+                    <p className="text-center text-[var(--adm-dim)] text-xs py-10">Memuat pesan...</p>
                   )}
                   <div ref={chatEndRef} />
                 </div>
 
-                <div className="p-2 bg-slate-900/90 border-t border-white/8 flex items-center gap-1.5 overflow-x-auto no-scrollbar flex-shrink-0">
-                  <span className="text-[10px] font-bold uppercase text-slate-500 pl-2 whitespace-nowrap">Template:</span>
+                <div className="p-2 bg-[var(--adm-inset)] border-t border-[var(--adm-line)] flex items-center gap-1.5 overflow-x-auto no-scrollbar flex-shrink-0">
+                  <span className="text-[10px] font-bold uppercase text-[var(--adm-dim)] pl-2 whitespace-nowrap">Template:</span>
                   {CANNED_RESPONSES.map((r, i) => (
                     <button
                       key={i}
                       type="button"
                       onClick={() => setReplyText(r)}
-                      className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] rounded-lg whitespace-nowrap border border-white/5 transition-colors cursor-pointer"
+                      className="px-2.5 py-1 bg-[var(--adm-inset)] hover:bg-[var(--adm-hover)] text-[var(--adm-body)] text-[11px] rounded-lg whitespace-nowrap border border-[var(--adm-line)] transition-colors cursor-pointer"
                     >
                       + Template {i + 1}
                     </button>
                   ))}
                 </div>
 
-                <form onSubmit={kirimBalasan} className="p-3 border-t border-white/8 bg-slate-900/60 flex items-center gap-2 flex-shrink-0">
+                <form onSubmit={kirimBalasan} className="p-3 border-t border-[var(--adm-line)] bg-[var(--adm-inset)] flex items-center gap-2 flex-shrink-0">
                   <textarea
                     rows={2}
                     value={replyText}
                     onChange={(e) => setReplyText(e.target.value)}
                     placeholder="Ketik balasan resmi Customer Service..."
-                    className="flex-1 bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
+                    className="flex-1 bg-[var(--adm-bg)] border border-[var(--adm-line)] rounded-xl px-3 py-2 text-xs text-[var(--adm-fg)] placeholder-[var(--adm-dim)] focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
                   />
 
                   <button
@@ -531,9 +531,9 @@ export default function AdminHelpdeskPage() {
                 </form>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center h-full p-8 text-center space-y-3 text-slate-500">
-                <Headphones className="w-12 h-12 text-slate-600" />
-                <h3 className="font-bold text-sm text-slate-300">Pilih Percakapan di Sisi Kiri</h3>
+              <div className="flex flex-col items-center justify-center h-full p-8 text-center space-y-3 text-[var(--adm-dim)]">
+                <Headphones className="w-12 h-12 text-[var(--adm-dim)]" />
+                <h3 className="font-bold text-sm text-[var(--adm-body)]">Pilih Percakapan di Sisi Kiri</h3>
                 <p className="text-xs max-w-xs">
                   Klik salah satu sesi percakapan pengunjung untuk membaca dan membalas pesan.
                 </p>
@@ -546,8 +546,8 @@ export default function AdminHelpdeskPage() {
       {/* ============ TAB PENGADUAN ============ */}
       {tab === 'complaint' && (
         <Panel className="mt-4">
-          <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-white/8">
-            <h2 className="text-[13.5px] font-bold text-white">Pengaduan Resmi</h2>
+          <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-[var(--adm-line)]">
+            <h2 className="text-[13.5px] font-bold text-[var(--adm-fg)]">Pengaduan Resmi</h2>
             <SearchBox value={qAduan} onChange={setQAduan} placeholder="Cari tiket, pelapor, atau subjek..." />
           </div>
 
@@ -567,7 +567,7 @@ export default function AdminHelpdeskPage() {
                   </Cell>
 
                   <Cell className="max-w-[260px]">
-                    <span className="font-bold text-white text-[12.5px] line-clamp-2">{c.subject}</span>
+                    <span className="font-bold text-[var(--adm-fg)] text-[12.5px] line-clamp-2">{c.subject}</span>
                     {c.attachment_url && (
                       <span className="mt-1 inline-flex items-center gap-1 text-[10.5px] text-amber-300">
                         <Paperclip className="w-3 h-3" /> ada lampiran
@@ -578,8 +578,8 @@ export default function AdminHelpdeskPage() {
                   <Cell><Badge text={c.category} color="#38bdf8" /></Cell>
 
                   <Cell className="max-w-[180px]">
-                    <span className="block truncate text-[12px] text-slate-200">{c.reporter_name}</span>
-                    <span className="block truncate text-[10.5px] text-slate-500">{c.reporter_phone}</span>
+                    <span className="block truncate text-[12px] text-[var(--adm-body)]">{c.reporter_name}</span>
+                    <span className="block truncate text-[10.5px] text-[var(--adm-dim)]">{c.reporter_phone}</span>
                   </Cell>
 
                   <Cell className="whitespace-nowrap text-[11.5px]">{tanggal(c.created_at)}</Cell>
@@ -596,14 +596,14 @@ export default function AdminHelpdeskPage() {
                       <button
                         onClick={() => bukaAduan(c)}
                         title="Tanggapi"
-                        className="w-8 h-8 rounded-lg bg-white/5 hover:bg-cyan-500/20 text-slate-300 hover:text-cyan-300 flex items-center justify-center transition-colors cursor-pointer"
+                        className="w-8 h-8 rounded-lg bg-[var(--adm-hover)] hover:bg-cyan-500/20 text-[var(--adm-body)] hover:text-[var(--adm-accent)] flex items-center justify-center transition-colors cursor-pointer"
                       >
                         <Reply className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => setHapusAduan(c.id)}
                         title="Hapus"
-                        className="w-8 h-8 rounded-lg bg-white/5 hover:bg-rose-500/20 text-slate-300 hover:text-rose-300 flex items-center justify-center transition-colors cursor-pointer"
+                        className="w-8 h-8 rounded-lg bg-[var(--adm-hover)] hover:bg-rose-500/20 text-[var(--adm-body)] hover:text-rose-300 flex items-center justify-center transition-colors cursor-pointer"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -632,13 +632,13 @@ export default function AdminHelpdeskPage() {
       >
         {aduanTerbuka && (
           <div className="space-y-4">
-            <div className="rounded-xl bg-slate-900/60 border border-white/8 p-4 space-y-2">
-              <p className="text-[13px] font-bold text-white">{aduanTerbuka.subject}</p>
-              <p className="text-[12px] text-slate-300 leading-relaxed whitespace-pre-wrap">
+            <div className="rounded-xl bg-[var(--adm-inset)] border border-[var(--adm-line)] p-4 space-y-2">
+              <p className="text-[13px] font-bold text-[var(--adm-fg)]">{aduanTerbuka.subject}</p>
+              <p className="text-[12px] text-[var(--adm-body)] leading-relaxed whitespace-pre-wrap">
                 {aduanTerbuka.description}
               </p>
 
-              <div className="pt-2 border-t border-white/8 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-400">
+              <div className="pt-2 border-t border-[var(--adm-line)] flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-[var(--adm-muted)]">
                 <span>{aduanTerbuka.reporter_name}</span>
                 <span className="inline-flex items-center gap-1"><Mail className="w-3 h-3" />{aduanTerbuka.reporter_email}</span>
                 <span className="inline-flex items-center gap-1"><Phone className="w-3 h-3" />{aduanTerbuka.reporter_phone}</span>
@@ -649,7 +649,7 @@ export default function AdminHelpdeskPage() {
                   href={aduanTerbuka.attachment_url}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 text-[11.5px] font-bold text-cyan-300 hover:text-cyan-200"
+                  className="inline-flex items-center gap-1.5 text-[11.5px] font-bold text-[var(--adm-accent)] hover:text-[var(--adm-accent)]"
                 >
                   <ExternalLink className="w-3.5 h-3.5" /> Lihat foto terlampir
                 </a>
@@ -657,13 +657,13 @@ export default function AdminHelpdeskPage() {
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+              <label className="block text-[11px] font-semibold text-[var(--adm-muted)] uppercase tracking-wider mb-1.5">
                 Status <span className="text-rose-400">*</span>
               </label>
               <select
                 value={statusAduan}
                 onChange={(e) => setStatusAduan(e.target.value as typeof statusAduan)}
-                className="w-full bg-[#0a1428] border border-white/10 rounded-xl px-3.5 py-2.5 text-[12.5px] text-slate-100 focus:outline-none focus:border-cyan-400/50 cursor-pointer"
+                className="w-full bg-[var(--adm-inset)] border border-[var(--adm-line)] rounded-xl px-3.5 py-2.5 text-[12.5px] text-[var(--adm-fg)] focus:outline-none focus:border-cyan-400/50 cursor-pointer"
               >
                 <option value="in_progress">Sedang ditindaklanjuti</option>
                 <option value="resolved">Selesai</option>
@@ -672,7 +672,7 @@ export default function AdminHelpdeskPage() {
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+              <label className="block text-[11px] font-semibold text-[var(--adm-muted)] uppercase tracking-wider mb-1.5">
                 Tanggapan <span className="text-rose-400">*</span>
               </label>
               <textarea
@@ -680,7 +680,7 @@ export default function AdminHelpdeskPage() {
                 value={tanggapan}
                 onChange={(e) => setTanggapan(e.target.value)}
                 placeholder="Tanggapan ini terbaca pelapor saat melacak nomor tiketnya."
-                className="w-full bg-[#0a1428] border border-white/10 rounded-xl px-3.5 py-2.5 text-[12.5px] text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-cyan-400/50 resize-none"
+                className="w-full bg-[var(--adm-inset)] border border-[var(--adm-line)] rounded-xl px-3.5 py-2.5 text-[12.5px] text-[var(--adm-fg)] placeholder:text-[var(--adm-dim)] focus:outline-none focus:border-cyan-400/50 resize-none"
               />
             </div>
           </div>

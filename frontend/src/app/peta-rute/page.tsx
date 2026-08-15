@@ -147,7 +147,7 @@ function PetaRuteContent() {
       <div className="fixed inset-0 z-[60] bg-[#0b1e5b] flex flex-col">
         <div className="flex items-center justify-between px-6 py-3 bg-[#081745] border-b border-white/10 flex-shrink-0">
           <div className="flex items-center gap-3">
-            <img src="/icon-app.svg" alt="" className="w-8 h-8 rounded-lg" />
+            <img src="/icon-192.png" alt="" className="w-8 h-8 rounded-lg" />
             <div className="leading-none">
               <p className="font-black text-white text-[15px] tracking-wide">BANDARA APT PRANOTO</p>
               <p className="text-[10px] text-blue-300 tracking-[0.2em] mt-0.5">PETA RUTE PENERBANGAN</p>

@@ -25,7 +25,10 @@ import {
   StatusChip, TicketStub, MessageBubble, RatingPanel, OutsideHoursNotice,
   EmptyChat, ALT_CHANNELS, isClosed,
 } from '@/components/helpdesk/shared';
-import { FAQ_DATA } from '@/lib/faqData';
+import { gabungFaq, type FaqTampil } from '@/lib/faqData';
+import SafeHtml from '@/components/SafeHtml';
+import { fetchApi } from '@/lib/api';
+import type { FaqItem } from '@/types';
 import {
   HELP_CATEGORIES, useServiceHours, useChatThread, startChat, sendChatMessage,
   submitComplaint, trackComplaint, trackInformationRequest, ticketKind,
@@ -58,15 +61,27 @@ export default function PusatBantuanView() {
   const [cari, setCari] = useState('');
   const [faqTerbuka, setFaqTerbuka] = useState<number | null>(null);
 
+  const [faqs, setFaqs] = useState<FaqTampil[]>([]);
+
+  useEffect(() => {
+    let batal = false;
+
+    fetchApi<FaqItem[]>('/faqs').then((res) => {
+      if (!batal && Array.isArray(res.data)) setFaqs(res.data.map(gabungFaq));
+    });
+
+    return () => { batal = true; };
+  }, []);
+
   const hasilFaq = useMemo(() => {
     const q = cari.trim().toLowerCase();
     if (!q) return [];
-    // Jawaban berupa JSX sehingga tidak dapat dicari; `keywords` yang
-    // menanggung beban itu — lihat catatan di lib/faqData.tsx.
-    return FAQ_DATA.filter(
-      (f) => f.question.toLowerCase().includes(q) || f.keywords.some((k) => k.includes(q)),
-    );
-  }, [cari]);
+
+    // Pencarian menjangkau isi jawaban, bukan hanya judul pertanyaannya —
+    // sebelumnya jawaban berupa JSX sehingga hanya daftar kata kunci yang
+    // dapat dicari, dan daftar itu ikut usang tiap kali jawabannya disunting.
+    return faqs.filter((f) => f.cariTeks.includes(q));
+  }, [cari, faqs]);
 
   /* ---------- lapis 2 & 3: intake ---------- */
   const [mode, setMode] = useState<Mode>('chat');
@@ -320,7 +335,8 @@ export default function PusatBantuanView() {
                                 transition={{ duration: 0.25 }}
                                 className="overflow-hidden"
                               >
-                                <div className="px-4 pb-4 pt-1 border-t border-slate-100">{f.answer}</div>
+                                {/* Jawaban HTML dari panel admin; disaring lebih dulu. */}
+                                <SafeHtml className="px-4 pb-4 pt-1 border-t border-slate-100 faq-answer" html={f.answerHtml} />
                               </motion.div>
                             )}
                           </AnimatePresence>

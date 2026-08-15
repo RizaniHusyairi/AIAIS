@@ -18,10 +18,19 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
     title: "APT Pranoto",
   },
-  icons: {
-    icon: "/icon-app.svg",
-    apple: "/icon-app.svg",
-  },
+  /*
+   * Ikon TIDAK didaftarkan di sini.
+   *
+   * `src/app/icon.png` dan `src/app/apple-icon.png` sudah ditemukan Next.js
+   * lewat konvensi berkas, dan tautannya disisipkan otomatis. Mendaftarkannya
+   * ulang di sini justru menghasilkan DUA tautan ikon yang bersaing, dan
+   * peramban tidak sepakat mana yang menang — itu sebabnya tab sempat
+   * menampilkan lambang lama meski berkasnya sudah diganti.
+   *
+   * Lambangnya sendiri berlatar biru lembaga, bukan transparan: lambang APT
+   * berwarna emas tipis, dan pada 16px di bilah tab ia nyaris hilang di atas
+   * latar terang.
+   */
 };
 
 export const viewport: Viewport = {
@@ -37,8 +46,13 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // `suppressHydrationWarning` berlaku khusus untuk atribut <html> itu sendiri.
+  // Panel admin menyetel `data-adm-theme` lewat skrip sebaris sebelum React
+  // hidrasi — itu memang disengaja, supaya tema gelap tidak didahului kedipan
+  // putih. Tanpa penanda ini React melaporkannya sebagai ketidakcocokan.
+  // Cakupannya hanya satu elemen ini; anak-anaknya tetap diperiksa seperti biasa.
   return (
-    <html lang="id" className="h-full antialiased">
+    <html lang="id" className="h-full antialiased" suppressHydrationWarning>
       <body className="min-h-full flex flex-col bg-slate-50 text-slate-900 font-sans selection:bg-blue-500 selection:text-white">
         <PwaRegister />
         <MobileRedirect />

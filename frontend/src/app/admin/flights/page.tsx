@@ -116,14 +116,14 @@ export default function AdminFlightsPage() {
       </motion.div>
 
       <Panel>
-        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-white/8">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-[var(--adm-line)]">
           <div className="flex gap-2">
             {([['all', 'Semua'], ['departure', 'Keberangkatan'], ['arrival', 'Kedatangan']] as const).map(([v, label]) => (
               <button
                 key={v}
                 onClick={() => setTab(v)}
                 className={`relative px-3.5 py-2 rounded-lg text-[12px] font-bold transition-colors cursor-pointer ${
-                  tab === v ? 'text-cyan-200' : 'text-slate-400 hover:text-slate-200'
+                  tab === v ? 'text-[var(--adm-accent)]' : 'text-[var(--adm-muted)] hover:text-[var(--adm-body)]'
                 }`}
               >
                 {tab === v && (
@@ -149,8 +149,8 @@ export default function AdminFlightsPage() {
                 <Row key={f.id}>
                   <Cell>
                     <span className="flex items-center gap-2">
-                      {isDep ? <PlaneTakeoff className="w-4 h-4 text-cyan-400" /> : <PlaneLanding className="w-4 h-4 text-emerald-400" />}
-                      <span className="font-bold text-white">{f.flight_number}</span>
+                      {isDep ? <PlaneTakeoff className="w-4 h-4 text-[var(--adm-accent)]" /> : <PlaneLanding className="w-4 h-4 text-emerald-400" />}
+                      <span className="font-bold text-[var(--adm-fg)]">{f.flight_number}</span>
                     </span>
                   </Cell>
                   <Cell>{f.airline}</Cell>
@@ -162,10 +162,10 @@ export default function AdminFlightsPage() {
                   <Cell><Badge text={st.label} color={st.color} /></Cell>
                   <Cell>
                     <div className="flex gap-1.5">
-                      <button onClick={() => openEdit(f)} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-cyan-500/20 text-slate-300 hover:text-cyan-300 flex items-center justify-center transition-colors cursor-pointer" title="Ubah">
+                      <button onClick={() => openEdit(f)} className="w-8 h-8 rounded-lg bg-[var(--adm-hover)] hover:bg-cyan-500/20 text-[var(--adm-body)] hover:text-[var(--adm-accent)] flex items-center justify-center transition-colors cursor-pointer" title="Ubah">
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={() => setDelId(Number(f.id))} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-rose-500/20 text-slate-300 hover:text-rose-300 flex items-center justify-center transition-colors cursor-pointer" title="Hapus">
+                      <button onClick={() => setDelId(Number(f.id))} className="w-8 h-8 rounded-lg bg-[var(--adm-hover)] hover:bg-rose-500/20 text-[var(--adm-body)] hover:text-rose-300 flex items-center justify-center transition-colors cursor-pointer" title="Hapus">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>

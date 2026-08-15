@@ -7,14 +7,15 @@
  * Hero dan akordeon memakai komponen bersama `components/ppid/*`.
  */
 
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import PpidHero, { FlightArc } from '@/components/ppid/PpidHero';
 import DocAccordion from '@/components/ppid/DocAccordion';
-import {
-  BERKALA_PENGANTAR, INFO_BERKALA, hitungDokumen,
-} from '@/lib/publicInfoData';
+import { BERKALA_PENGANTAR } from '@/lib/publicInfoData';
+import { kelompokkanDokumen } from '@/lib/ppidGroups';
+import { fetchApi } from '@/lib/api';
+import type { PeriodicDocument } from '@/types';
 import { CalendarClock, FolderOpen, FileText, Info, ArrowRight } from 'lucide-react';
 
 const rise = {
@@ -24,7 +25,34 @@ const rise = {
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.08 } } };
 
 export default function InformasiBerkalaView() {
-  const total = hitungDokumen(INFO_BERKALA);
+  const [items, setItems] = useState<PeriodicDocument[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let batal = false;
+
+    fetchApi<PeriodicDocument[]>('/periodic-documents').then((res) => {
+      if (batal) return;
+      setItems(Array.isArray(res.data) ? res.data : []);
+      setLoading(false);
+    });
+
+    return () => { batal = true; };
+  }, []);
+
+  const groups = useMemo(
+    () => kelompokkanDokumen(items.map((d) => ({
+      id: d.id,
+      category: d.category,
+      title: d.title,
+      published: d.published_date,
+      pejabat: d.pejabat_name,
+      url: d.document_path,
+    }))),
+    [items],
+  );
+
+  const total = items.length;
 
   return (
     <div className="bg-slate-50">
@@ -40,7 +68,7 @@ export default function InformasiBerkalaView() {
         <motion.div variants={container} initial="hidden" whileInView="show" viewport={{ once: true }} className="grid grid-cols-1 sm:grid-cols-3 gap-5">
           {[
             { icon: CalendarClock, label: 'Sifat Publikasi', value: 'Teratur & rutin', tone: 'from-blue-50 to-white ring-blue-100 text-blue-600' },
-            { icon: FolderOpen, label: 'Kategori', value: `${INFO_BERKALA.length} kategori`, tone: 'from-teal-50 to-white ring-teal-100 text-teal-600' },
+            { icon: FolderOpen, label: 'Kategori', value: `${groups.length} kategori`, tone: 'from-teal-50 to-white ring-teal-100 text-teal-600' },
             { icon: FileText, label: 'Dokumen', value: `${total} dokumen`, tone: 'from-amber-50 to-white ring-amber-100 text-amber-600' },
           ].map((c) => {
             const Icon = c.icon;
@@ -69,7 +97,22 @@ export default function InformasiBerkalaView() {
           </motion.p>
 
           <div className="mt-8">
-            <DocAccordion groups={INFO_BERKALA} />
+            {loading ? (
+              <div className="space-y-3" aria-busy="true" aria-label="Memuat dokumen">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="h-16 rounded-2xl bg-white ring-1 ring-slate-100 animate-pulse" />
+                ))}
+              </div>
+            ) : groups.length === 0 ? (
+              <div className="rounded-2xl bg-white ring-1 ring-slate-100 px-6 py-10 text-center">
+                <p className="text-[13.5px] font-bold text-slate-700">Belum ada dokumen yang ditampilkan.</p>
+                <p className="mt-1 text-[12.5px] text-slate-500">
+                  Daftar informasi berkala sedang dimutakhirkan. Silakan periksa kembali beberapa saat lagi.
+                </p>
+              </div>
+            ) : (
+              <DocAccordion groups={groups} />
+            )}
           </div>
         </motion.div>
       </section>

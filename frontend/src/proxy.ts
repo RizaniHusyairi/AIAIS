@@ -23,6 +23,24 @@ function toAppRoute(pathname: string): string {
   // terkunci dari fitur bantuan tanpa ada yang menyadarinya.
   if (pathname.startsWith('/complaints')) return '/app/layanan/bantuan';
   if (pathname.startsWith('/downloads')) return '/app/layanan';
+  // Statistik belum punya layar PWA tersendiri; diarahkan ke profil bandara
+  // yang memuat informasi umum sejenis.
+  if (pathname.startsWith('/statistik')) return '/app/profil';
+  // Kinerja keuangan sama halnya — informasi kelembagaan tanpa layar PWA
+  // tersendiri.
+  if (pathname.startsWith('/keuangan')) return '/app/profil';
+  // Area akun, masuk, dan daftar TIDAK dipetakan ke layar PWA mana pun, dan
+  // ketiganya sengaja tidak didaftarkan pada `matcher` di bawah. Formulir
+  // pengajuannya harus dapat dibuka apa adanya dari ponsel — di sanalah
+  // pemohon memotret dan mengunggah surat pengantarnya. Melemparnya ke layar
+  // PWA akan memutus alur itu, persis kekeliruan yang dulu menimpa
+  // `/complaints`.
+  // Papan Posko Nataru sengaja TIDAK didaftarkan pada `matcher` di bawah,
+  // jadi pemetaan ini tidak pernah terpakai dari peramban — ia ada supaya
+  // rutenya tidak jatuh ke `/app` seandainya kelak ikut dialihkan. Papan itu
+  // dirancang untuk monitor terminal dan tetap harus dapat dibuka apa adanya
+  // dari ponsel petugas yang memeriksanya dari jauh.
+  if (pathname.startsWith('/posko-nataru')) return '/app';
   if (pathname.startsWith('/regulasi')) return '/app/layanan';
   if (pathname.startsWith('/profile')) return '/app/profil';
   return '/app';

@@ -8,11 +8,13 @@
  */
 
 /**
- * - `/app`      → PWA ponsel, punya bilah navigasinya sendiri.
- * - `/admin`    → panel petugas, punya tata letaknya sendiri.
- * - `/aplikasi` → Portal Aplikasi, layar penuh tanpa chrome apa pun.
+ * - `/app`          → PWA ponsel, punya bilah navigasinya sendiri.
+ * - `/admin`        → panel petugas, punya tata letaknya sendiri.
+ * - `/aplikasi`     → Portal Aplikasi, layar penuh tanpa chrome apa pun.
+ * - `/posko-nataru` → papan pantau satu layar untuk monitor terminal; navbar
+ *                     dan footer akan memakan tinggi yang justru harus utuh.
  */
-export const OWN_CHROME_ROUTES = ['/app', '/admin', '/aplikasi'] as const;
+export const OWN_CHROME_ROUTES = ['/app', '/admin', '/aplikasi', '/posko-nataru'] as const;
 
 /**
  * Benar bila rute ini menyediakan chrome-nya sendiri.

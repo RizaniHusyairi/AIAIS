@@ -4,12 +4,12 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { adminFetch } from '@/lib/adminApi';
 import { API_BASE_URL } from '@/lib/api';
-import { BACKGROUND_META, DEFAULT_SETTINGS, invalidateSettings, BackgroundKey } from '@/lib/settings';
+import { BACKGROUND_META, DEFAULT_SETTINGS, invalidateSettings, SKM_KEYS, BackgroundKey } from '@/lib/settings';
 import {
   PageHeader, Panel, Btn, Badge, Toast, ToastMsg, Loading, InfoNote, stagger, riseIn,
 } from '@/components/admin/ui';
 import {
-  ImageIcon, RefreshCw, Save, RotateCcw, ExternalLink, Check, AlertTriangle, Monitor, Smartphone, Link2,
+  ImageIcon, RefreshCw, Save, RotateCcw, ExternalLink, Check, AlertTriangle, Monitor, Smartphone, Link2, Star,
 } from 'lucide-react';
 
 type Draft = Record<string, string>;
@@ -43,8 +43,12 @@ export default function AdminAppearancePage() {
 
   useEffect(() => { loadSettings(); }, []);
 
+  // Latar DAN blok SKM sama-sama dihitung, supaya satu tombol Simpan menutup
+  // keduanya — dua tombol simpan pada satu halaman selalu berakhir dengan
+  // salah satunya terlupakan.
   const dirtyKeys = useMemo(
-    () => BACKGROUND_META.filter((m) => (draft[m.key] ?? '') !== (saved[m.key] ?? '')).map((m) => m.key),
+    () => [...BACKGROUND_META.map((m) => m.key as string), ...SKM_KEYS]
+      .filter((k) => (draft[k] ?? '') !== (saved[k] ?? '')),
     [draft, saved]
   );
 
@@ -74,7 +78,7 @@ export default function AdminAppearancePage() {
       setSaved(fresh);
       setDraft(fresh);
       invalidateSettings();
-      setToast({ text: `${dirtyKeys.length} latar berhasil diperbarui`, kind: 'success' });
+      setToast({ text: `${dirtyKeys.length} pengaturan berhasil diperbarui`, kind: 'success' });
     } else {
       setToast({ text: res.message, kind: 'error' });
     }
@@ -103,10 +107,98 @@ export default function AdminAppearancePage() {
       />
 
       <InfoNote>
-        Tempelkan URL gambar (format <span className="text-cyan-300 font-semibold">.jpg / .png / .webp</span>) pada kolom di bawah.
+        Tempelkan URL gambar (format <span className="text-[var(--adm-accent)] font-semibold">.jpg / .png / .webp</span>) pada kolom di bawah.
         Pratinjau langsung muncul sebelum disimpan. Mengosongkan kolom lalu menyimpan akan mengembalikan latar ke gambar bawaan.
         Perubahan langsung tampil di halaman publik setelah disimpan.
       </InfoNote>
+
+      {/* ---- Survei Kepuasan Masyarakat ----
+          Ditaruh di atas daftar latar karena isinya bukan hiasan: tautan mati
+          pada halaman kewajiban UU 25/2009 adalah hal yang harus segera
+          terlihat dan dapat dibetulkan petugas sendiri. */}
+      <Panel>
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-[var(--adm-line)]">
+          <h2 className="text-[13.5px] font-bold text-[var(--adm-fg)] flex items-center gap-2">
+            <Star className="w-4 h-4 text-amber-400" /> Survei Kepuasan Masyarakat
+          </h2>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <button
+              type="button"
+              onClick={() => setValue('skm_is_active', draft.skm_is_active === '0' ? '1' : '0')}
+              className={`w-10 h-6 rounded-full p-0.5 transition-colors ${draft.skm_is_active === '0' ? 'bg-white/15' : 'bg-emerald-500'}`}
+              aria-pressed={draft.skm_is_active !== '0'}
+            >
+              <motion.span layout className="block w-5 h-5 rounded-full bg-white" style={{ marginLeft: draft.skm_is_active === '0' ? 0 : 16 }} />
+            </button>
+            <span className="text-[12px] font-semibold text-[var(--adm-body)]">
+              {draft.skm_is_active === '0' ? 'Disembunyikan' : 'Ditampilkan'}
+            </span>
+          </label>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <InfoNote>
+            Blok ini tampil pada halaman <span className="font-semibold">Standar Pelayanan</span>.
+            Tautannya milik Kemenhub dan dapat berganti sewaktu-waktu — betulkan di sini bila mati,
+            atau sembunyikan sementara lewat sakelar di atas.
+          </InfoNote>
+
+          {[
+            { key: 'skm_title', label: 'Judul Ajakan', textarea: false },
+            { key: 'skm_text', label: 'Kalimat Pengantar', textarea: true },
+            { key: 'skm_label', label: 'Teks Tombol', textarea: false },
+            { key: 'skm_url', label: 'Tautan Survei', textarea: false },
+          ].map((f) => {
+            const value = draft[f.key] ?? '';
+            const isDirty = value !== (saved[f.key] ?? '');
+            const isDefault = value === DEFAULT_SETTINGS[f.key];
+
+            return (
+              <div key={f.key}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--adm-dim)]">{f.label}</span>
+                  <span className="flex items-center gap-2">
+                    {isDirty && <Badge text="Belum disimpan" color="#fbbf24" />}
+                    <button
+                      onClick={() => setValue(f.key, DEFAULT_SETTINGS[f.key])}
+                      disabled={isDefault}
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--adm-body)] hover:text-[var(--adm-accent)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                    >
+                      <RotateCcw className="w-3 h-3" /> Bawaan
+                    </button>
+                  </span>
+                </div>
+
+                {f.textarea ? (
+                  <textarea
+                    rows={2}
+                    value={value}
+                    onChange={(e) => setValue(f.key, e.target.value)}
+                    className="mt-1.5 w-full bg-[var(--adm-inset)] border border-[var(--adm-line)] rounded-xl px-3.5 py-2.5 text-[12.5px] text-[var(--adm-fg)] focus:outline-none focus:border-[var(--adm-accent)] transition-colors resize-y"
+                  />
+                ) : (
+                  <input
+                    value={value}
+                    onChange={(e) => setValue(f.key, e.target.value)}
+                    className="mt-1.5 w-full bg-[var(--adm-inset)] border border-[var(--adm-line)] rounded-xl px-3.5 py-2.5 text-[12.5px] text-[var(--adm-fg)] focus:outline-none focus:border-[var(--adm-accent)] transition-colors"
+                  />
+                )}
+
+                {f.key === 'skm_url' && value && (
+                  <a
+                    href={value}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-1.5 inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-[var(--adm-accent)] hover:underline"
+                  >
+                    <ExternalLink className="w-3 h-3" /> Uji tautan ini
+                  </a>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </Panel>
 
       <motion.div variants={stagger} initial="hidden" animate="show" className="grid grid-cols-1 xl:grid-cols-2 gap-5">
         {BACKGROUND_META.map((m) => {
@@ -119,7 +211,7 @@ export default function AdminAppearancePage() {
             <motion.div key={m.key} variants={riseIn}>
               <Panel>
                 {/* preview */}
-                <div className="relative h-44 bg-[#0a1428] overflow-hidden">
+                <div className="relative h-44 bg-[var(--adm-inset)] overflow-hidden">
                   {value ? (
                     <img
                       key={value}
@@ -130,7 +222,7 @@ export default function AdminAppearancePage() {
                       onLoad={() => setBroken((b) => ({ ...b, [m.key]: false }))}
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-slate-600">
+                    <div className="w-full h-full flex items-center justify-center text-[var(--adm-dim)]">
                       <ImageIcon className="w-10 h-10" />
                     </div>
                   )}
@@ -140,14 +232,14 @@ export default function AdminAppearancePage() {
                   {/* label overlay */}
                   <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between gap-3">
                     <div>
-                      <p className="text-white font-black text-[15px] leading-tight drop-shadow">{m.label}</p>
-                      <p className="text-slate-300 text-[11px] mt-0.5">{m.note}</p>
+                      <p className="text-[var(--adm-fg)] font-black text-[15px] leading-tight drop-shadow">{m.label}</p>
+                      <p className="text-[var(--adm-body)] text-[11px] mt-0.5">{m.note}</p>
                     </div>
                     <a
                       href={m.href}
                       target="_blank"
                       rel="noreferrer"
-                      className="flex-shrink-0 inline-flex items-center gap-1.5 bg-black/50 hover:bg-black/70 backdrop-blur border border-white/20 text-white text-[11px] font-semibold px-2.5 py-1.5 rounded-lg transition-colors"
+                      className="flex-shrink-0 inline-flex items-center gap-1.5 bg-black/50 hover:bg-black/70 backdrop-blur border border-[var(--adm-line)] text-white text-[11px] font-semibold px-2.5 py-1.5 rounded-lg transition-colors"
                     >
                       Lihat <ExternalLink className="w-3 h-3" />
                     </a>
@@ -155,7 +247,7 @@ export default function AdminAppearancePage() {
 
                   {/* badges */}
                   <div className="absolute top-3 left-4 flex items-center gap-2">
-                    <span className="inline-flex items-center gap-1.5 bg-black/50 backdrop-blur border border-white/20 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full">
+                    <span className="inline-flex items-center gap-1.5 bg-black/50 backdrop-blur border border-[var(--adm-line)] text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full">
                       {isMobile ? <Smartphone className="w-3 h-3" /> : <Monitor className="w-3 h-3" />}
                       {m.page}
                     </span>
@@ -163,29 +255,29 @@ export default function AdminAppearancePage() {
                   </div>
 
                   {broken[m.key] && value && (
-                    <div className="absolute inset-0 bg-[#0a1428]/85 flex flex-col items-center justify-center gap-2">
+                    <div className="absolute inset-0 bg-[var(--adm-inset)]/85 flex flex-col items-center justify-center gap-2">
                       <AlertTriangle className="w-8 h-8 text-rose-400" />
                       <p className="text-rose-300 text-[12px] font-semibold">Gambar tidak dapat dimuat</p>
-                      <p className="text-slate-500 text-[11px]">Periksa kembali URL-nya</p>
+                      <p className="text-[var(--adm-dim)] text-[11px]">Periksa kembali URL-nya</p>
                     </div>
                   )}
                 </div>
 
                 {/* input */}
                 <div className="p-4 space-y-3">
-                  <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">URL Gambar Latar</label>
+                  <label className="block text-[11px] font-semibold text-[var(--adm-muted)] uppercase tracking-wider">URL Gambar Latar</label>
                   <div className="relative">
-                    <Link2 className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <Link2 className="w-4 h-4 text-[var(--adm-dim)] absolute left-3.5 top-1/2 -translate-y-1/2" />
                     <input
                       value={value}
                       onChange={(e) => setValue(m.key, e.target.value)}
                       placeholder="https://contoh.com/gambar.jpg"
-                      className="w-full bg-[#0a1428] border border-white/10 rounded-xl pl-10 pr-3 py-2.5 text-[12px] text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-400/50 transition-colors"
+                      className="w-full bg-[var(--adm-inset)] border border-[var(--adm-line)] rounded-xl pl-10 pr-3 py-2.5 text-[12px] text-[var(--adm-fg)] placeholder:text-[var(--adm-dim)] focus:outline-none focus:border-cyan-400/50 transition-colors"
                     />
                   </div>
 
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[11px] text-slate-500 flex items-center gap-1.5">
+                    <span className="text-[11px] text-[var(--adm-dim)] flex items-center gap-1.5">
                       {isDefault ? (
                         <><Check className="w-3.5 h-3.5 text-emerald-400" /> Menggunakan gambar bawaan</>
                       ) : (
@@ -195,7 +287,7 @@ export default function AdminAppearancePage() {
                     <button
                       onClick={() => resetOne(m.key)}
                       disabled={isDefault}
-                      className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-slate-300 hover:text-cyan-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-[var(--adm-body)] hover:text-[var(--adm-accent)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
                     >
                       <RotateCcw className="w-3.5 h-3.5" /> Kembalikan bawaan
                     </button>

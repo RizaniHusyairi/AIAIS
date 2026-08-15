@@ -2,19 +2,26 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\ResolvesFileUrl;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Surat resmi bandara: Surat Keputusan dan Surat Edaran.
  *
- * Aturan penting yang diwarisi dari v1: surat yang berkasnya TIDAK ada di
- * cakram tidak boleh tampil di halaman publik. Kolom `file_path` bisa
- * menunjuk berkas yang tidak pernah ada — sisa data contoh atau berkas yang
- * terhapus manual — dan tanpa pemeriksaan ini tautannya berujung 404.
+ * Tabelnya milik portal v1 dan dipakai apa adanya — kolomnya kebetulan sudah
+ * persis sama dengan yang dibutuhkan v2. Yang berbeda hanya letak berkasnya:
+ * PDF lama ada di direktori unggahan v1 (disk `legacy`), PDF baru ditulis ke
+ * disk `public` v2. Trait ResolvesFileUrl yang menyatukan keduanya.
+ *
+ * Aturan penting yang diwarisi dari v1: surat yang berkasnya TIDAK ada tidak
+ * boleh tampil di halaman publik. Kolom `file_path` bisa menunjuk berkas yang
+ * tidak pernah ada — sisa data contoh atau berkas yang terhapus manual — dan
+ * tanpa pemeriksaan ini tautannya berujung 404.
  */
 class Letter extends Model
 {
+    use ResolvesFileUrl;
+
     /** Jenis surat yang dikenali; dipakai pula sebagai aturan validasi. */
     public const TYPES = ['keputusan', 'edaran'];
 
@@ -27,40 +34,13 @@ class Letter extends Model
     /** Ikut terkirim pada JSON — frontend hanya perlu URL siap pakai. */
     protected $appends = ['file_url', 'has_file'];
 
-    /**
-     * Apakah berkasnya benar-benar dapat dibuka.
-     *
-     * URL penuh dianggap ada: dokumen yang masih dilayani server v1 tidak
-     * punya jejak di cakram v2, dan memeriksanya lewat jaringan akan membuat
-     * setiap permintaan daftar bergantung pada server lain.
-     */
     public function getHasFileAttribute(): bool
     {
-        if (empty($this->file_path)) {
-            return false;
-        }
-
-        if ($this->isAbsoluteUrl($this->file_path)) {
-            return true;
-        }
-
-        return Storage::disk('public')->exists($this->file_path);
+        return $this->fileExists($this->file_path);
     }
 
-    /** URL publik berkas, atau null bila berkasnya tidak ada. */
     public function getFileUrlAttribute(): ?string
     {
-        if (! $this->has_file) {
-            return null;
-        }
-
-        return $this->isAbsoluteUrl($this->file_path)
-            ? $this->file_path
-            : Storage::disk('public')->url($this->file_path);
-    }
-
-    private function isAbsoluteUrl(string $path): bool
-    {
-        return str_starts_with($path, 'http://') || str_starts_with($path, 'https://');
+        return $this->fileUrl($this->file_path);
     }
 }

@@ -78,6 +78,13 @@ return [
     'url' => env('APP_URL', 'http://localhost'),
 
     /*
+     * Alamat portal yang dilihat pengguna (Next.js), berbeda dari APP_URL yang
+     * menunjuk server API. Dipakai menyusun tautan yang dikirim lewat surel —
+     * tautan reset kata sandi harus mendarat di halaman portal, bukan di API.
+     */
+    'frontend_url' => env('FRONTEND_URL', 'http://localhost:3000'),
+
+    /*
     |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------

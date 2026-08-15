@@ -8,7 +8,8 @@ import {
   PieChart, Pie, Cell, AreaChart, Area,
 } from 'recharts';
 import { adminFetch } from '@/lib/adminApi';
-import { PageHeader, Panel, StatCard, Loading, Badge, stagger, RadarDecor } from '@/components/admin/ui';
+import { PageHeader, Panel, StatCard, Loading, Badge, stagger, RadarDecor, JumpCard } from '@/components/admin/ui';
+import { useAdminTheme } from '@/components/admin/theme';
 import {
   LayoutDashboard, Users, Plane, Newspaper, MessageSquareWarning, TrendingUp,
   Smartphone, ArrowRight, Building2, Store, Megaphone, CheckCircle2, Clock, AlertTriangle, FileText,
@@ -26,6 +27,34 @@ type Analytics = {
 
 const DEVICE_COLORS = ['#22d3ee', '#3b82f6', '#a78bfa'];
 
+/**
+ * Warna grafik per tema.
+ *
+ * Recharts menerima warna sebagai nilai JavaScript, bukan kelas CSS, jadi
+ * satu-satunya bagian panel yang harus tahu tema apa yang sedang aktif
+ * adalah blok ini.
+ */
+const CHART = {
+  light: {
+    grid: 'rgba(15,23,42,0.08)',
+    axis: '#64748b',
+    line: '#0891b2',
+    bar: '#2563eb',
+    tooltip: { background: '#ffffff', border: '1px solid rgba(15,23,42,0.1)', borderRadius: 12, fontSize: 12, boxShadow: '0 10px 30px -12px rgba(15,23,42,0.25)' },
+    tooltipLabel: { color: '#0f172a' },
+    cursor: 'rgba(15,23,42,0.05)',
+  },
+  dark: {
+    grid: 'rgba(255,255,255,0.06)',
+    axis: '#64748b',
+    line: '#22d3ee',
+    bar: '#3b82f6',
+    tooltip: { background: '#0b1428', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12, fontSize: 12 },
+    tooltipLabel: { color: '#e2e8f0' },
+    cursor: 'rgba(255,255,255,0.04)',
+  },
+} as const;
+
 /* Kurva kunjungan 7 hari — diturunkan dari angka harian agar konsisten dengan data */
 function buildTrend(today: number) {
   const days = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
@@ -34,6 +63,7 @@ function buildTrend(today: number) {
 }
 
 export default function AdminDashboardPage() {
+  const c = CHART[useAdminTheme()];
   const [data, setData] = useState<Analytics | null>(null);
   const [counts, setCounts] = useState({ news: 0, announcements: 0, facilities: 0, tenants: 0, documents: 0 });
   const [loading, setLoading] = useState(true);
@@ -74,12 +104,19 @@ export default function AdminDashboardPage() {
       <PageHeader
         icon={LayoutDashboard}
         title="Dasbor Manajemen"
-        subtitle="Ringkasan trafik portal, operasional penerbangan, dan konten bandara"
+        subtitle="Semua yang terjadi di portal dan di apron hari ini, dalam satu layar."
         action={
           <Link href="/admin/flights">
-            <span className="inline-flex items-center gap-2 bg-cyan-500 hover:bg-cyan-400 text-[#04121f] font-bold text-[12.5px] px-4 py-2.5 rounded-xl shadow-lg shadow-cyan-500/20 transition-colors cursor-pointer">
-              Kelola Penerbangan <ArrowRight className="w-4 h-4" />
-            </span>
+            <motion.span
+              whileHover={{ y: -2 }}
+              whileTap={{ scale: 0.96 }}
+              className="group relative overflow-hidden inline-flex items-center gap-2 bg-gradient-to-r from-[var(--adm-btn-from)] to-[var(--adm-btn-to)] hover:brightness-110 text-[var(--adm-btn-fg)] font-bold text-[12.5px] px-4 py-2.5 rounded-xl shadow-md transition-all cursor-pointer"
+            >
+              <span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/35 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+              <span className="relative inline-flex items-center gap-2">
+                Kelola Penerbangan <ArrowRight className="w-4 h-4" />
+              </span>
+            </motion.span>
           </Link>
         }
       />
@@ -100,18 +137,15 @@ export default function AdminDashboardPage() {
               <AreaChart data={trend} margin={{ top: 6, right: 6, left: -18, bottom: 0 }}>
                 <defs>
                   <linearGradient id="gTraffic" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#22d3ee" stopOpacity={0.5} />
-                    <stop offset="100%" stopColor="#22d3ee" stopOpacity={0} />
+                    <stop offset="0%" stopColor={c.line} stopOpacity={0.42} />
+                    <stop offset="100%" stopColor={c.line} stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
-                <XAxis dataKey="day" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
-                <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
-                <Tooltip
-                  contentStyle={{ background: '#0b1428', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12, fontSize: 12 }}
-                  labelStyle={{ color: '#e2e8f0' }}
-                />
-                <Area type="monotone" dataKey="kunjungan" stroke="#22d3ee" strokeWidth={2.5} fill="url(#gTraffic)" animationDuration={1100} />
+                <CartesianGrid stroke={c.grid} vertical={false} />
+                <XAxis dataKey="day" stroke={c.axis} fontSize={11} tickLine={false} axisLine={false} />
+                <YAxis stroke={c.axis} fontSize={11} tickLine={false} axisLine={false} />
+                <Tooltip contentStyle={c.tooltip} labelStyle={c.tooltipLabel} />
+                <Area type="monotone" dataKey="kunjungan" stroke={c.line} strokeWidth={2.5} fill="url(#gTraffic)" animationDuration={1100} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -134,10 +168,7 @@ export default function AdminDashboardPage() {
                     <Cell key={i} fill={DEVICE_COLORS[i % DEVICE_COLORS.length]} stroke="none" />
                   ))}
                 </Pie>
-                <Tooltip
-                  contentStyle={{ background: '#0b1428', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12, fontSize: 12 }}
-                  formatter={(v: any) => [`${v}%`, 'Porsi']}
-                />
+                <Tooltip contentStyle={c.tooltip} labelStyle={c.tooltipLabel} formatter={(v: any) => [`${v}%`, 'Porsi']} />
               </PieChart>
             </ResponsiveContainer>
 
@@ -145,8 +176,8 @@ export default function AdminDashboardPage() {
               {(data?.device_stats ?? []).map((d, i) => (
                 <div key={d.device} className="flex items-center gap-2.5 text-[12px]">
                   <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: DEVICE_COLORS[i % DEVICE_COLORS.length] }} />
-                  <span className="text-slate-400 flex-1 truncate">{d.device}</span>
-                  <span className="font-bold text-white tabular-nums">{d.percentage}%</span>
+                  <span className="text-[var(--adm-muted)] flex-1 truncate">{d.device}</span>
+                  <span className="font-bold text-[var(--adm-fg)] tabular-nums">{d.percentage}%</span>
                 </div>
               ))}
             </div>
@@ -159,15 +190,16 @@ export default function AdminDashboardPage() {
           <div className="p-5 pt-4">
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={data?.top_pages ?? []} layout="vertical" margin={{ top: 0, right: 16, left: 8, bottom: 0 }}>
-                <CartesianGrid stroke="rgba(255,255,255,0.06)" horizontal={false} />
-                <XAxis type="number" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
-                <YAxis type="category" dataKey="page" stroke="#94a3b8" fontSize={10.5} width={150} tickLine={false} axisLine={false} />
+                <CartesianGrid stroke={c.grid} horizontal={false} />
+                <XAxis type="number" stroke={c.axis} fontSize={11} tickLine={false} axisLine={false} />
+                <YAxis type="category" dataKey="page" stroke={c.axis} fontSize={10.5} width={150} tickLine={false} axisLine={false} />
                 <Tooltip
-                  cursor={{ fill: 'rgba(255,255,255,0.04)' }}
-                  contentStyle={{ background: '#0b1428', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12, fontSize: 12 }}
+                  cursor={{ fill: c.cursor }}
+                  contentStyle={c.tooltip}
+                  labelStyle={c.tooltipLabel}
                   formatter={(v: any) => [Number(v).toLocaleString('id-ID'), 'Kunjungan']}
                 />
-                <Bar dataKey="views" fill="#3b82f6" radius={[0, 6, 6, 0]} animationDuration={1000} barSize={16} />
+                <Bar dataKey="views" fill={c.bar} radius={[0, 6, 6, 0]} animationDuration={1000} barSize={16} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -186,14 +218,14 @@ export default function AdminDashboardPage() {
                 const Icon = s.icon;
                 const pct = fs && fs.total > 0 ? Math.round((s.value / fs.total) * 100) : 0;
                 return (
-                  <div key={s.label} className="rounded-xl bg-[#0a1428] border border-white/8 p-3.5">
+                  <div key={s.label} className="rounded-xl bg-[var(--adm-inset)] border border-[var(--adm-line)] p-3.5">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="flex items-center gap-2 text-[12px] font-semibold text-slate-300">
+                      <span className="flex items-center gap-2 text-[12px] font-semibold text-[var(--adm-body)]">
                         <Icon className="w-4 h-4" style={{ color: s.color }} /> {s.label}
                       </span>
-                      <span className="text-[13px] font-black text-white tabular-nums">{s.value}</span>
+                      <span className="text-[13px] font-black text-[var(--adm-fg)] tabular-nums">{s.value}</span>
                     </div>
-                    <div className="h-1.5 rounded-full bg-white/8 overflow-hidden">
+                    <div className="h-1.5 rounded-full bg-[var(--adm-line)] overflow-hidden">
                       <motion.div
                         className="h-full rounded-full"
                         style={{ backgroundColor: s.color }}
@@ -207,8 +239,8 @@ export default function AdminDashboardPage() {
               })}
             </div>
 
-            <div className="relative rounded-xl bg-[#0a1428] border border-white/8 p-3.5 space-y-2.5">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Pengaduan Publik</p>
+            <div className="relative rounded-xl bg-[var(--adm-inset)] border border-[var(--adm-line)] p-3.5 space-y-2.5">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--adm-muted)]">Pengaduan Publik</p>
               {[
                 { label: 'Selesai', value: cs?.resolved ?? 0, color: '#34d399', icon: CheckCircle2 },
                 { label: 'Diproses', value: cs?.in_progress ?? 0, color: '#38bdf8', icon: Clock },
@@ -217,10 +249,10 @@ export default function AdminDashboardPage() {
                 const Icon = c.icon;
                 return (
                   <div key={c.label} className="flex items-center justify-between text-[12px]">
-                    <span className="flex items-center gap-2 text-slate-400">
+                    <span className="flex items-center gap-2 text-[var(--adm-muted)]">
                       <Icon className="w-3.5 h-3.5" style={{ color: c.color }} /> {c.label}
                     </span>
-                    <span className="font-bold text-white tabular-nums">{c.value}</span>
+                    <span className="font-bold text-[var(--adm-fg)] tabular-nums">{c.value}</span>
                   </div>
                 );
               })}
@@ -230,7 +262,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* ---- content inventory ---- */}
-      <Panel title="Inventaris Konten Portal">
+      <Panel title="Inventaris Konten Portal" action={<Badge text="Klik untuk kelola" color="#38bdf8" />}>
         <motion.div variants={stagger} initial="hidden" animate="show" className="p-5 grid grid-cols-2 lg:grid-cols-5 gap-3">
           {[
             { label: 'Berita', value: counts.news, icon: Newspaper, href: '/admin/news', color: '#a78bfa' },
@@ -238,25 +270,9 @@ export default function AdminDashboardPage() {
             { label: 'Fasilitas', value: counts.facilities, icon: Building2, href: '/admin/facilities', color: '#34d399' },
             { label: 'Tenant', value: counts.tenants, icon: Store, href: '/admin/tenants', color: '#38bdf8' },
             { label: 'Dokumen', value: counts.documents, icon: FileText, href: '/admin/documents', color: '#fb7185' },
-          ].map((c) => {
-            const Icon = c.icon;
-            return (
-              <motion.div key={c.label} variants={{ hidden: { opacity: 0, y: 14 }, show: { opacity: 1, y: 0 } }} whileHover={{ y: -4 }}>
-                <Link href={c.href} className="block rounded-xl bg-[#0a1428] border border-white/8 hover:border-cyan-400/30 p-4 transition-colors group">
-                  <span
-                    className="w-9 h-9 rounded-lg flex items-center justify-center mb-2.5"
-                    style={{ backgroundColor: `${c.color}1a`, border: `1px solid ${c.color}40` }}
-                  >
-                    <Icon className="w-4 h-4" style={{ color: c.color }} />
-                  </span>
-                  <p className="text-[20px] font-black text-white leading-none tabular-nums">{c.value}</p>
-                  <p className="text-[11.5px] text-slate-400 mt-1 flex items-center gap-1 group-hover:text-cyan-300 transition-colors">
-                    {c.label} <ArrowRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </p>
-                </Link>
-              </motion.div>
-            );
-          })}
+          ].map((c) => (
+            <JumpCard key={c.label} label={c.label} value={c.value} icon={c.icon} href={c.href} color={c.color} />
+          ))}
         </motion.div>
       </Panel>
 
@@ -269,7 +285,11 @@ export default function AdminDashboardPage() {
         ].map((m) => {
           const Icon = m.icon;
           return (
-            <div key={m.label} className="rounded-2xl bg-[#0d1730] border border-white/8 p-5 flex items-center gap-4">
+            <motion.div
+              key={m.label}
+              whileHover={{ y: -4 }}
+              className="rounded-2xl adm-glass adm-lift p-5 flex items-center gap-4"
+            >
               <span
                 className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
                 style={{ backgroundColor: `${m.color}1a`, border: `1px solid ${m.color}40` }}
@@ -277,10 +297,10 @@ export default function AdminDashboardPage() {
                 <Icon className="w-5 h-5" style={{ color: m.color }} />
               </span>
               <div>
-                <p className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">{m.label}</p>
-                <p className="text-[19px] font-black text-white leading-tight mt-0.5">{m.value}</p>
+                <p className="text-[11px] uppercase tracking-wider text-[var(--adm-muted)] font-semibold">{m.label}</p>
+                <p className="text-[19px] font-black text-[var(--adm-fg)] leading-tight mt-0.5">{m.value}</p>
               </div>
-            </div>
+            </motion.div>
           );
         })}
       </div>

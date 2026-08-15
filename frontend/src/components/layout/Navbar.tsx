@@ -11,7 +11,8 @@ import {
   Newspaper, MessageSquareWarning, Info, UserRound, MapPin, Clock,
   CloudSun, Globe, ArrowRight, PlaneTakeoff, ShieldCheck,
   FileText, ClipboardList, Scale, FolderOpen, TrendingUp, CircleHelp,
-  Megaphone, Store, ExternalLink, LayoutGrid,
+  Megaphone, Store, ExternalLink, LayoutGrid, UserCircle,
+  BarChart3, CalendarRange,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { RELATED_LINKS } from '@/lib/relatedLinks';
@@ -62,6 +63,7 @@ const MENU: MenuItem[] = [
       { name: 'Struktur Organisasi', href: '/profile#struktur', icon: Users, desc: 'Bagan organisasi Kantor UPBU Kelas I' },
       { name: 'Pejabat Bandara', href: '/profile#pejabat', icon: UserRound, desc: 'Struktur pimpinan Kantor UPBU Kelas I APT Pranoto' },
       { name: 'Fasilitas Bandara', href: '/facilities', icon: Building2, desc: 'Ruang tunggu, musala, kesehatan, dan fasilitas umum' },
+      { name: 'Statistik Lalu Lintas', href: '/statistik', icon: BarChart3, desc: 'Pergerakan pesawat, penumpang, bagasi, dan kargo per periode' },
     ],
   },
 
@@ -98,7 +100,8 @@ const MENU: MenuItem[] = [
       { name: 'Jadwal Penerbangan', href: '/flights', icon: Plane, desc: 'Status keberangkatan & kedatangan real-time' },
       { name: 'Peta Rute', href: '/peta-rute', icon: MapPin, desc: 'Rute penerbangan hari ini pada satu peta' },
       { name: 'Berita', href: '/news', icon: Newspaper, desc: 'Kabar terbaru & pengumuman resmi operasional' },
-      { name: 'Kinerja Keuangan', icon: TrendingUp, desc: 'Laporan keuangan Badan Layanan Umum', soon: true },
+      { name: 'Kinerja Keuangan', href: '/keuangan', icon: TrendingUp, desc: 'Pemasukan dan anggaran Badan Layanan Umum' },
+      { name: 'Papan Posko Nataru', href: '/posko-nataru', icon: CalendarRange, desc: 'Perkembangan arus penumpang selama Posko Natal & Tahun Baru' },
       { name: 'FAQ', href: '/faq', icon: CircleHelp, desc: 'Pertanyaan yang sering diajukan' },
     ],
   },
@@ -574,6 +577,18 @@ export default function Navbar() {
               >
                 <Moon className="w-[18px] h-[18px]" />
               </motion.button>
+
+              {/* Akun layanan warga — pintu menuju formulir pengajuan.
+                  Sengaja bergaya tenang, bukan tombol penuh: yang membutuhkannya
+                  datang dengan tujuan dan mencarinya, sedangkan sebagian besar
+                  pengunjung portal hanya menengok jadwal penerbangan. */}
+              <Link
+                href="/akun"
+                className="ml-1 inline-flex items-center gap-1.5 text-[13px] font-semibold text-blue-100 hover:text-white px-3 h-10 rounded-full hover:bg-white/10 transition-colors"
+              >
+                <UserCircle className="w-[18px] h-[18px]" />
+                <span>Akun</span>
+              </Link>
 
               {/* Tombol utama menuju Portal Aplikasi (sistem kedinasan pegawai).
                   Sebelumnya tempat ini ditempati "Kontak Kami"; Pusat Bantuan

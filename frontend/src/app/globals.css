@@ -136,6 +136,220 @@
 }
 
 /* ================================================================
+   Panel admin — lapisan "kokpit"
+   ================================================================
+   Semua kelas berawalan `adm-` hanya dipakai di bawah /admin. Ditaruh di
+   CSS, bukan utilitas Tailwind, karena bertumpu pada gradien berlapis,
+   mask, dan @keyframes — tiga hal yang jadi tidak terbaca kalau ditulis
+   sebagai rentetan kelas panjang di JSX.
+
+   Seluruh animasi hias di sini mati sendiri pada prefers-reduced-motion
+   (lihat blok di ujung berkas): panel ini dipakai bekerja seharian, dan
+   gerakan yang tidak bisa dimatikan adalah gangguan, bukan hiasan.
+
+   Warnanya seluruhnya bertoken. `data-adm-theme` di <html> yang memilih
+   set mana yang berlaku — tema terang jadi bawaan, dan komponen tidak perlu
+   tahu tema apa yang sedang aktif. */
+
+/* ---- Tema terang (bawaan): siang cerah, kertas biru sangat muda ---- */
+:root {
+  --adm-bg: #eef3fa;
+  --adm-glow-a: rgba(37, 99, 235, 0.1);
+  --adm-glow-b: rgba(14, 165, 233, 0.09);
+  --adm-grid: rgba(30, 64, 175, 0.05);
+
+  --adm-panel: rgba(255, 255, 255, 0.86);
+  --adm-panel-top: rgba(255, 255, 255, 0.7);
+  --adm-inset: #f5f8fc;
+  --adm-line: rgba(15, 23, 42, 0.09);
+  --adm-hover: rgba(15, 23, 42, 0.04);
+
+  --adm-fg: #0f172a;
+  --adm-body: #475569;
+  --adm-muted: #64748b;
+  --adm-dim: #94a3b8;
+
+  --adm-accent: #0e7490;
+  --adm-accent-strong: #0891b2;
+  --adm-accent-soft: rgba(8, 145, 178, 0.1);
+  --adm-accent-line: rgba(8, 145, 178, 0.3);
+  --adm-accent-ring: rgba(8, 145, 178, 0.14);
+
+  --adm-ok: #047857;
+  --adm-ok-soft: rgba(16, 185, 129, 0.12);
+  --adm-ok-line: rgba(5, 150, 105, 0.3);
+  --adm-danger: #be123c;
+  --adm-danger-soft: rgba(244, 63, 94, 0.1);
+  --adm-danger-line: rgba(225, 29, 72, 0.28);
+  --adm-warn: #b45309;
+  --adm-warn-soft: rgba(245, 158, 11, 0.12);
+  --adm-warn-line: rgba(217, 119, 6, 0.3);
+
+  /* Bayangan lembut menggantikan pendar neon — di atas kertas terang,
+     kedalaman dibaca dari bayangan, bukan dari cahaya. */
+  --adm-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 10px 30px -18px rgba(15, 23, 42, 0.22);
+  --adm-shadow-lift: 0 2px 4px rgba(15, 23, 42, 0.05), 0 22px 44px -24px rgba(8, 145, 178, 0.4);
+  --adm-sweep-color: rgba(15, 23, 42, 0.04);
+  --adm-scrim: rgba(15, 23, 42, 0.35);
+
+  /* Tombol utama: teks putih di atas gradien pekat. Kebalikan dari tema
+     gelap, yang justru menaruh teks gelap di atas gradien terang. */
+  --adm-btn-from: #0891b2;
+  --adm-btn-to: #2563eb;
+  --adm-btn-fg: #ffffff;
+}
+
+/* ---- Tema gelap: kokpit malam ---- */
+:root[data-adm-theme='dark'] {
+  --adm-bg: #050a16;
+  --adm-glow-a: rgba(37, 99, 235, 0.18);
+  --adm-glow-b: rgba(34, 211, 238, 0.12);
+  --adm-grid: rgba(56, 189, 248, 0.045);
+
+  --adm-panel: rgba(11, 20, 40, 0.82);
+  --adm-panel-top: rgba(255, 255, 255, 0.045);
+  --adm-inset: rgba(10, 20, 40, 0.75);
+  --adm-line: rgba(255, 255, 255, 0.08);
+  --adm-hover: rgba(255, 255, 255, 0.06);
+
+  --adm-fg: #ffffff;
+  --adm-body: #cbd5e1;
+  --adm-muted: #94a3b8;
+  --adm-dim: #64748b;
+
+  --adm-accent: #67e8f9;
+  --adm-accent-strong: #22d3ee;
+  --adm-accent-soft: rgba(34, 211, 238, 0.14);
+  --adm-accent-line: rgba(34, 211, 238, 0.35);
+  --adm-accent-ring: rgba(34, 211, 238, 0.15);
+
+  --adm-ok: #6ee7b7;
+  --adm-ok-soft: rgba(16, 185, 129, 0.12);
+  --adm-ok-line: rgba(52, 211, 153, 0.4);
+  --adm-danger: #fda4af;
+  --adm-danger-soft: rgba(244, 63, 94, 0.12);
+  --adm-danger-line: rgba(244, 63, 94, 0.35);
+  --adm-warn: #fcd34d;
+  --adm-warn-soft: rgba(251, 191, 36, 0.15);
+  --adm-warn-line: rgba(251, 191, 36, 0.3);
+
+  --adm-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 34px -22px rgba(0, 0, 0, 0.9);
+  --adm-shadow-lift: 0 18px 40px -24px rgba(34, 211, 238, 0.55);
+  --adm-sweep-color: rgba(255, 255, 255, 0.07);
+  --adm-scrim: rgba(3, 8, 15, 0.8);
+
+  --adm-btn-from: #22d3ee;
+  --adm-btn-to: #3b82f6;
+  --adm-btn-fg: #04121f;
+}
+
+/* Latar utama: peta navigasi udara. Kisi halus + dua pendar ufuk. */
+.adm-sky {
+  background-color: var(--adm-bg);
+  background-image:
+    radial-gradient(80rem 40rem at 12% -10%, var(--adm-glow-a), transparent 60%),
+    radial-gradient(60rem 36rem at 100% 100%, var(--adm-glow-b), transparent 62%),
+    linear-gradient(var(--adm-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--adm-grid) 1px, transparent 1px);
+  background-size: auto, auto, 52px 52px, 52px 52px;
+  background-attachment: fixed;
+  color: var(--adm-body);
+}
+
+/* Permukaan kaca. Dipakai panel, kartu statistik, modal, dan bilah atas. */
+.adm-glass {
+  background:
+    linear-gradient(180deg, var(--adm-panel-top), transparent 42%),
+    var(--adm-panel);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--adm-line);
+  box-shadow: var(--adm-shadow);
+}
+
+/* Sorot pinggir saat kursor lewat — halus, sekadar penanda "ini hidup". */
+.adm-lift {
+  transition: border-color 0.25s ease, box-shadow 0.3s ease, transform 0.25s ease;
+}
+.adm-lift:hover {
+  border-color: var(--adm-accent-line);
+  box-shadow: var(--adm-shadow-lift);
+}
+
+/* Garis marka landasan: putus-putus mendatar di kepala panel. */
+.adm-runway {
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--adm-accent-strong) 0 14px,
+    transparent 14px 30px
+  );
+  opacity: 0.65;
+}
+
+/* Sorotan yang menyapu sekali saat elemen muncul. */
+.adm-sweep::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 38%, var(--adm-sweep-color) 50%, transparent 62%);
+  transform: translateX(-120%);
+  animation: admSweep 1.5s ease-out 0.2s both;
+}
+@keyframes admSweep {
+  to { transform: translateX(120%); }
+}
+
+/* Takik boarding pass di sisi kiri-kanan — dipakai judul modal & toast. */
+.adm-ticket {
+  -webkit-mask-image:
+    radial-gradient(9px at 0 50%, transparent 98%, #000 100%),
+    radial-gradient(9px at 100% 50%, transparent 98%, #000 100%);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    radial-gradient(9px at 0 50%, transparent 98%, #000 100%),
+    radial-gradient(9px at 100% 50%, transparent 98%, #000 100%);
+  mask-composite: intersect;
+}
+
+/* Lampu tepi landasan pada bilah pemuat. */
+@keyframes admTaxi {
+  0%   { transform: translateX(-8%) translateY(0) rotate(45deg); }
+  50%  { transform: translateX(108%) translateY(-6px) rotate(45deg); }
+  50.01% { transform: translateX(-8%) translateY(0) rotate(45deg); opacity: 0; }
+  60%  { opacity: 1; }
+  100% { transform: translateX(108%) translateY(-6px) rotate(45deg); }
+}
+
+@keyframes admBeacon {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.5); }
+  50%      { opacity: 0.35; box-shadow: 0 0 0 6px rgba(52, 211, 153, 0); }
+}
+.adm-beacon { animation: admBeacon 2s ease-in-out infinite; }
+
+/* Awan tipis yang menyeret pelan di kepala halaman. */
+@keyframes admDrift {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+/* Bilah gulir mengikuti tema. Aturan global di kepala berkas ini
+   berwarna terang tetap — di panel gelap ia tampak seperti tempelan. */
+.adm-sky ::-webkit-scrollbar-track { background: transparent; }
+.adm-sky ::-webkit-scrollbar-thumb {
+  background: var(--adm-line);
+  border-radius: 4px;
+}
+.adm-sky ::-webkit-scrollbar-thumb:hover { background: var(--adm-accent-line); }
+
+@media (prefers-reduced-motion: reduce) {
+  .adm-sweep::after,
+  .adm-beacon,
+  [class*='adm-'] { animation: none !important; }
+  .adm-lift:hover { transform: none; }
+}
+
+/* ================================================================
    Kursor pesawat — halaman /aplikasi
    ================================================================
    Menyembunyikan kursor bawaan butuh `!important`: stylesheet peramban

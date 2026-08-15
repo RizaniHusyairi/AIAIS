@@ -149,15 +149,15 @@ export default function AdminInformationRequestsPage() {
     const sisa = sisaHariKerja(r.due_date);
     const selesai = r.status === 'fulfilled' || r.status === 'rejected';
 
-    if (sisa === null) return <span className="text-slate-500">-</span>;
-    if (selesai) return <span className="text-slate-400 text-[11.5px]">{fmt(r.due_date)}</span>;
+    if (sisa === null) return <span className="text-[var(--adm-dim)]">-</span>;
+    if (selesai) return <span className="text-[var(--adm-muted)] text-[11.5px]">{fmt(r.due_date)}</span>;
 
     return (
       <span className="whitespace-nowrap">
-        <span className={`text-[11.5px] font-bold ${sisa < 0 ? 'text-rose-400' : sisa <= 3 ? 'text-amber-300' : 'text-slate-300'}`}>
+        <span className={`text-[11.5px] font-bold ${sisa < 0 ? 'text-rose-400' : sisa <= 3 ? 'text-amber-300' : 'text-[var(--adm-body)]'}`}>
           {sisa < 0 ? `Lewat ${Math.abs(sisa)} hari kerja` : `${sisa} hari kerja lagi`}
         </span>
-        <span className="block text-slate-500 text-[10.5px]">
+        <span className="block text-[var(--adm-dim)] text-[10.5px]">
           {fmt(r.due_date)}{r.is_extended && ' · diperpanjang'}
         </span>
       </span>
@@ -189,13 +189,13 @@ export default function AdminInformationRequestsPage() {
       )}
 
       <Panel>
-        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-white/8">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-[var(--adm-line)]">
           <div className="flex gap-2 flex-wrap">
             {([['all', 'Semua'], ['submitted', 'Menunggu'], ['in_progress', 'Diproses'], ['fulfilled', 'Dijawab']] as const).map(([v, label]) => (
               <button
                 key={v}
                 onClick={() => setTab(v)}
-                className={`relative px-3.5 py-2 rounded-lg text-[12px] font-bold transition-colors cursor-pointer ${tab === v ? 'text-cyan-200' : 'text-slate-400 hover:text-slate-200'}`}
+                className={`relative px-3.5 py-2 rounded-lg text-[12px] font-bold transition-colors cursor-pointer ${tab === v ? 'text-[var(--adm-accent)]' : 'text-[var(--adm-muted)] hover:text-[var(--adm-body)]'}`}
               >
                 {tab === v && (
                   <motion.span layoutId="inforeq-tab" className="absolute inset-0 rounded-lg bg-cyan-500/12 border border-cyan-400/30" transition={{ type: 'spring', stiffness: 480, damping: 34 }} />
@@ -218,13 +218,13 @@ export default function AdminInformationRequestsPage() {
               return (
                 <Row key={r.id}>
                   <Cell>
-                    <span className="flex items-center gap-1.5 font-mono text-[11.5px] font-bold text-cyan-300 whitespace-nowrap">
+                    <span className="flex items-center gap-1.5 font-mono text-[11.5px] font-bold text-[var(--adm-accent)] whitespace-nowrap">
                       <Ticket className="w-3.5 h-3.5" /> {r.ticket_number}
                     </span>
                   </Cell>
                   <Cell className="max-w-[170px]">
-                    <p className="font-semibold text-white text-[12px] truncate">{r.name}</p>
-                    <p className="text-slate-500 text-[10.5px] truncate">{r.request_from}</p>
+                    <p className="font-semibold text-[var(--adm-fg)] text-[12px] truncate">{r.name}</p>
+                    <p className="text-[var(--adm-dim)] text-[10.5px] truncate">{r.request_from}</p>
                   </Cell>
                   <Cell className="max-w-[280px]"><span className="truncate block">{r.information_details}</span></Cell>
                   <Cell className="whitespace-nowrap">{fmt(r.created_at)}</Cell>
@@ -233,7 +233,7 @@ export default function AdminInformationRequestsPage() {
                   <Cell>
                     <button
                       onClick={() => openReply(r)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/15 border border-cyan-400/30 text-cyan-300 hover:bg-cyan-500/25 text-[11.5px] font-bold transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/15 border border-cyan-400/30 text-[var(--adm-accent)] hover:bg-cyan-500/25 text-[11.5px] font-bold transition-colors cursor-pointer"
                     >
                       <Reply className="w-3.5 h-3.5" /> Tinjau
                     </button>
@@ -273,35 +273,35 @@ export default function AdminInformationRequestsPage() {
               ].map((f) => {
                 const Icon = f.icon;
                 return (
-                  <div key={f.label} className="rounded-xl bg-[#0a1428] border border-white/8 p-3">
-                    <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-slate-500 font-bold">
+                  <div key={f.label} className="rounded-xl bg-[var(--adm-inset)] border border-[var(--adm-line)] p-3">
+                    <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-[var(--adm-dim)] font-bold">
                       <Icon className="w-3 h-3" /> {f.label}
                     </p>
-                    <p className="text-[12px] text-slate-200 mt-1 break-words">{f.value}</p>
+                    <p className="text-[12px] text-[var(--adm-body)] mt-1 break-words">{f.value}</p>
                   </div>
                 );
               })}
             </div>
 
             {/* Berkas syarat */}
-            <div className="rounded-xl bg-[#0a1428] border border-white/8 p-4">
-              <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">
+            <div className="rounded-xl bg-[var(--adm-inset)] border border-[var(--adm-line)] p-4">
+              <p className="text-[10px] uppercase tracking-wider text-[var(--adm-dim)] font-bold">
                 Berkas Syarat
               </p>
-              <p className="mt-1 text-[11px] text-slate-400 leading-relaxed">
+              <p className="mt-1 text-[11px] text-[var(--adm-muted)] leading-relaxed">
                 Berkas tersimpan pada penyimpanan tertutup dan tidak memiliki alamat publik.
                 Perlakukan sebagai data pribadi.
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <button
                   onClick={() => unduh(active, 'ktp')}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/6 border border-white/12 text-slate-200 hover:bg-white/10 text-[11.5px] font-bold transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--adm-hover)] border border-[var(--adm-line)] text-[var(--adm-body)] hover:bg-[var(--adm-hover)] text-[11.5px] font-bold transition-colors cursor-pointer"
                 >
                   <Download className="w-3.5 h-3.5" /> Scan KTP
                 </button>
                 <button
                   onClick={() => unduh(active, 'surat-pernyataan')}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/6 border border-white/12 text-slate-200 hover:bg-white/10 text-[11.5px] font-bold transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--adm-hover)] border border-[var(--adm-line)] text-[var(--adm-body)] hover:bg-[var(--adm-hover)] text-[11.5px] font-bold transition-colors cursor-pointer"
                 >
                   <Download className="w-3.5 h-3.5" /> Surat Pernyataan
                 </button>
@@ -309,30 +309,30 @@ export default function AdminInformationRequestsPage() {
             </div>
 
             {/* Isi permohonan */}
-            <div className="rounded-xl bg-[#0a1428] border border-white/8 p-4 space-y-3">
+            <div className="rounded-xl bg-[var(--adm-inset)] border border-[var(--adm-line)] p-4 space-y-3">
               <div>
-                <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Rincian Informasi yang Diminta</p>
-                <p className="mt-1 text-[12.5px] text-slate-300 leading-relaxed whitespace-pre-line">{active.information_details}</p>
+                <p className="text-[10px] uppercase tracking-wider text-[var(--adm-dim)] font-bold">Rincian Informasi yang Diminta</p>
+                <p className="mt-1 text-[12.5px] text-[var(--adm-body)] leading-relaxed whitespace-pre-line">{active.information_details}</p>
               </div>
               <div>
-                <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Tujuan Penggunaan</p>
-                <p className="mt-1 text-[12.5px] text-slate-300 leading-relaxed whitespace-pre-line">{active.information_purpose}</p>
+                <p className="text-[10px] uppercase tracking-wider text-[var(--adm-dim)] font-bold">Tujuan Penggunaan</p>
+                <p className="mt-1 text-[12.5px] text-[var(--adm-body)] leading-relaxed whitespace-pre-line">{active.information_purpose}</p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <div>
-                  <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Cara Memperoleh</p>
-                  <p className="mt-1 text-[12px] text-slate-300">{active.obtain_method}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-[var(--adm-dim)] font-bold">Cara Memperoleh</p>
+                  <p className="mt-1 text-[12px] text-[var(--adm-body)]">{active.obtain_method}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Cara Mendapat Salinan</p>
-                  <p className="mt-1 text-[12px] text-slate-300">{active.copy_method}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-[var(--adm-dim)] font-bold">Cara Mendapat Salinan</p>
+                  <p className="mt-1 text-[12px] text-[var(--adm-body)]">{active.copy_method}</p>
                 </div>
               </div>
             </div>
 
             {/* Tenggat */}
             <InfoNote>
-              Masuk {fmt(active.created_at)} · batas jawaban <span className="font-bold text-cyan-200">{fmt(active.due_date)}</span>
+              Masuk {fmt(active.created_at)} · batas jawaban <span className="font-bold text-[var(--adm-accent)]">{fmt(active.due_date)}</span>
               {active.is_extended && ' (sudah diperpanjang 7 hari kerja)'}.
               {(() => {
                 const s = sisaHariKerja(active.due_date);
@@ -345,7 +345,7 @@ export default function AdminInformationRequestsPage() {
 
             {active.admin_response && (
               <InfoNote>
-                <span className="font-bold text-cyan-200">Tanggapan sebelumnya:</span> {active.admin_response}
+                <span className="font-bold text-[var(--adm-accent)]">Tanggapan sebelumnya:</span> {active.admin_response}
               </InfoNote>
             )}
 
@@ -370,15 +370,15 @@ export default function AdminInformationRequestsPage() {
             />
 
             {!active.is_extended && (
-              <label className="flex items-start gap-2.5 rounded-xl bg-[#0a1428] border border-white/8 p-3 cursor-pointer">
+              <label className="flex items-start gap-2.5 rounded-xl bg-[var(--adm-inset)] border border-[var(--adm-line)] p-3 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={perpanjang}
                   onChange={(e) => setPerpanjang(e.target.checked)}
                   className="mt-0.5 accent-cyan-400 w-4 h-4 cursor-pointer"
                 />
-                <span className="text-[12px] text-slate-300 leading-relaxed">
-                  Perpanjang tenggat <span className="font-bold text-slate-100">7 hari kerja</span>{' '}
+                <span className="text-[12px] text-[var(--adm-body)] leading-relaxed">
+                  Perpanjang tenggat <span className="font-bold text-[var(--adm-fg)]">7 hari kerja</span>{' '}
                   sesuai UU 14/2008 Pasal 22 ayat (7). Pemohon melihat tanggal baru ini saat melacak tiketnya.
                 </span>
               </label>
@@ -389,7 +389,7 @@ export default function AdminInformationRequestsPage() {
                 href={active.response_link}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1.5 text-[11.5px] font-bold text-cyan-300 hover:text-cyan-200"
+                className="inline-flex items-center gap-1.5 text-[11.5px] font-bold text-[var(--adm-accent)] hover:text-[var(--adm-accent)]"
               >
                 <ExternalLink className="w-3.5 h-3.5" /> Buka dokumen jawaban tersimpan
               </a>

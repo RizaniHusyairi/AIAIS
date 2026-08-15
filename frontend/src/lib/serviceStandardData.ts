@@ -35,13 +35,19 @@ export const SP_DASAR_HUKUM = 'Undang-Undang Nomor 25 Tahun 2009 tentang Pelayan
 export const SP_PENGANTAR =
   'Sesuai Undang-Undang Nomor 25 Tahun 2009 tentang Pelayanan Publik, Bandar Udara APT Pranoto menyusun dan memublikasikan Standar Pelayanan sebagai tolok ukur penyelenggaraan pelayanan, Maklumat Pelayanan sebagai pernyataan kesanggupan, serta hasil Survei Kepuasan Masyarakat sebagai bahan evaluasi berkelanjutan.';
 
-/** Ajakan mengisi Survei Kepuasan Masyarakat. Tautannya milik Kemenhub. */
-export const SKM = {
-  title: 'Ikut Serta dalam Survei Kepuasan Masyarakat',
-  text: 'Penilaian Anda kami olah menjadi Indeks Kepuasan Masyarakat, dan laporan hasilnya diterbitkan pada halaman ini.',
-  label: 'Isi Survei Kepuasan Masyarakat',
-  url: 'https://skm.dephub.go.id/ly/ApfkINxw',
-} as const;
+/*
+ * Ajakan mengisi Survei Kepuasan Masyarakat — DIPINDAHKAN dari sini.
+ *
+ * Blok SKM kini dibaca dari tabel `settings` lewat `useSetting('skm_*')`,
+ * supaya petugas dapat membetulkan tautannya sendiri: tautan itu milik
+ * Kemenhub dan dapat berganti sewaktu-waktu, sedangkan halaman ini memikul
+ * kewajiban UU 25/2009. Tautan mati di sini bukan hal yang boleh menunggu
+ * penggelaran ulang.
+ *
+ * Nilai bawaannya ada di `SettingController::DEFAULTS` (backend) dan
+ * `DEFAULT_SETTINGS` (frontend) — ketiganya (`skm_url`, `skm_label`,
+ * `skm_is_active`) memang sudah terisi di basis data warisan v1.
+ */
 
 export type ServiceDoc = {
   slug: string;

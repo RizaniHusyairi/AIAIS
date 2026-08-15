@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+#
+# Dijalankan otomatis sesudah `git pull` berhasil menggabungkan perubahan.
+#
+# Inilah yang membuat pemegang server cukup mengetik `git pull`: hook ini
+# memanggil deploy.sh, sehingga dependensi terpasang, migrasi berjalan,
+# frontend dibangun, dan layanan dimuat ulang tanpa perintah tambahan.
+#
+# HOOK INI TIDAK AKTIF DENGAN SENDIRINYA. Direktori .git/hooks tidak ikut
+# terlacak git, jadi hook harus ditunjuk sekali di server:
+#
+#     git config core.hooksPath .githooks
+#
+# Sengaja begitu: penggelaran otomatis tidak boleh menyala di mesin
+# pengembangan hanya karena seseorang menarik perubahan.
+
+set -e
+
+# Hanya di server. Tanpa penanda ini, `git pull` di laptop siapa pun akan
+# ikut membangun ulang dan memuat ulang layanan.
+if [ "${AIAIS_DEPLOY_TARGET:-}" != "server" ]; then
+  echo "post-merge: dilewati (AIAIS_DEPLOY_TARGET bukan 'server')."
+  exit 0
+fi
+
+AKAR="$(git rev-parse --show-toplevel)"
+
+echo ""
+echo "post-merge: menjalankan penggelaran..."
+exec "$AKAR/deploy.sh"

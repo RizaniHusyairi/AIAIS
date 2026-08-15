@@ -8,14 +8,15 @@
  * memakai `DocAccordion` yang sama.
  */
 
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import PpidHero, { FlightArc } from '@/components/ppid/PpidHero';
 import DocAccordion from '@/components/ppid/DocAccordion';
-import {
-  SETIAP_SAAT_PENGANTAR, INFO_SETIAP_SAAT, hitungDokumen,
-} from '@/lib/publicInfoData';
+import { SETIAP_SAAT_PENGANTAR } from '@/lib/publicInfoData';
+import { kelompokkanDokumen } from '@/lib/ppidGroups';
+import { fetchApi } from '@/lib/api';
+import type { EvergreenInformation } from '@/types';
 import { DoorOpen, FolderOpen, FileText, ArrowRight, Info } from 'lucide-react';
 
 const rise = {
@@ -25,7 +26,33 @@ const rise = {
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.08 } } };
 
 export default function InformasiSetiapSaatView() {
-  const total = hitungDokumen(INFO_SETIAP_SAAT);
+  const [items, setItems] = useState<EvergreenInformation[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let batal = false;
+
+    fetchApi<EvergreenInformation[]>('/evergreen-information').then((res) => {
+      if (batal) return;
+      setItems(Array.isArray(res.data) ? res.data : []);
+      setLoading(false);
+    });
+
+    return () => { batal = true; };
+  }, []);
+
+  const groups = useMemo(
+    () => kelompokkanDokumen(items.map((d) => ({
+      id: d.id,
+      category: d.category,
+      title: d.title,
+      published: d.published_date,
+      url: d.document_link,
+    }))),
+    [items],
+  );
+
+  const total = items.length;
 
   return (
     <div className="bg-slate-50">
@@ -40,7 +67,7 @@ export default function InformasiSetiapSaatView() {
         <motion.div variants={container} initial="hidden" whileInView="show" viewport={{ once: true }} className="grid grid-cols-1 sm:grid-cols-3 gap-5">
           {[
             { icon: DoorOpen, label: 'Cara Akses', value: 'Tanpa permohonan', tone: 'from-blue-50 to-white ring-blue-100 text-blue-600' },
-            { icon: FolderOpen, label: 'Kategori', value: `${INFO_SETIAP_SAAT.length} kategori`, tone: 'from-teal-50 to-white ring-teal-100 text-teal-600' },
+            { icon: FolderOpen, label: 'Kategori', value: `${groups.length} kategori`, tone: 'from-teal-50 to-white ring-teal-100 text-teal-600' },
             { icon: FileText, label: 'Dokumen', value: `${total} dokumen`, tone: 'from-amber-50 to-white ring-amber-100 text-amber-600' },
           ].map((c) => {
             const Icon = c.icon;
@@ -68,7 +95,22 @@ export default function InformasiSetiapSaatView() {
           </motion.p>
 
           <div className="mt-8">
-            <DocAccordion groups={INFO_SETIAP_SAAT} />
+            {loading ? (
+              <div className="space-y-3" aria-busy="true" aria-label="Memuat dokumen">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="h-16 rounded-2xl bg-white ring-1 ring-slate-100 animate-pulse" />
+                ))}
+              </div>
+            ) : groups.length === 0 ? (
+              <div className="rounded-2xl bg-white ring-1 ring-slate-100 px-6 py-10 text-center">
+                <p className="text-[13.5px] font-bold text-slate-700">Belum ada dokumen yang ditampilkan.</p>
+                <p className="mt-1 text-[12.5px] text-slate-500">
+                  Daftar informasi setiap saat sedang dimutakhirkan. Silakan periksa kembali beberapa saat lagi.
+                </p>
+              </div>
+            ) : (
+              <DocAccordion groups={groups} />
+            )}
           </div>
         </motion.div>
       </section>

@@ -108,8 +108,8 @@ export default function AdminTenantsPage() {
       </motion.div>
 
       <Panel>
-        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-white/8">
-          <h2 className="text-[13.5px] font-bold text-white">Direktori Tenant</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-[var(--adm-line)]">
+          <h2 className="text-[13.5px] font-bold text-[var(--adm-fg)]">Direktori Tenant</h2>
           <SearchBox value={q} onChange={setQ} placeholder="Cari tenant / lokasi..." />
         </div>
 
@@ -127,8 +127,8 @@ export default function AdminTenantsPage() {
                     <div className="flex items-center gap-2.5">
                       {t.image && <img src={t.image} alt="" className="w-9 h-9 rounded-lg object-cover flex-shrink-0" />}
                       <div className="min-w-0">
-                        <p className="font-bold text-white text-[12.5px] truncate">{t.name}</p>
-                        {t.description && <p className="text-slate-400 text-[11px] truncate">{t.description}</p>}
+                        <p className="font-bold text-[var(--adm-fg)] text-[12.5px] truncate">{t.name}</p>
+                        {t.description && <p className="text-[var(--adm-muted)] text-[11px] truncate">{t.description}</p>}
                       </div>
                     </div>
                   </Cell>
@@ -138,10 +138,10 @@ export default function AdminTenantsPage() {
                   <Cell>{t.contact_phone || '-'}</Cell>
                   <Cell>
                     <div className="flex gap-1.5">
-                      <button onClick={() => openEdit(t)} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-cyan-500/20 text-slate-300 hover:text-cyan-300 flex items-center justify-center transition-colors cursor-pointer" title="Ubah">
+                      <button onClick={() => openEdit(t)} className="w-8 h-8 rounded-lg bg-[var(--adm-hover)] hover:bg-cyan-500/20 text-[var(--adm-body)] hover:text-[var(--adm-accent)] flex items-center justify-center transition-colors cursor-pointer" title="Ubah">
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={() => setDelId(t.id)} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-rose-500/20 text-slate-300 hover:text-rose-300 flex items-center justify-center transition-colors cursor-pointer" title="Hapus">
+                      <button onClick={() => setDelId(t.id)} className="w-8 h-8 rounded-lg bg-[var(--adm-hover)] hover:bg-rose-500/20 text-[var(--adm-body)] hover:text-rose-300 flex items-center justify-center transition-colors cursor-pointer" title="Hapus">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>

@@ -1,32 +1,59 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import SkyParticles from '@/components/effects/SkyParticles';
 import {
   Search, HelpCircle, ChevronDown, ArrowRight, Sparkles, MessageCircle, Phone, X,
 } from 'lucide-react';
-// Isi FAQ tinggal di lib supaya Pusat Bantuan memakai data yang sama.
-// Jangan mengembalikannya ke berkas ini — dua salinan akan segera berbeda.
-import { FAQ_DATA, FAQ_CATEGORIES as CATEGORIES } from '@/lib/faqData';
+// Isi FAQ datang dari API; `lib/faqData` tinggal menyediakan ikon per
+// kategori dan penurunan teks pencarian. Jangan mengembalikan daftar
+// pertanyaan ke berkas ini — dua salinan akan segera berbeda.
+import { gabungFaq, kategoriDari, SEMUA_KATEGORI, type FaqTampil } from '@/lib/faqData';
+import { fetchApi } from '@/lib/api';
+import SafeHtml from '@/components/SafeHtml';
+import type { FaqItem } from '@/types';
 
-export default function FAQPage() {
+export default function FaqView({ awal }: { awal: FaqTampil[] }) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState('Semua');
-  const [openItems, setOpenItems] = useState<number[]>([1]); // default open item 1
+  const [activeCategory, setActiveCategory] = useState(SEMUA_KATEGORI);
+  const [openItems, setOpenItems] = useState<number[]>(awal[0] ? [awal[0].id] : []);
+  // Data awal datang dari server supaya halaman sudah berisi pada render
+  // pertama — halaman FAQ justru paling sering ditemukan lewat mesin pencari.
+  const [items, setItems] = useState<FaqTampil[]>(awal);
+  const [loading, setLoading] = useState(awal.length === 0);
+
+  useEffect(() => {
+    let batal = false;
+
+    fetchApi<FaqItem[]>('/faqs').then((res) => {
+      if (batal) return;
+
+      const daftar = Array.isArray(res.data) ? res.data.map(gabungFaq) : [];
+      setItems(daftar);
+      // Pertanyaan pertama terbuka sejak awal supaya halaman tidak tampak
+      // kosong; id-nya baru diketahui setelah datanya tiba.
+      if (daftar[0]) setOpenItems([daftar[0].id]);
+      setLoading(false);
+    });
+
+    return () => { batal = true; };
+  }, []);
+
+  const CATEGORIES = useMemo(() => kategoriDari(items), [items]);
 
   const filteredFAQs = useMemo(() => {
-    return FAQ_DATA.filter((item) => {
-      const matchCat = activeCategory === 'Semua' || item.category === activeCategory;
-      const qLower = searchQuery.toLowerCase().trim();
+    const qLower = searchQuery.toLowerCase().trim();
+
+    return items.filter((item) => {
+      const matchCat = activeCategory === SEMUA_KATEGORI || item.category === activeCategory;
       if (!qLower) return matchCat;
 
-      const matchQ = item.question.toLowerCase().includes(qLower);
-      const matchKeyword = item.keywords.some((k) => k.toLowerCase().includes(qLower));
-      return matchCat && (matchQ || matchKeyword);
+      // Pencarian menjangkau isi jawaban, bukan hanya judul pertanyaannya.
+      return matchCat && item.cariTeks.includes(qLower);
     });
-  }, [searchQuery, activeCategory]);
+  }, [items, searchQuery, activeCategory]);
 
   const toggleItem = (id: number) => {
     setOpenItems((prev) =>
@@ -141,7 +168,13 @@ export default function FAQPage() {
         </div>
 
         {/* FAQ Accordion List */}
-        {filteredFAQs.length > 0 ? (
+        {loading ? (
+          <div className="space-y-4" aria-busy="true" aria-label="Memuat pertanyaan">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="h-20 rounded-2xl bg-white dark:bg-slate-900 ring-1 ring-slate-100 dark:ring-slate-800/60 animate-pulse" />
+            ))}
+          </div>
+        ) : filteredFAQs.length > 0 ? (
           <div className="space-y-4">
             {filteredFAQs.map((item, idx) => {
               const isOpen = openItems.includes(item.id);
@@ -185,9 +218,12 @@ export default function FAQPage() {
                         exit={{ height: 0, opacity: 0 }}
                         transition={{ duration: 0.25, ease: 'easeInOut' }}
                       >
-                        <div className="px-4 sm:px-5 pb-5 pt-1 border-t border-slate-100 dark:border-slate-800/60 ml-13 sm:ml-14">
-                          {item.answer}
-                        </div>
+                        {/* Jawaban berupa HTML dari panel admin; disaring
+                            lebih dulu — lihat components/SafeHtml.tsx. */}
+                        <SafeHtml
+                          className="px-4 sm:px-5 pb-5 pt-1 border-t border-slate-100 dark:border-slate-800/60 ml-13 sm:ml-14 faq-answer"
+                          html={item.answerHtml}
+                        />
                       </motion.div>
                     )}
                   </AnimatePresence>

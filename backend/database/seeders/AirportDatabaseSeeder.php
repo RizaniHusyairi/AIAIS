@@ -2,30 +2,36 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use App\Models\User;
-use App\Models\News;
 use App\Models\Announcement;
-use App\Models\Facility;
-use App\Models\Tenant;
 use App\Models\Complaint;
 use App\Models\Document;
+use App\Models\Facility;
+use App\Models\News;
+use App\Models\Tenant;
+use App\Models\User;
+use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 class AirportDatabaseSeeder extends Seeder
 {
     public function run(): void
     {
         // 1. Admin User
-        User::updateOrCreate(
+        //
+        // `role` dan `is_accepted` disetel terpisah, bukan lewat
+        // `updateOrCreate`: keduanya sengaja di luar `$fillable` supaya
+        // kewenangan tidak pernah dapat diisi lewat mass assignment.
+        $admin = User::updateOrCreate(
             ['email' => 'admin@aptpranoto-airport.id'],
             [
                 'name' => 'Administrator Bandara AAP',
                 'password' => Hash::make('password123'),
-                'role' => 'admin',
             ]
         );
+
+        $admin->role = 'admin';
+        $admin->is_accepted = true;
+        $admin->save();
 
         // Jadwal penerbangan TIDAK di-seed.
         //

@@ -64,27 +64,6 @@ return [
             ]) : [],
         ],
 
-        /*
-         * Basis data portal v1 (aptpairport.id), hanya dibaca oleh command
-         * `aiais:import-*`. Arahkan ke hasil restore dump produksi, bukan ke
-         * salinan pengembangan `db_apt` — salinan itu masih memuat data contoh
-         * (surat SE/001/2025 dst.) yang tidak boleh ikut masuk ke v2.
-         */
-        'legacy' => [
-            'driver' => 'mysql',
-            'host' => env('LEGACY_DB_HOST', env('DB_HOST', '127.0.0.1')),
-            'port' => env('LEGACY_DB_PORT', env('DB_PORT', '3306')),
-            'database' => env('LEGACY_DB_DATABASE', 'db_apt_prod'),
-            'username' => env('LEGACY_DB_USERNAME', env('DB_USERNAME', 'root')),
-            'password' => env('LEGACY_DB_PASSWORD', env('DB_PASSWORD', '')),
-            'charset' => 'utf8mb4',
-            'collation' => 'utf8mb4_unicode_ci',
-            'prefix' => '',
-            'prefix_indexes' => true,
-            'strict' => false,
-            'engine' => null,
-        ],
-
         'mariadb' => [
             'driver' => 'mariadb',
             'url' => env('DB_URL'),
@@ -148,8 +127,17 @@ return [
     |
     */
 
+    /*
+     * Sengaja BUKAN 'migrations'.
+     *
+     * Portal v2 berjalan di atas basis data portal v1, dan v1 juga aplikasi
+     * Laravel — tabel `migrations` di sana sudah berisi 87 baris miliknya.
+     * Bila v2 ikut memakai tabel itu, Laravel tidak akan mengenali satu pun
+     * nama berkas migrasi v2, lalu mencoba menjalankan semuanya dari nol di
+     * atas tabel yang sudah berisi data produksi.
+     */
     'migrations' => [
-        'table' => 'migrations',
+        'table' => env('DB_MIGRATIONS_TABLE', 'migrations_v2'),
         'update_date_on_publish' => true,
     ],
 

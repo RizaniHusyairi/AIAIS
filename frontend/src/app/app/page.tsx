@@ -118,7 +118,7 @@ export default function BerandaScreen() {
                 <p className="font-black text-[13px] tracking-wide">APT PRANOTO</p>
                 <p className="text-[9px] text-blue-200 tracking-[0.2em]">SAMARINDA</p>
               </div>
-              <img src="/icon-app.svg" alt="logo" className="w-8 h-8 rounded-lg" />
+              <img src="/icon-192.png" alt="logo" className="w-8 h-8 rounded-lg" />
             </div>
           </div>
 

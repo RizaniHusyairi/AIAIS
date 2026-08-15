@@ -1,5 +1,6 @@
 'use client';
 
+import SafeHtml from '@/components/SafeHtml';
 import React, { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { motion, useScroll, useTransform } from 'framer-motion';
@@ -294,8 +295,9 @@ export default function NewsDetailPage({ params }: { params: Promise<{ slug: str
             </p>
           </div>
 
-          {/* HTML Rendered Content */}
-          <div className="article-content" dangerouslySetInnerHTML={{ __html: article.content }} />
+          {/* Isi artikel berupa HTML dari editor panel admin; disaring lebih
+              dulu — lihat alasannya di components/SafeHtml.tsx. */}
+          <SafeHtml className="article-content" html={article.content} />
 
           {/* Article Keywords / Tags Ribbon */}
           <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center gap-2 text-xs">

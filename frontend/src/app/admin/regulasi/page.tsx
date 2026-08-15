@@ -158,8 +158,8 @@ export default function AdminRegulasiPage() {
       )}
 
       <Panel>
-        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-white/8">
-          <h2 className="text-[13.5px] font-bold text-white">Daftar Surat</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-[var(--adm-line)]">
+          <h2 className="text-[13.5px] font-bold text-[var(--adm-fg)]">Daftar Surat</h2>
           <SearchBox value={q} onChange={setQ} placeholder="Cari judul atau nomor surat..." />
         </div>
 
@@ -171,7 +171,7 @@ export default function AdminRegulasiPage() {
           <Table head={['Judul Surat', 'Jenis', 'Nomor', 'Tanggal Terbit', 'Berkas', 'Aksi']}>
             {visible.map((l) => (
               <Row key={l.id}>
-                <Cell className="max-w-[340px]"><span className="font-bold text-white text-[12.5px] line-clamp-2">{l.title}</span></Cell>
+                <Cell className="max-w-[340px]"><span className="font-bold text-[var(--adm-fg)] text-[12.5px] line-clamp-2">{l.title}</span></Cell>
                 <Cell><Badge text={TYPE_LABEL[l.type] ?? l.type} color={TYPE_COLOR[l.type] ?? '#94a3b8'} /></Cell>
                 <Cell className="whitespace-nowrap">{l.number}</Cell>
                 <Cell className="whitespace-nowrap tabular-nums">
@@ -185,14 +185,14 @@ export default function AdminRegulasiPage() {
                 <Cell>
                   <div className="flex gap-1.5">
                     {l.file_url && (
-                      <a href={l.file_url} target="_blank" rel="noreferrer" className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 flex items-center justify-center transition-colors" title="Buka berkas">
+                      <a href={l.file_url} target="_blank" rel="noreferrer" className="w-8 h-8 rounded-lg bg-[var(--adm-hover)] hover:bg-[var(--adm-hover)] text-[var(--adm-body)] flex items-center justify-center transition-colors" title="Buka berkas">
                         <ExternalLink className="w-3.5 h-3.5" />
                       </a>
                     )}
-                    <button onClick={() => openEdit(l)} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-cyan-500/20 text-slate-300 hover:text-cyan-300 flex items-center justify-center transition-colors cursor-pointer" title="Ubah">
+                    <button onClick={() => openEdit(l)} className="w-8 h-8 rounded-lg bg-[var(--adm-hover)] hover:bg-cyan-500/20 text-[var(--adm-body)] hover:text-[var(--adm-accent)] flex items-center justify-center transition-colors cursor-pointer" title="Ubah">
                       <Pencil className="w-3.5 h-3.5" />
                     </button>
-                    <button onClick={() => setDelId(l.id)} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-rose-500/20 text-slate-300 hover:text-rose-300 flex items-center justify-center transition-colors cursor-pointer" title="Hapus">
+                    <button onClick={() => setDelId(l.id)} className="w-8 h-8 rounded-lg bg-[var(--adm-hover)] hover:bg-rose-500/20 text-[var(--adm-body)] hover:text-rose-300 flex items-center justify-center transition-colors cursor-pointer" title="Hapus">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -250,7 +250,7 @@ export default function AdminRegulasiPage() {
 
           {/* unggah berkas */}
           <div>
-            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+            <label className="block text-[11px] font-semibold text-[var(--adm-muted)] uppercase tracking-wider mb-1.5">
               Berkas Surat (PDF)
             </label>
             <input
@@ -264,11 +264,11 @@ export default function AdminRegulasiPage() {
               <Btn variant="ghost" onClick={() => fileInput.current?.click()}>
                 <Upload className="w-4 h-4" /> Pilih Berkas
               </Btn>
-              <span className="text-[12px] text-slate-400 truncate max-w-[280px]">
+              <span className="text-[12px] text-[var(--adm-muted)] truncate max-w-[280px]">
                 {file ? file.name : editId ? 'Biarkan kosong bila berkasnya tidak diganti.' : 'Belum ada berkas dipilih.'}
               </span>
             </div>
-            <p className="mt-1.5 text-[11px] text-slate-500">Format PDF, maksimal 20 MB.</p>
+            <p className="mt-1.5 text-[11px] text-[var(--adm-dim)]">Format PDF, maksimal 20 MB.</p>
           </div>
 
           <Field
@@ -277,7 +277,7 @@ export default function AdminRegulasiPage() {
             onChange={(v) => setForm({ ...form, file_url: v })}
             placeholder="https://aptpairport.id/uploads/.../surat.pdf"
           />
-          <p className="-mt-2 text-[11px] text-slate-500">
+          <p className="-mt-2 text-[11px] text-[var(--adm-dim)]">
             Dipakai untuk surat yang berkasnya masih tersimpan di portal lama. Bila berkas diunggah,
             tautan ini diabaikan.
           </p>

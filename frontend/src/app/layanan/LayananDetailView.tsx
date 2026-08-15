@@ -16,16 +16,18 @@
  * berjalan di portal lama — pengguna berhak tahu sebelum berpindah situs.
  */
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
   ArrowRight, ArrowLeft, ExternalLink, CheckCircle2, ClipboardList, Headphones,
-  Phone, Mail, MapPin, Info, Ruler,
+  Phone, Mail, MapPin, Info, Ruler, Clock,
 } from 'lucide-react';
 import SkyParticles from '@/components/effects/SkyParticles';
 import { CONTACT } from '@/lib/airportProfile';
-import { SERVICES, getService } from '@/lib/serviceData';
+import { SERVICES, getService, gabungLayanan, type Service } from '@/lib/serviceData';
+import { fetchApi } from '@/lib/api';
+import type { ServiceItem } from '@/types';
 
 /* Lengkung lintasan dekoratif — selaras dengan halaman regulasi & unduhan */
 function FlightArc({ className = '', d = 'M-20 170 Q 380 50 1020 130' }: { className?: string; d?: string }) {
@@ -51,7 +53,6 @@ const rise = {
 };
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
 
-const rupiah = (n: number) => `Rp ${n.toLocaleString('id-ID')}`;
 
 /**
  * Yang dioper hanya `slug`, bukan objek layanannya.
@@ -63,12 +64,43 @@ const rupiah = (n: number) => `Rp ${n.toLocaleString('id-ID')}`;
  * utuh. Slug-nya sudah dipastikan sah oleh halaman pembungkus.
  */
 export default function LayananDetailView({ slug }: { slug: string }) {
-  const service = getService(slug)!;
-  const Icon = service.icon;
-  const accent = service.accent;
+  /**
+   * Bawaan presentasi dipakai sebagai tampilan awal supaya halaman tidak
+   * berkedip kosong, lalu ditimpa data dari API begitu tiba. Untuk slug yang
+   * belum dikenal daftar bawaan, tampilan menunggu API.
+   */
+  const [service, setService] = useState<Service | null>(() => getService(slug) ?? null);
+  const [items, setItems] = useState<ServiceItem[]>([]);
+
+  useEffect(() => {
+    let batal = false;
+
+    fetchApi<ServiceItem>(`/services/${slug}`).then((res) => {
+      if (!batal && res.success && res.data) setService(gabungLayanan(res.data));
+    });
+
+    fetchApi<ServiceItem[]>('/services').then((res) => {
+      if (!batal && Array.isArray(res.data)) setItems(res.data);
+    });
+
+    return () => { batal = true; };
+  }, [slug]);
 
   // Tautan ke layanan lain, supaya pengunjung tidak harus kembali ke menu.
-  const lainnya = SERVICES.filter((s) => s.slug !== service.slug);
+  // Selama daftar dari API belum tiba, dipakai bawaan presentasi.
+  const lainnya = (items.length ? items.map(gabungLayanan) : SERVICES)
+    .filter((s) => s.slug !== slug);
+
+  if (!service) {
+    return (
+      <div className="bg-slate-50 min-h-[60vh] flex items-center justify-center px-4">
+        <div className="h-40 w-full max-w-2xl rounded-3xl bg-white ring-1 ring-slate-200 animate-pulse" />
+      </div>
+    );
+  }
+
+  const Icon = service.icon;
+  const accent = service.accent;
 
   return (
     <div className="bg-slate-50 overflow-hidden">
@@ -113,14 +145,22 @@ export default function LayananDetailView({ slug }: { slug: string }) {
 
             <p className="mt-4 text-blue-100/90 text-[15px] leading-relaxed max-w-xl">{service.description}</p>
 
-            <a
-              href={service.applyUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-7 inline-flex items-center gap-2 bg-white text-blue-700 font-bold text-[13.5px] px-6 py-3.5 rounded-full shadow-lg hover:bg-blue-50 transition-colors"
-            >
-              Ajukan Sekarang <ExternalLink className="w-4 h-4" />
-            </a>
+            {service.applyUrl ? (
+              <a
+                href={service.applyUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-7 inline-flex items-center gap-2 bg-white text-blue-700 font-bold text-[13.5px] px-6 py-3.5 rounded-full shadow-lg hover:bg-blue-50 transition-colors"
+              >
+                Ajukan Sekarang <ExternalLink className="w-4 h-4" />
+              </a>
+            ) : (
+              /* Formulirnya belum ada di portal ini. Lebih baik mengatakannya
+                 daripada memasang tombol yang berujung halaman kosong. */
+              <span className="mt-7 inline-flex items-center gap-2 bg-white/12 ring-1 ring-white/25 text-blue-50 font-semibold text-[13px] px-6 py-3.5 rounded-full">
+                <Clock className="w-4 h-4" /> Formulir daring segera tersedia
+              </span>
+            )}
           </motion.div>
         </div>
 
@@ -236,7 +276,7 @@ export default function LayananDetailView({ slug }: { slug: string }) {
                       <tr key={r.label} className="bg-slate-50/70">
                         <td className="px-4 py-3 rounded-l-xl text-[13px] text-slate-700">{r.label}</td>
                         <td className="px-4 py-3 rounded-r-xl text-[13.5px] font-black text-slate-900 text-right tabular-nums">
-                          {rupiah(r.pricePerM2)}
+                          {r.priceText}
                         </td>
                       </tr>
                     ))}
@@ -284,21 +324,37 @@ export default function LayananDetailView({ slug }: { slug: string }) {
             ))}
           </motion.ol>
 
-          <motion.a
-            variants={rise}
-            href={service.applyUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-6 w-full inline-flex items-center justify-center gap-2 text-white font-bold text-[13.5px] px-5 py-3.5 rounded-full shadow-md transition-transform active:scale-95"
-            style={{ backgroundColor: accent }}
-          >
-            Ajukan Sekarang <ExternalLink className="w-4 h-4" />
-          </motion.a>
+          {service.applyUrl ? (
+            <>
+              <motion.a
+                variants={rise}
+                href={service.applyUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-6 w-full inline-flex items-center justify-center gap-2 text-white font-bold text-[13.5px] px-5 py-3.5 rounded-full shadow-md transition-transform active:scale-95"
+                style={{ backgroundColor: accent }}
+              >
+                Ajukan Sekarang <ExternalLink className="w-4 h-4" />
+              </motion.a>
 
-          {/* Pengajuan belum pindah ke portal ini — katakan sebelum diklik. */}
-          <motion.p variants={rise} className="mt-3 text-[11.5px] text-slate-500 leading-relaxed text-center">
-            Formulir pengajuan masih dilayani portal layanan bandara dan terbuka di tab baru.
-          </motion.p>
+              <motion.p variants={rise} className="mt-3 text-[11.5px] text-slate-500 leading-relaxed text-center">
+                Formulir pengajuan terbuka di tab baru.
+              </motion.p>
+            </>
+          ) : (
+            /* Dasbor pemohon masih milik portal lama dan ikut dipensiunkan.
+               Sampai modul pengajuannya dibangun di sini, halaman ini
+               mengatakannya apa adanya — bukan memasang tautan mati. */
+            <motion.div variants={rise} className="mt-6 rounded-2xl bg-slate-50 ring-1 ring-slate-200 px-5 py-4 text-center">
+              <p className="inline-flex items-center gap-2 text-[13px] font-bold text-slate-700">
+                <Clock className="w-4 h-4 text-amber-500" /> Formulir daring segera tersedia
+              </p>
+              <p className="mt-1.5 text-[11.5px] text-slate-500 leading-relaxed">
+                Sementara ini, ajukan permohonan langsung ke kantor bandara dengan menyiapkan
+                berkas di atas.
+              </p>
+            </motion.div>
+          )}
         </motion.div>
       </section>
 

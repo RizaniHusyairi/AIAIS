@@ -8,17 +8,23 @@
  * ini memberi mereka tempat yang semestinya, lengkap dengan keterangan apa
  * gunanya masing-masing — sesuatu yang tidak muat di menu.
  *
- * Datanya di `lib/relatedLinks.ts`, sumber tunggal bersama navbar dan footer.
+ * Daftar tautannya kini diambil dari API (`/external-links`) supaya petugas
+ * dapat menyuntingnya sendiri — kemampuan yang hilang bersama panel admin v1.
+ *
+ * CATATAN: navbar dan footer MASIH memakai daftar tetap di `lib/relatedLinks.ts`.
+ * Selama itu belum ikut dialihkan, menyunting sebuah tautan lewat panel admin
+ * hanya mengubah halaman ini; menu dan footer tetap menampilkan nilai lamanya.
  */
 
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import PpidHero, { FlightArc } from '@/components/ppid/PpidHero';
-import {
-  RELATED_LINK_GROUPS, TAUTAN_PENGANTAR, TOTAL_RELATED_LINKS,
-} from '@/lib/relatedLinks';
+import { TAUTAN_PENGANTAR } from '@/lib/relatedLinks';
+import { slugify } from '@/lib/ppidGroups';
+import { fetchApi } from '@/lib/api';
 import { hostOf } from '@/lib/url';
+import type { ExternalLink as ExternalLinkData } from '@/types';
 import {
   Globe, ExternalLink, ShieldCheck, Users, ArrowRight, Info, MessageSquareWarning,
 } from 'lucide-react';
@@ -29,13 +35,66 @@ const rise = {
 };
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.08 } } };
 
-/** Ikon per kelompok — hiasan, tidak menambah makna baru pada datanya. */
-const GROUP_META: Record<string, { icon: typeof Globe; accent: string; tint: string }> = {
-  'pelayanan-publik': { icon: MessageSquareWarning, accent: '#2563eb', tint: 'bg-blue-50' },
-  'aplikasi-pegawai': { icon: Users, accent: '#7c3aed', tint: 'bg-violet-50' },
+/**
+ * Hiasan dan kalimat pengantar per kelompok.
+ *
+ * Dikunci pada NAMA kelompok sebagaimana tersimpan di basis data, bukan pada
+ * slug turunannya — nama itulah yang dikelola petugas lewat panel admin, dan
+ * mencocokkan lewat slug akan putus begitu ejaannya disunting sedikit.
+ *
+ * `lead` sengaja tinggal di sini: kalimatnya ditulis untuk v2 dan tidak ada
+ * padanannya di basis data v1. Kelompok yang belum punya entri jatuh ke
+ * nilai bawaan, jadi kelompok baru tetap tampil wajar tanpa menyunting kode.
+ */
+const GROUP_META: Record<string, { icon: typeof Globe; accent: string; tint: string; lead: string }> = {
+  'Layanan Pengaduan & Informasi Publik': {
+    icon: MessageSquareWarning,
+    accent: '#2563eb',
+    tint: 'bg-blue-50',
+    lead: 'Kanal nasional tempat masyarakat memeriksa standar layanan kami dan menyampaikan aspirasi di luar portal ini.',
+  },
+  'Aplikasi Internal Pegawai': {
+    icon: Users,
+    accent: '#7c3aed',
+    tint: 'bg-violet-50',
+    lead: 'Aplikasi kedinasan Kementerian Perhubungan. Membutuhkan akun pegawai untuk masuk.',
+  },
 };
 
+const GROUP_FALLBACK = { icon: Globe, accent: '#0891b2', tint: 'bg-cyan-50', lead: '' };
+
 export default function TautanTerkaitView() {
+  const [links, setLinks] = useState<ExternalLinkData[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let batal = false;
+
+    fetchApi<ExternalLinkData[]>('/external-links').then((res) => {
+      if (batal) return;
+      setLinks(Array.isArray(res.data) ? res.data : []);
+      setLoading(false);
+    });
+
+    return () => { batal = true; };
+  }, []);
+
+  /** Kelompokkan menurut urutan kiriman backend (`sort_order`). */
+  const groups = useMemo(() => {
+    const out: { slug: string; title: string; links: ExternalLinkData[] }[] = [];
+
+    for (const l of links) {
+      let g = out.find((x) => x.title === l.group);
+      if (!g) {
+        g = { slug: slugify(l.group), title: l.group, links: [] };
+        out.push(g);
+      }
+      g.links.push(l);
+    }
+
+    return out;
+  }, [links]);
+
   return (
     <div className="bg-slate-50">
       <PpidHero
@@ -56,8 +115,8 @@ export default function TautanTerkaitView() {
           className="grid grid-cols-1 sm:grid-cols-3 gap-5"
         >
           {[
-            { icon: Globe, label: 'Total Tautan', value: `${TOTAL_RELATED_LINKS} portal`, tone: 'from-blue-50 to-white ring-blue-100 text-blue-600' },
-            { icon: ShieldCheck, label: 'Kelompok', value: `${RELATED_LINK_GROUPS.length} kelompok`, tone: 'from-violet-50 to-white ring-violet-100 text-violet-600' },
+            { icon: Globe, label: 'Total Tautan', value: `${links.length} portal`, tone: 'from-blue-50 to-white ring-blue-100 text-blue-600' },
+            { icon: ShieldCheck, label: 'Kelompok', value: `${groups.length} kelompok`, tone: 'from-violet-50 to-white ring-violet-100 text-violet-600' },
             { icon: Info, label: 'Pengelola', value: 'Kementerian PANRB & Perhubungan', tone: 'from-teal-50 to-white ring-teal-100 text-teal-600' },
           ].map((c) => {
             const Icon = c.icon;
@@ -79,8 +138,23 @@ export default function TautanTerkaitView() {
 
       {/* ============ DAFTAR TAUTAN ============ */}
       <section className="max-w-[1400px] mx-auto px-4 sm:px-6 py-14 space-y-12">
-        {RELATED_LINK_GROUPS.map((group) => {
-          const meta = GROUP_META[group.slug] ?? { icon: Globe, accent: '#0891b2', tint: 'bg-cyan-50' };
+        {loading && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5" aria-busy="true" aria-label="Memuat tautan">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="h-28 rounded-2xl bg-white ring-1 ring-slate-200 animate-pulse" />
+            ))}
+          </div>
+        )}
+
+        {!loading && groups.length === 0 && (
+          <div className="rounded-2xl bg-white ring-1 ring-slate-200 px-6 py-10 text-center">
+            <p className="text-[13.5px] font-bold text-slate-700">Belum ada tautan yang ditampilkan.</p>
+            <p className="mt-1 text-[12.5px] text-slate-500">Daftar tautan terkait sedang dimutakhirkan.</p>
+          </div>
+        )}
+
+        {groups.map((group) => {
+          const meta = GROUP_META[group.title] ?? GROUP_FALLBACK;
           const Icon = meta.icon;
 
           return (
@@ -97,14 +171,14 @@ export default function TautanTerkaitView() {
                 </span>
                 <div>
                   <h2 className="text-2xl font-black text-slate-900 tracking-tight">{group.title}</h2>
-                  <p className="mt-1 text-[13.5px] text-slate-500 leading-relaxed max-w-2xl">{group.lead}</p>
+                  <p className="mt-1 text-[13.5px] text-slate-500 leading-relaxed max-w-2xl">{meta.lead}</p>
                 </div>
               </motion.div>
 
               <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-5">
                 {group.links.map((l) => (
                   <motion.a
-                    key={l.slug}
+                    key={l.id}
                     variants={rise}
                     whileHover={{ y: -5 }}
                     href={l.url}

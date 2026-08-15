@@ -13,13 +13,15 @@
  * jelas mana yang berpindah situs.
  */
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { ArrowRight, ExternalLink, Building2, Headphones, Phone, Mail } from 'lucide-react';
 import SkyParticles from '@/components/effects/SkyParticles';
 import { CONTACT } from '@/lib/airportProfile';
-import { SERVICES, EXTERNAL_SERVICES } from '@/lib/serviceData';
+import { SERVICES, EXTERNAL_SERVICES, gabungLayanan } from '@/lib/serviceData';
+import { fetchApi } from '@/lib/api';
+import type { ServiceItem } from '@/types';
 
 function FlightArc({ className = '', d = 'M-20 170 Q 380 50 1020 130' }: { className?: string; d?: string }) {
   return (
@@ -45,6 +47,22 @@ const rise = {
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
 
 export default function LayananIndexView() {
+  // Bawaan presentasi dipakai sampai data API tiba, supaya daftar tidak
+  // berkedip kosong pada kunjungan pertama.
+  const [layanan, setLayanan] = useState(SERVICES);
+
+  useEffect(() => {
+    let batal = false;
+
+    fetchApi<ServiceItem[]>('/services').then((res) => {
+      if (!batal && Array.isArray(res.data) && res.data.length) {
+        setLayanan(res.data.map(gabungLayanan));
+      }
+    });
+
+    return () => { batal = true; };
+  }, []);
+
   return (
     <div className="bg-slate-50 overflow-hidden">
       {/* ============ HERO ============ */}
@@ -106,7 +124,7 @@ export default function LayananIndexView() {
           viewport={{ once: true }}
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
         >
-          {SERVICES.map((s) => {
+          {layanan.map((s) => {
             const SIcon = s.icon;
             return (
               <motion.div key={s.slug} variants={rise} whileHover={{ y: -5 }}>

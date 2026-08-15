@@ -11,12 +11,18 @@
  *             adanya — ini teks layanan publik, dan menghaluskannya berarti
  *             mengubah persyaratan yang mengikat pemohon.
  *
- *   ⚠ PENGAJUAN MASIH DILAYANI v1.
- *   Kesembilan layanan ini berujung pada dashboard pemohon di
- *   aptpairport.id/dashboard/*, yang belum dipindahkan ke AIAIS. Karena itu
- *   `applyUrl` berisi URL penuh ke v1 dan tombolnya dibuka di tab baru.
- *   Ganti nilainya dengan lintasan internal begitu alur pengajuannya ada di
- *   portal v2 — tampilan tidak perlu diubah.
+ *   ⚠ DAFTAR DI BAWAH BUKAN LAGI SUMBER UTAMA.
+ *   Isi layanan kini datang dari API (`/services`), yang membacanya dari tabel
+ *   `services` warisan v1. Daftar ini tinggal sebagai BAWAAN PRESENTASI: ikon,
+ *   warna aksen, serta ringkasan dan paragraf pembuka yang tidak punya kolom
+ *   di basis data v1. `gabungLayanan()` di bawah menimpakan data API di
+ *   atasnya.
+ *
+ *   ⚠ PENGAJUAN BELUM ADA DI PORTAL INI.
+ *   Kesepuluh layanan berujung pada dashboard pemohon v1
+ *   (`dashboard/tenant`, dst.), yang ikut mati saat v1 dipensiunkan. Sampai
+ *   modul pengajuan v2 dibangun, `lintasanPengajuan()` mengembalikan `null`
+ *   dan tampilan berkata "belum tersedia" — bukan memasang tautan mati.
  *
  *   Tiga layanan lain pada menu yang sama (PAS, TIM, Keuangan dan
  *   Penagihan) tidak ada di sini: ketiganya memang portal terpisah
@@ -25,6 +31,7 @@
  * ────────────────────────────────────────────────────────────────────────
  */
 
+import type { ServiceItem } from '@/types';
 import {
   Building2, ClipboardList, Users, Megaphone, FileText, Store, Plane,
   type LucideIcon,
@@ -33,8 +40,14 @@ import {
 /** Kategori ruang usaha beserta tarifnya; hanya layanan Tenant yang punya. */
 export type TenantRate = {
   label: string;
-  /** Rupiah per meter persegi, per bulan. Angka, bukan teks, agar dapat diformat. */
-  pricePerM2: number;
+  /**
+   * Besaran tarif apa adanya, mis. "Rp. 31.000/m²".
+   *
+   * Teks, bukan angka: satuannya berbeda-beda antar layanan, dan basis data
+   * v1 memang menyimpannya begini. Memaksanya jadi angka berarti kehilangan
+   * satuan atau mengarang normalisasi yang tidak ada di sumbernya.
+   */
+  priceText: string;
 };
 
 export type Service = {
@@ -56,8 +69,13 @@ export type Service = {
   steps: string[];
   /** Tarif ruang; hanya terisi pada layanan Tenant. */
   rates?: TenantRate[];
-  /** Dashboard pemohon di v1 — lihat catatan provenans di atas. */
-  applyUrl: string;
+  /**
+   * Tautan formulir pengajuan, atau `null` bila belum ada di portal ini.
+   *
+   * `null` bukan kelalaian melainkan keadaan sebenarnya: dasbor pemohon masih
+   * milik v1 dan ikut mati saat cutover. Lihat `lintasanPengajuan()`.
+   */
+  applyUrl: string | null;
 };
 
 /**
@@ -94,7 +112,6 @@ const ALUR_USAHA = [
   'Melengkapi administrasi dan kontrak jika disetujui',
 ];
 
-const DASHBOARD = 'https://aptpairport.id/dashboard';
 
 export const SERVICES: Service[] = [
   {
@@ -108,7 +125,7 @@ export const SERVICES: Service[] = [
       'Layanan pengajuan beauty contest merupakan sarana bagi pengusaha untuk mengajukan proposal usaha kepada Bandara APT Pranoto Samarinda dengan melalui proses verifikasi dan presentasi bisnis.',
     requirements: [...BERKAS_USAHA],
     steps: ALUR_USAHA,
-    applyUrl: `${DASHBOARD}/beauty-contest`,
+    applyUrl: null,
   },
 
   {
@@ -129,7 +146,7 @@ export const SERVICES: Service[] = [
       'Unggah Kembali Dokumen yang Sudah Ditandatangani',
       'Menunggu Verifikasi Staf',
     ],
-    applyUrl: `${DASHBOARD}/extend-advance`,
+    applyUrl: null,
   },
 
   {
@@ -143,7 +160,7 @@ export const SERVICES: Service[] = [
       'Layanan pengajuan field trip untuk keperluan bisnis dan pengembangan usaha di lingkungan Bandara APT Pranoto Samarinda.',
     requirements: ['Surat Permohonan'],
     steps: ALUR_USAHA,
-    applyUrl: `${DASHBOARD}/fieldtrip`,
+    applyUrl: null,
   },
 
   {
@@ -157,7 +174,7 @@ export const SERVICES: Service[] = [
       'Layanan pengiklanan di Bandara APT Pranoto memungkinkan perusahaan untuk mengajukan proposal usaha dengan melalui proses verifikasi dokumen, presentasi bisnis, dan penandatanganan kontrak.',
     requirements: [...BERKAS_USAHA],
     steps: ALUR_USAHA,
-    applyUrl: `${DASHBOARD}/pengiklanan`,
+    applyUrl: null,
   },
 
   {
@@ -171,7 +188,7 @@ export const SERVICES: Service[] = [
       'Layanan ini memfasilitasi pengusaha yang ingin menjalankan usaha di area bandara dengan proses yang terstruktur dan transparan.',
     requirements: berkasUsahaDengan('Desain Teknis Booth/Tempat Usaha'),
     steps: ALUR_USAHA,
-    applyUrl: `${DASHBOARD}/perijinan`,
+    applyUrl: null,
   },
 
   {
@@ -196,7 +213,7 @@ export const SERVICES: Service[] = [
       'Menunggu proses verifikasi dan penilaian oleh petugas',
       "Mengunduh sertifikat digital melalui dashboard setelah status berubah menjadi 'Selesai'",
     ],
-    applyUrl: `${DASHBOARD}/pengajuan-ojt`,
+    applyUrl: null,
   },
 
   {
@@ -216,7 +233,7 @@ export const SERVICES: Service[] = [
       'Sertifikat Penjamah Makanan (untuk F&B)',
     ),
     steps: ALUR_USAHA,
-    applyUrl: `${DASHBOARD}/sewa`,
+    applyUrl: null,
   },
 
   {
@@ -233,7 +250,7 @@ export const SERVICES: Service[] = [
     // teks persyaratan resmi — pembetulannya urusan pengelola, bukan portal.
     requirements: ['Dokumen dari aplikasi crounus'],
     steps: ALUR_USAHA,
-    applyUrl: `${DASHBOARD}/slot`,
+    applyUrl: null,
   },
 
   {
@@ -251,17 +268,74 @@ export const SERVICES: Service[] = [
     ),
     steps: ALUR_USAHA,
     rates: [
-      { label: 'Terbuka tanpa AC', pricePerM2: 31000 },
-      { label: 'Tertutup tanpa AC', pricePerM2: 48000 },
-      { label: 'Terbuka dengan AC', pricePerM2: 65000 },
-      { label: 'Tertutup dengan AC', pricePerM2: 82000 },
+      { label: 'Terbuka tanpa AC', priceText: 'Rp. 31.000/m²' },
+      { label: 'Tertutup tanpa AC', priceText: 'Rp. 48.000/m²' },
+      { label: 'Terbuka dengan AC', priceText: 'Rp. 65.000/m²' },
+      { label: 'Tertutup dengan AC', priceText: 'Rp. 82.000/m²' },
     ],
-    applyUrl: `${DASHBOARD}/tenant`,
+    applyUrl: null,
   },
 ];
 
 export const getService = (slug: string): Service | undefined =>
   SERVICES.find((s) => s.slug === slug);
+
+/* ------------------------------------------------------------------ */
+/*  Penggabungan dengan data dari API                                  */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Gabungkan satu layanan dari API dengan bawaan presentasi di atas.
+ *
+ * Basis data v1 menyimpan isi layanan — nama, judul, persyaratan, alur, tarif
+ * — tetapi TIDAK menyimpan ikon, warna aksen, ringkasan, maupun paragraf
+ * pembuka. Ketiga hal terakhir ditranskrip dari halaman v1 yang menuliskannya
+ * langsung di berkas tampilan.
+ *
+ * Karena itu API menang untuk apa pun yang benar-benar ia punya, dan daftar di
+ * atas hanya mengisi yang kosong. Begitu petugas mengisi `summary`/`description`
+ * lewat panel admin, nilainya langsung dipakai; ikon dan warna tetap urusan
+ * kode karena keduanya pilihan desain, bukan isi.
+ */
+export function gabungLayanan(api: ServiceItem): Service {
+  const bawaan = getService(api.slug);
+
+  return {
+    slug: api.slug,
+    name: api.name,
+    title: api.title,
+    icon: bawaan?.icon ?? ClipboardList,
+    accent: bawaan?.accent ?? '#0891b2',
+    summary: api.summary || bawaan?.summary || '',
+    description: api.description || bawaan?.description || '',
+    requirements: api.requirements ?? [],
+    steps: api.steps ?? [],
+    rates: api.pricing_info?.length
+      ? api.pricing_info.map((t) => ({ label: t.name, priceText: t.price }))
+      : undefined,
+    applyUrl: lintasanPengajuan(api.submission_url),
+  };
+}
+
+/**
+ * Terjemahkan `submission_url` menjadi tautan yang benar-benar dapat dibuka.
+ *
+ * Nilai warisan v1 berbentuk lintasan dasbor pemohon ("dashboard/tenant").
+ * Dasbor itu ikut mati saat portal v1 dipensiunkan, sehingga memasangnya
+ * sebagai tautan berarti menjanjikan formulir yang tidak ada. `null` di sini
+ * membuat tampilan berkata "belum tersedia" — jujur, dan berubah sendiri
+ * begitu modul pengajuan v2 mendarat dan nilainya diperbarui.
+ */
+function lintasanPengajuan(url: string | null): string | null {
+  const nilai = (url ?? '').trim();
+
+  if (!nilai) return null;
+  if (nilai.startsWith('http://') || nilai.startsWith('https://')) return nilai;
+  if (nilai.startsWith('/')) return nilai;
+
+  // Sisanya lintasan relatif gaya v1 — belum punya padanan di portal ini.
+  return null;
+}
 
 /** Layanan yang dilayani portal terpisah; ditampilkan sebagai tautan luar. */
 export const EXTERNAL_SERVICES = [

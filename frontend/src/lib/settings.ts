@@ -3,32 +3,23 @@
 import { useEffect, useState } from 'react';
 import { API_BASE_URL } from '@/lib/api';
 
-/** Kunci latar header/hero yang dapat diatur dari panel manajemen. */
-export const BACKGROUND_KEYS = [
-  'bg_home',
-  'bg_news',
-  'bg_profile',
-  'bg_tenants',
-  'bg_facilities',
-  'bg_tourism',
-  'bg_app_home',
-  'bg_app_news',
-] as const;
+/*
+ * Konstantanya tinggal di 'settingsShared.ts' yang TIDAK bertanda 'use client'.
+ * Berkas ini bertanda demikian karena berisi hook, dan modul klien membuat
+ * seluruh ekspornya menjadi rujukan klien saat diimpor Server Component —
+ * lihat catatan lengkapnya di sana. Diekspor ulang di sini supaya kode klien
+ * yang sudah mengimpornya dari '@/lib/settings' tidak perlu diubah.
+ */
+export {
+  BACKGROUND_KEYS,
+  SKM_KEYS,
+  DEFAULT_SETTINGS,
+  type BackgroundKey,
+  type SkmKey,
+} from './settingsShared';
 
-export type BackgroundKey = (typeof BACKGROUND_KEYS)[number];
+import { DEFAULT_SETTINGS, type BackgroundKey } from './settingsShared';
 
-/** Nilai bawaan — harus selaras dengan SettingController::DEFAULTS di backend. */
-export const DEFAULT_SETTINGS: Record<string, string> = {
-  bg_home: '/bg/bg-beranda.png',
-  bg_news: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?auto=format&fit=crop&w=1400&q=80',
-  bg_profile: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?auto=format&fit=crop&w=1800&q=80',
-  bg_tenants: 'https://images.unsplash.com/photo-1542296332-2e4473faf563?auto=format&fit=crop&w=1800&q=80',
-  bg_facilities: 'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=1800&q=80',
-  bg_tourism: 'https://images.unsplash.com/photo-1502680390469-be75c86b636f?auto=format&fit=crop&w=1800&q=80',
-  bg_app_home: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?auto=format&fit=crop&w=900&q=80',
-  bg_app_news: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?auto=format&fit=crop&w=900&q=80',
-  hero_video_url: 'https://assets.mixkit.co/videos/preview/mixkit-airplane-taking-off-at-sunset-41484-large.mp4',
-};
 
 export const BACKGROUND_META: { key: BackgroundKey; label: string; page: string; href: string; note: string }[] = [
   { key: 'bg_home', label: 'Beranda', page: 'Portal Desktop', href: '/', note: 'Latar hero utama halaman depan' },
