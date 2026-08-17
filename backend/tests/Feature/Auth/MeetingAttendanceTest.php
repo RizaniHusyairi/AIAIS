@@ -96,13 +96,14 @@ class MeetingAttendanceTest extends TestCase
     }
 
     /** @return array<string, string> */
-    private function isian(): array
+    private function isian(array $ganti = []): array
     {
-        return [
+        return array_merge([
             'name' => 'Siti Aminah',
             'department' => 'Unit Operasi',
+            'phone' => '081234567890',
             'signature' => $this->tandaTangan(),
-        ];
+        ], $ganti);
     }
 
     public function test_token_karangan_dijawab_404(): void
@@ -213,5 +214,73 @@ class MeetingAttendanceTest extends TestCase
             ->assertOk();
 
         $this->getJson($this->prefix.'/absensi/'.$lama)->assertNotFound();
+    }
+
+    /* ================================================================
+       Pencegahan absensi ganda
+
+       Aturan ini ADA DI v1 dan sempat hilang saat modulnya dipindahkan ke v2.
+       Tanpa ia, satu orang yang menekan kirim dua kali — hal yang lumrah pada
+       jaringan lambat — tercatat dua kali, dan daftar hadir yang dicetak
+       menjadi bukti kehadiran yang salah hitung.
+       ================================================================ */
+
+    public function test_nomor_hp_wajib_diisi(): void
+    {
+        $rapat = $this->buatRapat();
+
+        $this->postJson(
+            $this->prefix.'/absensi/'.$rapat->public_token,
+            $this->isian(['phone' => '']),
+        )->assertStatus(422);
+
+        $this->assertSame(0, $rapat->attendances()->count());
+    }
+
+    public function test_nomor_hp_yang_sama_ditolak_pada_rapat_yang_sama(): void
+    {
+        $rapat = $this->buatRapat();
+
+        $this->postJson($this->prefix.'/absensi/'.$rapat->public_token, $this->isian())
+            ->assertCreated();
+
+        $this->postJson(
+            $this->prefix.'/absensi/'.$rapat->public_token,
+            $this->isian(['name' => 'Orang Lain', 'department' => 'Unit Lain']),
+        )->assertStatus(422);
+
+        $this->assertSame(1, $rapat->attendances()->count());
+    }
+
+    /** "0812-3456-7890" dan "081234567890" ditulis orang yang sama. */
+    public function test_nomor_hp_dibandingkan_setelah_dinormalkan(): void
+    {
+        $rapat = $this->buatRapat();
+
+        $this->postJson($this->prefix.'/absensi/'.$rapat->public_token, $this->isian())
+            ->assertCreated();
+
+        $this->postJson(
+            $this->prefix.'/absensi/'.$rapat->public_token,
+            $this->isian(['phone' => '0812-3456-7890']),
+        )->assertStatus(422);
+
+        $this->assertSame(1, $rapat->attendances()->count());
+    }
+
+    /** Rapat yang berbeda punya daftar hadirnya sendiri. */
+    public function test_nomor_yang_sama_boleh_hadir_di_rapat_berbeda(): void
+    {
+        $satu = $this->buatRapat();
+        $dua = $this->buatRapat();
+
+        $this->postJson($this->prefix.'/absensi/'.$satu->public_token, $this->isian())
+            ->assertCreated();
+
+        $this->postJson($this->prefix.'/absensi/'.$dua->public_token, $this->isian())
+            ->assertCreated();
+
+        $this->assertSame(1, $satu->attendances()->count());
+        $this->assertSame(1, $dua->attendances()->count());
     }
 }

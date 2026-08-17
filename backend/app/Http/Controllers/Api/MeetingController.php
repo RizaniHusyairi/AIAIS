@@ -191,6 +191,15 @@ class MeetingController extends Controller
                 'name' => $a->name,
                 'department' => $a->department,
                 'phone' => $a->phone,
+                /*
+                 * Waktu tanda tangan dibubuhkan — kolom yang ada pada cetakan
+                 * v1 dan sempat hilang di v2. Pada daftar hadir, jam mengisi
+                 * adalah bagian dari bukti kehadirannya, bukan hiasan.
+                 *
+                 * Lewat `CetakanPdf::waktu()`, WAJIB: tanpa itu kolomnya
+                 * tercetak dalam UTC sementara kaki halaman menulis WITA.
+                 */
+                'waktu' => CetakanPdf::waktu($a->created_at),
                 'signature' => $this->tandaTanganDataUri($a),
             ];
         });
@@ -243,13 +252,44 @@ class MeetingController extends Controller
         $data = $request->validate([
             'name' => 'required|string|max:125',
             'department' => 'required|string|max:125',
-            'phone' => 'nullable|string|max:125',
+            // WAJIB, bukan opsional. Nomor inilah satu-satunya penanda yang
+            // membedakan peserta di daftar hadir tanpa akun — tanpa ia, tidak
+            // ada cara mengetahui satu orang mengisi dua kali. v1 juga
+            // mewajibkannya.
+            'phone' => 'required|string|max:125',
             'signature' => 'required|string',
         ], [
             'name.required' => 'Nama wajib diisi.',
             'department.required' => 'Unit kerja atau instansi wajib diisi.',
+            'phone.required' => 'Nomor HP wajib diisi.',
             'signature.required' => 'Tanda tangan wajib diisi. Goreskan tanda tangan Anda pada kotak yang tersedia.',
         ]);
+
+        /*
+         * Tolak absensi ganda pada rapat yang sama.
+         *
+         * Aturan ini ADA DI v1 dan sempat hilang saat modulnya dipindahkan ke
+         * v2. Tanpa ia, satu orang yang menekan tombol kirim dua kali — hal
+         * yang lumrah terjadi pada jaringan lambat — tercatat dua kali, dan
+         * daftar hadir yang dicetak menjadi bukti kehadiran yang salah hitung.
+         *
+         * Nomornya dinormalkan lebih dulu: "0812-3456-7890" dan "081234567890"
+         * ditulis orang yang sama tetapi tidak pernah cocok bila dibandingkan
+         * apa adanya.
+         */
+        $nomor = preg_replace('/[^0-9]/', '', $data['phone']);
+
+        $sudahAda = $rapat->attendances()
+            ->get(['id', 'phone'])
+            ->contains(fn ($p) => preg_replace('/[^0-9]/', '', (string) $p->phone) === $nomor);
+
+        if ($sudahAda) {
+            return ApiResponse::error(
+                'Nomor HP ini sudah terdaftar pada daftar hadir rapat ini.',
+                null,
+                422
+            );
+        }
 
         $lintasan = $this->simpanTandaTangan($data['signature']);
 

@@ -77,7 +77,7 @@ export default function AbsensiForm({ token, info }: { token: string; info: Abse
         body: JSON.stringify({
           name: nama,
           department: unit,
-          phone: telepon.trim() || null,
+          phone: telepon.trim(),
           signature: ttd,
         }),
       });
@@ -179,14 +179,20 @@ export default function AbsensiForm({ token, info }: { token: string; info: Abse
                 />
               </label>
 
+              {/* WAJIB, bukan opsional. Nomor inilah satu-satunya penanda yang
+                  membedakan peserta pada daftar hadir tanpa akun, dan yang
+                  dipakai backend menolak absensi ganda. */}
               <label className="block">
                 <span className="text-[11.5px] font-bold uppercase tracking-[0.12em] text-slate-500">
-                  Nomor Telepon <span className="font-medium normal-case tracking-normal text-slate-400">(opsional)</span>
+                  Nomor Telepon
                 </span>
                 <input
-                  type="tel" inputMode="numeric" maxLength={125} autoComplete="tel" className={gaya}
+                  type="tel" inputMode="numeric" required maxLength={125} autoComplete="tel" className={gaya}
                   value={telepon} onChange={(e) => setTelepon(e.target.value)}
                 />
+                <span className="mt-1 block text-[11px] text-slate-400">
+                  Dipakai untuk memastikan satu peserta tercatat sekali saja.
+                </span>
               </label>
 
               <TandaTanganKanvas onChange={setTtd} />

@@ -43,9 +43,10 @@
                 <tr>
                     <th class="tengah" style="width: 26px;">No</th>
                     <th>Nama</th>
-                    <th style="width: 150px;">Unit Kerja / Instansi</th>
-                    <th style="width: 90px;">Telepon</th>
-                    <th class="tengah" style="width: 110px;">Tanda Tangan</th>
+                    <th style="width: 135px;">Unit Kerja / Instansi</th>
+                    <th style="width: 82px;">Telepon</th>
+                    <th style="width: 96px;">Waktu Hadir</th>
+                    <th class="tengah" style="width: 104px;">Tanda Tangan</th>
                 </tr>
             </thead>
             <tbody>
@@ -55,6 +56,7 @@
                         <td>{{ $p['name'] }}</td>
                         <td>{{ $p['department'] }}</td>
                         <td>{{ $p['phone'] ?: '—' }}</td>
+                        <td>{{ $p['waktu'] }}</td>
                         <td class="tengah" style="height: 42px;">
                             @if ($p['signature'])
                                 <img src="{{ $p['signature'] }}" alt="" style="height: 34px;">
