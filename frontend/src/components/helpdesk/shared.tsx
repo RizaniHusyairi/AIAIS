@@ -106,29 +106,154 @@ const jam = (iso?: string) =>
     ? new Date(iso).toLocaleTimeString('id-ID', { timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit' })
     : '';
 
-export function MessageBubble({ msg }: { msg: ChatMessage }) {
+/**
+ * Satu gelembung pesan.
+ *
+ * `rapat` menyatakan pesan ini menyusul pesan lain dari pengirim yang sama, dan
+ * `akhirGrup` menyatakan ia yang terakhir dalam giliran itu. Nama dan jam hanya
+ * dicetak sekali di KAKI giliran — bukan di tiap gelembung, dan bukan pula di
+ * kepalanya, karena yang ingin diketahui pembaca adalah kapan giliran itu
+ * berakhir. Tanpa ini, tiap baris mengulang "Anda · 11.41 WITA".
+ */
+export function MessageBubble({
+  msg, rapat = false, akhirGrup = true,
+}: {
+  msg: ChatMessage;
+  rapat?: boolean;
+  akhirGrup?: boolean;
+}) {
   const dariPetugas = msg.sender_type === 'admin';
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      className={`flex ${dariPetugas ? 'justify-start' : 'justify-end'}`}
+      /* Masuk dari sisi pengirimnya masing-masing; pegas pendek supaya terasa
+         seperti pesan yang mendarat, bukan panel yang memudar. */
+      initial={{ opacity: 0, y: 10, x: dariPetugas ? -10 : 10, scale: 0.96 }}
+      animate={{ opacity: 1, y: 0, x: 0, scale: 1 }}
+      transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+      className={`flex ${dariPetugas ? 'justify-start' : 'justify-end'} ${rapat ? 'mt-1' : 'mt-3'}`}
     >
-      <div className={`max-w-[80%] ${dariPetugas ? '' : 'items-end'}`}>
+      <div className="max-w-[82%] min-w-0">
         <div
-          className={`rounded-2xl px-4 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap break-words ${
+          className={`px-4 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap break-words shadow-sm ${
             dariPetugas
-              ? 'bg-white ring-1 ring-slate-200 text-slate-700 rounded-tl-sm'
-              : 'bg-blue-600 text-white rounded-tr-sm'
+              ? `bg-white ring-1 ring-slate-200 text-slate-700 shadow-slate-200/70 ${
+                  rapat ? 'rounded-2xl rounded-tl-md' : 'rounded-2xl rounded-tl-sm'
+                }`
+              : `bg-gradient-to-br from-sky-500 to-blue-700 text-white shadow-blue-600/25 ${
+                  rapat ? 'rounded-2xl rounded-tr-md' : 'rounded-2xl rounded-tr-sm'
+                }`
           }`}
         >
           {msg.message}
         </div>
 
-        <p className={`mt-1 text-[10.5px] text-slate-400 ${dariPetugas ? 'text-left' : 'text-right'}`}>
-          {dariPetugas ? msg.sender_name : 'Anda'} · {jam(msg.created_at)} WITA
-        </p>
+        {akhirGrup && (
+          <p className={`mt-1 text-[10.5px] text-slate-400 ${dariPetugas ? 'text-left' : 'text-right'}`}>
+            {dariPetugas ? msg.sender_name : 'Anda'} · {jam(msg.created_at)} WITA
+          </p>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+/**
+ * Penanda hari di antara pesan.
+ *
+ * Percakapan bantuan kerap menggantung semalam: warga bertanya sore, petugas
+ * membalas pagi berikutnya. Tanpa penanda ini keduanya terbaca berurutan
+ * dalam hitungan detik.
+ */
+export function PemisahHari({ iso }: { iso: string }) {
+  const d = new Date(iso);
+  const hariIni = new Date();
+  const sama = (a: Date, b: Date) => a.toDateString() === b.toDateString();
+  const kemarin = new Date(hariIni);
+  kemarin.setDate(kemarin.getDate() - 1);
+
+  const label = sama(d, hariIni)
+    ? 'Hari ini'
+    : sama(d, kemarin)
+      ? 'Kemarin'
+      : d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  return (
+    <div className="flex items-center gap-3 my-4" aria-hidden="true">
+      <span className="flex-1 h-px bg-slate-200" />
+      <span className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-slate-400">{label}</span>
+      <span className="flex-1 h-px bg-slate-200" />
+    </div>
+  );
+}
+
+/**
+ * Seluruh isi percakapan: penanda hari, pengelompokan, dan gelembungnya.
+ *
+ * Dipakai halaman web DAN layar PWA. Sebelumnya keduanya memetakan
+ * `messages.map(...)` sendiri-sendiri, sehingga tiap perbaikan tampilan
+ * percakapan harus dikerjakan dua kali — dan pengelompokan seperti ini akan
+ * menyimpang di antara keduanya pada suntingan pertama.
+ */
+export function DaftarPesan({ messages }: { messages: ChatMessage[] }) {
+  return (
+    <>
+      {messages.map((m, i) => {
+        const sebelum = messages[i - 1];
+        const sesudah = messages[i + 1];
+
+        const hariBaru =
+          !sebelum ||
+          new Date(sebelum.created_at).toDateString() !== new Date(m.created_at).toDateString();
+
+        /* Satu giliran bicara: pengirim sama, hari sama, jarak kurang dari
+           lima menit. */
+        const seGiliran = (a?: ChatMessage, b?: ChatMessage) =>
+          !!a && !!b &&
+          a.sender_type === b.sender_type &&
+          new Date(a.created_at).toDateString() === new Date(b.created_at).toDateString() &&
+          Math.abs(new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) < 5 * 60 * 1000;
+
+        const rapat = !hariBaru && seGiliran(sebelum, m);
+        const akhirGrup = !seGiliran(m, sesudah);
+
+        return (
+          <React.Fragment key={m.id}>
+            {hariBaru && <PemisahHari iso={m.created_at} />}
+            <MessageBubble msg={m} rapat={rapat} akhirGrup={akhirGrup} />
+          </React.Fragment>
+        );
+      })}
+    </>
+  );
+}
+
+/**
+ * Tiga titik "menunggu balasan".
+ *
+ * SENGAJA BUKAN "petugas sedang mengetik". Portal ini tidak punya kanal
+ * langsung ke papan ketik petugas — denyutnya lima detik sekali dan hanya
+ * membawa pesan yang sudah terkirim. Menampilkan indikator mengetik berarti
+ * mengarang keadaan yang tidak diketahui, dan warga akan menunggu balasan yang
+ * belum tentu sedang ditulis.
+ */
+export function MenungguBalasan() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex justify-start mt-3"
+    >
+      <div className="flex items-center gap-2 bg-white ring-1 ring-slate-200 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm shadow-slate-200/70">
+        {[0, 1, 2].map((i) => (
+          <motion.span
+            key={i}
+            className="w-1.5 h-1.5 rounded-full bg-slate-300"
+            animate={{ opacity: [0.3, 1, 0.3], y: [0, -3, 0] }}
+            transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.16, ease: 'easeInOut' }}
+          />
+        ))}
+        <span className="ml-1 text-[11.5px] text-slate-400">Menunggu balasan petugas</span>
       </div>
     </motion.div>
   );
@@ -313,12 +438,26 @@ export function OutsideHoursNotice() {
 
 export function EmptyChat() {
   return (
-    <div className="flex flex-col items-center justify-center py-12 text-center">
-      <span className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center">
-        <MessageCircle className="w-6 h-6 text-blue-500" />
-      </span>
-      <p className="mt-3 text-[13px] font-semibold text-slate-600">Belum ada pesan</p>
-      <p className="mt-0.5 text-[11.5px] text-slate-400">Tulis pertanyaan Anda di bawah.</p>
+    <div className="flex flex-col items-center justify-center py-14 text-center">
+      <motion.span
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+        className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-sky-500 to-blue-700 shadow-lg shadow-blue-600/25 flex items-center justify-center"
+      >
+        <MessageCircle className="w-7 h-7 text-white" />
+        {/* Denyut halus — menandakan ruangnya hidup dan sedang menunggu, bukan
+            layar yang gagal memuat. */}
+        <motion.span
+          className="absolute inset-0 rounded-2xl ring-2 ring-sky-400/50"
+          animate={{ scale: [1, 1.28], opacity: [0.6, 0] }}
+          transition={{ duration: 2, repeat: Infinity, ease: 'easeOut' }}
+        />
+      </motion.span>
+      <p className="mt-4 text-[13.5px] font-bold text-slate-700">Percakapan dimulai</p>
+      <p className="mt-1 text-[11.5px] text-slate-400 max-w-[15rem] leading-relaxed">
+        Tulis pertanyaan Anda di bawah. Petugas menjawab pada jam layanan 07.00–20.00 WITA.
+      </p>
     </div>
   );
 }

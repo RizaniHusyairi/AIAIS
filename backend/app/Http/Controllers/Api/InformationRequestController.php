@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Helpers\ApiResponse;
 use App\Models\InformationRequest;
+use App\Support\Notifikasi;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -147,6 +148,8 @@ class InformationRequestController extends Controller
                 'status' => 'submitted',
                 'due_date' => $this->addWorkingDays($now, self::RESPONSE_WORKING_DAYS),
             ]);
+
+            Notifikasi::kirim('informasi', $record->ticket_number);
 
             return ApiResponse::success([
                 'ticket_number' => $record->ticket_number,

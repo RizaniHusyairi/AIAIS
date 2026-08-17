@@ -12,27 +12,15 @@ import { useSyncExternalStore } from 'react';
  * dihitung di JavaScript — grafik Recharts dan warna aksen yang dikirim
  * halaman sebagai heks.
  */
-export type AdminTheme = 'light' | 'dark';
-
-export const ADMIN_THEME_KEY = 'aiais_admin_theme';
-const EVENT = 'adm-theme';
-
-/**
- * Skrip yang harus jalan SEBELUM halaman digambar.
- *
- * Tanpa ini, pemakai tema gelap melihat kedipan putih setiap kali panel
- * dimuat: CSS menetapkan tema terang sebagai bawaan, dan koreksinya baru
- * datang setelah React hidrasi. Disisipkan sebagai <script> sebaris di
- * kerangka panel supaya peramban mengeksekusinya saat mengurai HTML.
+/*
+ * Konstantanya tinggal di 'themeShared.ts' yang TIDAK bertanda 'use client'.
+ * Berkas ini bertanda demikian karena berisi hook, dan modul klien membuat
+ * seluruh ekspornya menjadi rujukan klien saat diimpor Server Component.
+ * Diekspor ulang di sini supaya kode klien yang sudah ada tidak perlu diubah.
  */
-export const THEME_INIT_SCRIPT = `
-try {
-  var t = localStorage.getItem('${ADMIN_THEME_KEY}');
-  document.documentElement.dataset.admTheme = t === 'dark' ? 'dark' : 'light';
-} catch (e) {
-  document.documentElement.dataset.admTheme = 'light';
-}
-`;
+export { ADMIN_THEME_KEY, THEME_INIT_SCRIPT, type AdminTheme } from './themeShared';
+
+import { ADMIN_THEME_KEY, ADMIN_THEME_EVENT as EVENT, type AdminTheme } from './themeShared';
 
 export function setAdminTheme(theme: AdminTheme) {
   document.documentElement.dataset.admTheme = theme;

@@ -11,7 +11,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { API_BASE_URL } from '@/lib/api';
-import type { ChatThread, ChatMessage, ComplaintTracking } from '@/types';
+import type { ChatThread, ChatMessage, ComplaintTracking, LostReportTracking } from '@/types';
 
 /* ------------------------------------------------------------------ */
 /*  Tetapan bersama                                                    */
@@ -66,13 +66,14 @@ export function useServiceHours(): boolean {
 }
 
 /** Jenis tiket ditentukan awalannya, supaya pengunjung tak perlu mengingatnya. */
-export type TicketKind = 'chat' | 'complaint' | 'information' | 'unknown';
+export type TicketKind = 'chat' | 'complaint' | 'information' | 'lost' | 'unknown';
 
 export function ticketKind(ticket: string): TicketKind {
   const t = ticket.trim().toUpperCase();
   if (t.startsWith('CHAT-')) return 'chat';
   if (t.startsWith('TKT-')) return 'complaint';
   if (t.startsWith('PIP-')) return 'information';
+  if (t.startsWith('HLG-')) return 'lost';
   return 'unknown';
 }
 
@@ -200,6 +201,83 @@ export function trackInformationRequest(ticket: string) {
     `/information-requests/track/${encodeURIComponent(ticket)}`,
     { headers: JSON_HEADERS },
   );
+}
+
+/* ---------- lapor kehilangan barang ---------- */
+
+export type LostReportInput = {
+  reporter_name: string;
+  reporter_phone: string;
+  reporter_email?: string;
+  category: string;
+  item_description: string;
+  lost_area: string;
+  /** Format `YYYY-MM-DDTHH:mm` dari <input type="datetime-local">. */
+  lost_at: string;
+  flight_number?: string;
+  photo?: File | null;
+};
+
+/**
+ * `YYYY-MM-DDTHH:mm` (waktu lokal peramban) → ISO 8601 dalam UTC.
+ *
+ * WAJIB dipakai sebelum mengirim nilai `datetime-local` ke backend.
+ * `<input type="datetime-local">` menghasilkan teks TANPA zona waktu, dan
+ * Laravel membacanya sebagai UTC karena `APP_TIMEZONE=UTC`. Pelapor di
+ * Samarinda yang memilih pukul 09.15 karenanya tersimpan sebagai 09.15 UTC —
+ * yakni 17.15 WITA, delapan jam meleset — dan waktu yang jelas sudah lewat
+ * ditolak validasi sebagai "di masa depan".
+ *
+ * `new Date(nilai)` menafsirkan teks tanpa zona itu sebagai waktu LOKAL, lalu
+ * `toISOString()` mengubahnya menjadi instan UTC yang benar.
+ *
+ * Ini keluarga kekeliruan yang sama dengan cetakan PDF yang pernah menuliskan
+ * jam UTC di dokumen berlabel WITA — hanya arahnya terbalik.
+ */
+function keInstanUtc(nilaiLokal: string): string {
+  if (!nilaiLokal) return '';
+  const d = new Date(nilaiLokal);
+  return Number.isNaN(d.getTime()) ? nilaiLokal : d.toISOString();
+}
+
+/**
+ * Kirim laporan kehilangan barang.
+ *
+ * Selalu multipart dengan alasan yang sama seperti `submitComplaint`: satu
+ * jalur kirim lebih mudah dijaga daripada bercabang menurut ada tidaknya foto,
+ * dan `Content-Type` sengaja tidak diisi supaya peramban menentukan
+ * `boundary`-nya sendiri.
+ */
+export function submitLostReport(input: LostReportInput) {
+  const body = new FormData();
+  body.append('reporter_name', input.reporter_name);
+  body.append('reporter_phone', input.reporter_phone);
+  if (input.reporter_email) body.append('reporter_email', input.reporter_email);
+  body.append('category', input.category);
+  body.append('item_description', input.item_description);
+  body.append('lost_area', input.lost_area);
+  body.append('lost_at', keInstanUtc(input.lost_at));
+  if (input.flight_number) body.append('flight_number', input.flight_number);
+  if (input.photo) body.append('photo', input.photo);
+
+  return panggil<{ ticket_number: string; status: string; created_at: string }>('/lost-reports', {
+    method: 'POST',
+    headers: { Accept: 'application/json' },
+    body,
+  });
+}
+
+/**
+ * Lacak laporan kehilangan.
+ *
+ * Balasannya sengaja tidak memuat data pribadi pelapor maupun rincian barang
+ * temuan yang tercocokkan — lihat `LostReport::publicView()` di backend. Yang
+ * disampaikan kepada pelapor ditulis petugas sendiri di `admin_note`.
+ */
+export function trackLostReport(ticket: string) {
+  return panggil<LostReportTracking>(`/lost-reports/track/${encodeURIComponent(ticket)}`, {
+    headers: JSON_HEADERS,
+  });
 }
 
 /* ---------- penilaian ---------- */

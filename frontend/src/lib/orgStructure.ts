@@ -19,9 +19,28 @@
  *   `OFFICIALS` di lib/airportProfile.ts (bersumber dari halaman "Pejabat
  *   Bandara" aptpairport.id yang lebih baru), BUKAN yang tertulis di bagan.
  *   Bagan lebih lama: di sana tertulis "MURDOKO, A.Md" sedangkan halaman
- *   tayang menulis "MURDOKO, S.H.". Dari bagan hanya diambil hal yang tidak
- *   ada di tempat lain: pangkat/golongan, NIP, susunan unit, dan daftar
- *   jabatan fungsional.
+ *   tayang menulis "MURDOKO, S.H.". Dari bagan hanya diambil susunan unit dan
+ *   daftar jabatan fungsional.
+ * ────────────────────────────────────────────────────────────────────────
+ * PELINDUNGAN DATA PRIBADI — UU 27/2022
+ *
+ *   NIP DAN PANGKAT/GOLONGAN TIDAK DITRANSKRIP KE SINI, meski keduanya
+ *   tercantum pada gambar bagan aslinya.
+ *
+ *   NIP adalah nomor identitas yang melekat pada pribadi pegawai, bukan pada
+ *   jabatannya, dan dapat dipakai menelusuri data kepegawaian orang tersebut
+ *   di sistem lain. Pangkat/golongan menyatakan kedudukan kepegawaian —
+ *   informasi ketenagakerjaan pribadi yang tidak diperlukan publik untuk
+ *   mengetahui siapa yang memimpin sebuah unit.
+ *
+ *   Ini modul `lib/` yang ikut dibundel ke peramban tiap pengunjung, jadi
+ *   menyembunyikannya di tampilan tidak menyensor apa pun — datanya tetap
+ *   terbaca di berkas JavaScript. Satu-satunya cara adalah tidak pernah
+ *   menuliskannya.
+ *
+ *   Yang tetap ditranskrip: nomenklatur unit, susunan hierarki, dan daftar
+ *   jabatan fungsional — seluruhnya melekat pada organisasi, bukan pada orang.
+ *   Lihat agen `.claude/agents/sensor-data-pribadi.md`.
  *
  *   SALAH KETIK PADA SUMBER DIPERTAHANKAN. Bagan memuat beberapa kekeliruan
  *   ketik ("Pengloah", "Penatan", "Pranatan"). Seluruhnya disalin apa adanya
@@ -48,10 +67,11 @@ export interface OrgUnit {
    * dan Unit Usaha).
    */
   officialSlug?: string;
-  /** Pangkat/golongan menurut bagan. */
-  golongan?: string;
-  /** NIP menurut bagan — data ini memang tercantum pada bagan publik. */
-  nip?: string;
+  /*
+   * `golongan` dan `nip` SENGAJA TIDAK ADA — lihat catatan PDP di kepala
+   * berkas. Keduanya dihapus sebagai medan, bukan dikosongkan isinya, supaya
+   * transkripsi bagan berikutnya tidak diam-diam memasukkannya kembali.
+   */
   /** Daftar jabatan fungsional di bawah unit tersebut. */
   jabatan: string[];
   /**
@@ -70,8 +90,6 @@ export interface OrgUnit {
 export const ORG_HEAD = {
   slug: 'kadek',
   unit: 'Kepala Kantor UPBU Kelas I A.P.T. Pranoto Samarinda',
-  golongan: 'Pembina Tk I (IV/b)',
-  nip: '19760704 199803 1 001',
   /**
    * Jabatan fungsional yang pada bagan tergantung langsung pada garis
    * Kepala Kantor, di luar keempat unit di bawahnya.
@@ -127,8 +145,6 @@ export const ORG_UNITS: OrgUnit[] = [
     name: 'Subbagian Keuangan dan Tata Usaha',
     shortName: 'Keuangan & Tata Usaha',
     officialSlug: 'zaldi',
-    golongan: 'Penata Tk. I (III/d)',
-    nip: '19810917 200212 1 002',
     accent: '#2563eb',
     jabatan: [
       'Analis Anggaran Ahli Pertama',
@@ -169,8 +185,6 @@ export const ORG_UNITS: OrgUnit[] = [
     name: 'Seksi Teknik dan Operasi',
     shortName: 'Teknik & Operasi',
     officialSlug: 'murdoko',
-    golongan: 'Penata Tk. I (III/d)',
-    nip: '19780319 200012 1 001',
     accent: '#0891b2',
     jabatan: [
       'Teknisi Penerbangan Penyelia',
@@ -189,8 +203,6 @@ export const ORG_UNITS: OrgUnit[] = [
     name: 'Seksi Keamanan Penerbangan dan Pelayanan Darurat',
     shortName: 'Keamanan Penerbangan & Pelayanan Darurat',
     officialSlug: 'ikhsan',
-    golongan: 'Pembina (IV/a)',
-    nip: '19811011 200212 1 002',
     accent: '#dc2626',
     jabatan: [
       'Pengevaluasi Keselamatan dan Keamanan Bandar Udara',
@@ -211,8 +223,6 @@ export const ORG_UNITS: OrgUnit[] = [
     name: 'Seksi Pelayanan dan Kerjasama',
     shortName: 'Pelayanan & Kerjasama',
     officialSlug: 'roslan',
-    golongan: 'Penata Tk. I (III/d)',
-    nip: '19740919 199803 1 001',
     accent: '#7c3aed',
     jabatan: [
       'Personel Teknik dan Operasional Penerbangan',

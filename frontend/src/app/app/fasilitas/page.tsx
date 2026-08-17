@@ -1,80 +1,149 @@
 'use client';
 
-import React, { useState } from 'react';
+/**
+ * Direktori fasilitas terminal.
+ *
+ * SEBELUMNYA LAYAR INI MENGARANG ISINYA: dua belas fasilitas ditulis tetap di
+ * dalam berkas — "Duty Free", "Coffee Shop", "Area Bermain" — tanpa hubungan
+ * apa pun dengan apa yang benar-benar ada di terminal. Petugas yang menyunting
+ * daftar fasilitas di panel admin tidak pernah mengubah apa yang dilihat
+ * pengguna ponsel.
+ *
+ * Kini bersumber `GET /facilities`, sumber yang sama dengan direktori desktop,
+ * dan memakai `lib/facilityMeta.ts` supaya warna serta ikon satu fasilitas
+ * selalu sama di kedua tampilan.
+ */
+
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { StatusBar, AppHeader, listContainer, listItem } from '@/components/pwa/ui';
+import { fetchApi } from '@/lib/api';
+import { Facility } from '@/types';
+import { facilityCatMeta, facilityIcon } from '@/lib/facilityMeta';
 import {
-  MoonStar, ShowerHead, Armchair, Wifi, BatteryCharging, CreditCard, Baby, Accessibility, Info, Search,
-  Utensils, ShoppingBag, Coffee,
-} from 'lucide-react';
+  StatusBar, AppHeader, Segmented, KotakCari, Memuat, LayarKosong,
+  listContainer, listItem,
+} from '@/components/pwa/ui';
+import { Building2, MapPin } from 'lucide-react';
 
-type Cat = 'semua' | 'umum' | 'belanja' | 'kuliner' | 'lainnya';
-
-const CATS: { value: Cat; label: string }[] = [
-  { value: 'semua', label: 'Semua' },
-  { value: 'umum', label: 'Umum' },
-  { value: 'belanja', label: 'Belanja' },
-  { value: 'kuliner', label: 'Kuliner' },
-  { value: 'lainnya', label: 'Lainnya' },
-];
-
-const FACILITIES = [
-  { name: 'Musholla', icon: MoonStar, color: '#0d9488', bg: '#f0fdfa', cat: 'umum' },
-  { name: 'Toilet', icon: ShowerHead, color: '#2563eb', bg: '#eff6ff', cat: 'umum' },
-  { name: 'Ruang Tunggu', icon: Armchair, color: '#ea580c', bg: '#fff7ed', cat: 'umum' },
-  { name: 'Wi-Fi Gratis', icon: Wifi, color: '#2563eb', bg: '#eff6ff', cat: 'umum' },
-  { name: 'Charging Station', icon: BatteryCharging, color: '#059669', bg: '#ecfdf5', cat: 'umum' },
-  { name: 'ATM Center', icon: CreditCard, color: '#7c3aed', bg: '#f5f3ff', cat: 'lainnya' },
-  { name: 'Area Bermain', icon: Baby, color: '#db2777', bg: '#fdf2f8', cat: 'lainnya' },
-  { name: 'Kursi Roda', icon: Accessibility, color: '#0891b2', bg: '#ecfeff', cat: 'lainnya' },
-  { name: 'Restoran', icon: Utensils, color: '#dc2626', bg: '#fef2f2', cat: 'kuliner' },
-  { name: 'Coffee Shop', icon: Coffee, color: '#92400e', bg: '#fef3c7', cat: 'kuliner' },
-  { name: 'Duty Free', icon: ShoppingBag, color: '#7c3aed', bg: '#f5f3ff', cat: 'belanja' },
-  { name: 'Informasi', icon: Info, color: '#2563eb', bg: '#eff6ff', cat: 'umum' },
-];
+const SEMUA = 'Semua';
 
 export default function FasilitasScreen() {
-  const [cat, setCat] = useState<Cat>('semua');
-  const items = FACILITIES.filter((f) => cat === 'semua' || f.cat === cat);
+  const [fasilitas, setFasilitas] = useState<Facility[] | null>(null);
+  const [kategori, setKategori] = useState<string>(SEMUA);
+  const [cari, setCari] = useState('');
+
+  useEffect(() => {
+    fetchApi<Facility[]>('/facilities').then((res) => {
+      setFasilitas(res.success && Array.isArray(res.data) ? res.data : []);
+    });
+  }, []);
+
+  /* Daftar publik hanya menampilkan yang benar-benar dapat dipakai — aturan
+     lintas-lapis portal. Panel admin yang menampilkan seluruhnya. */
+  const aktif = useMemo(
+    () => (fasilitas ?? []).filter((f) => f.is_operational),
+    [fasilitas],
+  );
+
+  /* Kategori dibangkitkan dari datanya, bukan didaftar tetap: kategori baru
+     yang ditambahkan petugas langsung muncul tanpa menyunting berkas ini. */
+  const kategoriTersedia = useMemo(() => {
+    const set = [...new Set(aktif.map((f) => f.category))].sort();
+    return [SEMUA, ...set];
+  }, [aktif]);
+
+  const tampil = useMemo(() => {
+    const q = cari.trim().toLowerCase();
+    return aktif.filter((f) => {
+      const cocokKategori = kategori === SEMUA || f.category === kategori;
+      const cocokCari =
+        !q ||
+        f.name.toLowerCase().includes(q) ||
+        f.location_description?.toLowerCase().includes(q);
+      return cocokKategori && cocokCari;
+    });
+  }, [aktif, kategori, cari]);
 
   return (
     <div className="min-h-full bg-slate-50">
       <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-xl border-b border-slate-100">
         <StatusBar />
-        <AppHeader title="Fasilitas Bandara" />
-        <div className="px-4 pb-3 flex gap-2 overflow-x-auto no-scrollbar">
-          {CATS.map((c) => (
-            <button
-              key={c.value}
-              onClick={() => setCat(c.value)}
-              className={`flex-shrink-0 px-4 py-2 rounded-full text-[12.5px] font-semibold transition-colors ${
-                cat === c.value ? 'bg-blue-600 text-white shadow' : 'bg-slate-100 text-slate-600'
-              }`}
-            >
-              {c.label}
-            </button>
-          ))}
+        <AppHeader title="Fasilitas" />
+        <div className="px-4 pb-3 space-y-3">
+          <KotakCari value={cari} onChange={setCari} placeholder="Cari fasilitas…" />
+          {kategoriTersedia.length > 1 && (
+            <Segmented
+              options={kategoriTersedia.map((k) => ({ value: k, label: k }))}
+              value={kategori}
+              onChange={setKategori}
+              layoutId="seg-fasilitas"
+            />
+          )}
         </div>
       </div>
 
-      <motion.div key={cat} variants={listContainer} initial="hidden" animate="show" className="p-4 grid grid-cols-3 gap-3">
-        {items.map((f) => {
-          const Icon = f.icon;
-          return (
-            <motion.button
-              key={f.name}
-              variants={listItem}
-              whileTap={{ scale: 0.94 }}
-              className="bg-white rounded-2xl p-4 shadow-sm shadow-slate-200/60 flex flex-col items-center gap-2.5 aspect-square justify-center"
-            >
-              <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ backgroundColor: f.bg }}>
-                <Icon className="w-6 h-6" style={{ color: f.color }} strokeWidth={2.1} />
-              </div>
-              <span className="text-[11.5px] font-semibold text-slate-700 text-center leading-tight">{f.name}</span>
-            </motion.button>
-          );
-        })}
-      </motion.div>
+      {fasilitas === null ? (
+        <Memuat label="Memuat fasilitas…" />
+      ) : tampil.length === 0 ? (
+        <LayarKosong
+          icon={Building2}
+          judul={aktif.length === 0 ? 'Belum ada data fasilitas' : 'Tidak ada yang cocok'}
+          pesan={
+            aktif.length === 0
+              ? 'Daftar fasilitas terminal belum diisi petugas.'
+              : 'Coba kata kunci lain atau pilih kategori Semua.'
+          }
+        />
+      ) : (
+        <motion.div
+          variants={listContainer}
+          initial="hidden"
+          animate="show"
+          /* Dua kolom mulai tablet — kartunya pendek, dan satu kolom di layar
+             selebar itu menyisakan separuh layar kosong. */
+          className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3"
+        >
+          {tampil.map((f) => {
+            const meta = facilityCatMeta(f.category);
+            const Icon = facilityIcon(f);
+            return (
+              <motion.div
+                key={f.id}
+                variants={listItem}
+                className="flex items-start gap-3.5 bg-white rounded-2xl p-3.5 shadow-sm shadow-slate-200/60"
+              >
+                <span
+                  className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0"
+                  style={{ backgroundColor: meta.bg }}
+                >
+                  <Icon className="w-5 h-5" style={{ color: meta.color }} strokeWidth={2.1} />
+                </span>
+
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-slate-900 text-[14px] leading-snug">{f.name}</p>
+                  {f.location_description && (
+                    <p className="mt-0.5 flex items-start gap-1 text-[11.5px] text-slate-500 leading-snug">
+                      <MapPin className="w-3.5 h-3.5 flex-shrink-0 mt-px text-slate-400" />
+                      {f.location_description}
+                    </p>
+                  )}
+                  {f.description && (
+                    <p className="mt-1 text-[12px] text-slate-500 leading-relaxed line-clamp-2">
+                      {f.description}
+                    </p>
+                  )}
+                  <span
+                    className="mt-2 inline-block text-[10px] font-bold uppercase tracking-[0.12em] px-2 py-0.5 rounded-full"
+                    style={{ backgroundColor: meta.bg, color: meta.color }}
+                  >
+                    {f.category}
+                  </span>
+                </div>
+              </motion.div>
+            );
+          })}
+        </motion.div>
+      )}
     </div>
   );
 }

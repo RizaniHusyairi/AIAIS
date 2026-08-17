@@ -13,6 +13,16 @@ class DatabaseSeeder extends Seeder
         $this->guardAgainstSeedingRealData();
 
         $this->call(AirportDatabaseSeeder::class);
+
+        /*
+         * Perayaan beranda. Isinya bukan data karangan — 17 Agustus dan
+         * 1 Januari fakta kalender — sehingga aman dijalankan pada basis data
+         * sungguhan sekalipun. Karena penjaga di atas menghentikan seluruh
+         * `db:seed`, pada basis data produksi jalankan tersendiri:
+         *
+         *     php artisan db:seed --class=SiteEventSeeder
+         */
+        $this->call(SiteEventSeeder::class);
     }
 
     /**

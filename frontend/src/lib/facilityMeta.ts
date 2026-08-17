@@ -14,8 +14,20 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { Facility } from '@/types';
 
-/** Warna per kategori fasilitas, selaras dengan palet halaman tenant. */
+/**
+ * Warna per kategori fasilitas, selaras dengan palet halaman tenant.
+ *
+ * DUA KATEGORI TERATAS SEMPAT HILANG DARI DAFTAR INI. Seluruh 22 fasilitas
+ * yang benar-benar terdaftar berkategori "Sisi Udara", "Sisi Darat", atau
+ * "Umum", sedangkan daftar ini hanya mengenal yang ketiga — sehingga 17 dari
+ * 22 fasilitas tampil abu-abu dengan ikon bawaan yang sama, dan kategorinya
+ * tidak lagi membedakan apa pun. Empat kategori di bawah "Umum" tidak dipakai
+ * data mana pun hari ini; keduanya dibiarkan sebagai cadangan bila petugas
+ * memakainya kelak.
+ */
 export const FACILITY_CAT_META: Record<string, { color: string; bg: string; icon: LucideIcon }> = {
+  'Sisi Udara': { color: '#0891b2', bg: '#ecfeff', icon: Plane },
+  'Sisi Darat': { color: '#7c3aed', bg: '#f5f3ff', icon: Luggage },
   'Umum': { color: '#2563eb', bg: '#eff6ff', icon: Building2 },
   'Keagamaan': { color: '#059669', bg: '#ecfdf5', icon: Sparkles },
   'Kesehatan': { color: '#e11d48', bg: '#fff1f2', icon: Stethoscope },

@@ -15,14 +15,18 @@ use App\Http\Controllers\Api\FaqController;
 use App\Http\Controllers\Api\FieldTripController;
 use App\Http\Controllers\Api\FinanceController;
 use App\Http\Controllers\Api\FlightController;
+use App\Http\Controllers\Api\FoundItemController;
 use App\Http\Controllers\Api\ImmediateInformationController;
 use App\Http\Controllers\Api\InformationRequestController;
 use App\Http\Controllers\Api\InformationServiceReportController;
+use App\Http\Controllers\Api\InstagramController;
 use App\Http\Controllers\Api\InventoryController;
 use App\Http\Controllers\Api\LetterController;
+use App\Http\Controllers\Api\LostReportController;
 use App\Http\Controllers\Api\MeetingController;
 use App\Http\Controllers\Api\NataruController;
 use App\Http\Controllers\Api\NewsController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\OjtController;
 use App\Http\Controllers\Api\PeriodicDocumentController;
 use App\Http\Controllers\Api\PersuratanController;
@@ -31,6 +35,7 @@ use App\Http\Controllers\Api\RatingController;
 use App\Http\Controllers\Api\ServiceController;
 use App\Http\Controllers\Api\ServiceStandardController;
 use App\Http\Controllers\Api\SettingController;
+use App\Http\Controllers\Api\SiteEventController;
 use App\Http\Controllers\Api\SlotController;
 use App\Http\Controllers\Api\SparePartController;
 use App\Http\Controllers\Api\SubmissionController;
@@ -100,11 +105,32 @@ Route::prefix(config('api.version'))->group(function () {
     // `publicView()` supaya nomor tiket yang tertebak tidak membocorkan
     // identitas pelapor lain.
     Route::post('/complaints', [ComplaintController::class, 'store'])->middleware('throttle:10,1');
-    Route::get('/complaints/track/{ticket}', [ComplaintController::class, 'track']);
+    // Throttle pada pelacakan bukan soal beban, melainkan penebakan: nomor
+    // tiketnya hanya empat karakter acak, dan tanpa pembatas ini menyisirnya
+    // secara beruntun tidak memakan biaya berarti.
+    Route::get('/complaints/track/{ticket}', [ComplaintController::class, 'track'])
+        ->middleware('throttle:20,1');
 
     Route::post('/chat/start', [ChatController::class, 'start'])->middleware('throttle:20,1');
     Route::get('/chat/{ticket_number}', [ChatController::class, 'show']);
     Route::post('/chat/{ticket_number}/message', [ChatController::class, 'sendVisitorMessage'])
+        ->middleware('throttle:20,1');
+
+    // Lapor kehilangan barang.
+    //
+    // Terbuka tanpa akun dengan alasan yang sama seperti pengaduan: orang yang
+    // baru kehilangan tas tidak akan mendaftar lebih dulu, dan menuntutnya
+    // menyaring habis wisatawan serta penumpang transit.
+    //
+    // Pelacakannya dibatasi lebih ketat daripada tetangganya. Yang dilindungi
+    // bukan sekadar judul dan status, melainkan ciri barang berharga beserta
+    // status penemuannya — cukup bagi seseorang untuk menyusun klaim palsu.
+    // Nomor tiketnya juga dibuat delapan karakter, bukan empat.
+    //
+    // Katalog barang temuan TIDAK punya rute publik sama sekali; lihat
+    // FoundItemController.
+    Route::post('/lost-reports', [LostReportController::class, 'store'])->middleware('throttle:10,1');
+    Route::get('/lost-reports/track/{ticket}', [LostReportController::class, 'track'])
         ->middleware('throttle:20,1');
 
     // Penilaian kepuasan; hanya tiket yang penanganannya selesai yang dilayani.
@@ -164,6 +190,19 @@ Route::prefix(config('api.version'))->group(function () {
     // tanpa autentikasi karena formulirnya perlu tahu bentuknya sebelum
     // pemohon masuk — isinya definisi antarmuka, bukan data siapa pun.
     Route::get('/submission-types', [SubmissionController::class, 'types']);
+
+    // Unggahan Instagram untuk beranda.
+    //
+    // Membaca TABEL LOKAL, tidak pernah memanggil Instagram: token tidak boleh
+    // sampai ke peramban pengunjung, dan gangguan di Instagram tidak boleh ikut
+    // merusak beranda. Gambarnya pun salinan lokal — URL CDN Meta mati dalam
+    // hitungan jam. Lihat InstagramSync.
+    Route::get('/instagram-posts', [InstagramController::class, 'index']);
+
+    // Perayaan yang sedang berlangsung — memicu animasi sambutan di beranda.
+    // Membalas `data: null` bila tidak ada, dan itu keadaan yang paling sering
+    // terjadi sepanjang tahun.
+    Route::get('/site-events/active', [SiteEventController::class, 'active']);
 
     // Kinerja keuangan BLU. Agregat pemasukan dan anggaran; `?year=` memecah
     // serinya per bulan. `detailed` adalah anggaran yang sudah DIRINCI, bukan
@@ -521,6 +560,35 @@ Route::prefix(config('api.version'))->group(function () {
             Route::put('/spare-parts/{id}/stock', [SparePartController::class, 'adjustStock'])->whereNumber('id');
             Route::delete('/spare-parts/{id}', [SparePartController::class, 'destroy'])->whereNumber('id');
 
+            // Perayaan beranda. Tanggal hari besar keagamaan mengikuti SKB
+            // Tiga Menteri dan bergeser tiap tahun, jadi petugas yang mengisi.
+            Route::get('/site-events', [SiteEventController::class, 'adminIndex']);
+            Route::post('/site-events', [SiteEventController::class, 'store']);
+            Route::put('/site-events/{id}', [SiteEventController::class, 'update'])->whereNumber('id');
+            Route::delete('/site-events/{id}', [SiteEventController::class, 'destroy'])->whereNumber('id');
+
+            // Instagram. Token TIDAK pernah ikut respons — `status` hanya
+            // melaporkan kapan ia habis, dan hitung mundur itulah yang mencegah
+            // sambungan mati diam-diam.
+            Route::get('/instagram/status', [InstagramController::class, 'status']);
+            Route::get('/instagram/posts', [InstagramController::class, 'adminIndex']);
+            Route::post('/instagram/sync', [InstagramController::class, 'sync']);
+            Route::post('/instagram/credentials', [InstagramController::class, 'storeCredentials']);
+            Route::put('/instagram/posts/{id}/visibility', [InstagramController::class, 'toggleVisibility'])->whereNumber('id');
+            Route::delete('/instagram/posts/{id}', [InstagramController::class, 'destroy'])->whereNumber('id');
+
+            // Sumber konten beranda: 'auto' (token) atau 'manual' (diisi petugas).
+            // Mode manual menghentikan kedua pekerjaan terjadwal — lihat
+            // SyncInstagramPosts dan RefreshInstagramToken.
+            Route::put('/instagram/mode', [InstagramController::class, 'updateMode']);
+
+            // Unggahan manual. `POST /{id}` didaftarkan di samping `PUT` karena
+            // gambarnya dikirim multipart, dan peramban tidak dapat mengirim
+            // multipart lewat PUT — pola yang sama seperti `letters`.
+            Route::post('/instagram/posts', [InstagramController::class, 'storeManual']);
+            Route::post('/instagram/posts/{id}', [InstagramController::class, 'updateManual'])->whereNumber('id');
+            Route::put('/instagram/posts/{id}', [InstagramController::class, 'updateManual'])->whereNumber('id');
+
             // Absensi rapat. Tautan peserta hanya keluar lewat endpoint
             // khusus, tidak pernah ikut pada daftar rapat.
             Route::get('/meetings', [MeetingController::class, 'adminIndex']);
@@ -555,6 +623,32 @@ Route::prefix(config('api.version'))->group(function () {
             Route::put('/complaints/{id}/resolve', [ComplaintController::class, 'resolve']);
             Route::delete('/complaints/{id}', [ComplaintController::class, 'destroy']);
 
+            // Lapor Kehilangan Barang.
+            //
+            // `matched` sengaja tidak dapat disetel lewat `/status` — status itu
+            // hanya lahir dari `/match`, yang benar-benar menautkan sebuah
+            // barang temuan. Tanpa pemisahan ini, sebuah laporan bisa berstatus
+            // "sudah dicocokkan" tanpa barang yang tertaut.
+            Route::get('/lost-reports', [LostReportController::class, 'adminIndex']);
+            Route::get('/lost-reports/{id}', [LostReportController::class, 'adminShow'])->whereNumber('id');
+            Route::get('/lost-reports/{id}/candidates', [LostReportController::class, 'candidates'])->whereNumber('id');
+            Route::put('/lost-reports/{id}/status', [LostReportController::class, 'updateStatus'])->whereNumber('id');
+            Route::put('/lost-reports/{id}/match', [LostReportController::class, 'match'])->whereNumber('id');
+            Route::delete('/lost-reports/{id}', [LostReportController::class, 'destroy'])->whereNumber('id');
+
+            // Barang temuan — seluruhnya internal, tidak ada padanan publiknya.
+            //
+            // `POST /{id}` didaftarkan di samping `PUT` karena foto barang
+            // dikirim sebagai multipart, dan peramban tidak dapat mengirim
+            // multipart lewat PUT. Pola yang sama dipakai rute `letters`.
+            Route::get('/found-items', [FoundItemController::class, 'adminIndex']);
+            Route::post('/found-items', [FoundItemController::class, 'store']);
+            Route::post('/found-items/{id}', [FoundItemController::class, 'update'])->whereNumber('id');
+            Route::put('/found-items/{id}', [FoundItemController::class, 'update'])->whereNumber('id');
+            Route::put('/found-items/{id}/handover', [FoundItemController::class, 'handover'])->whereNumber('id');
+            Route::get('/found-items/{id}/handover-pdf', [FoundItemController::class, 'handoverPdf'])->whereNumber('id');
+            Route::delete('/found-items/{id}', [FoundItemController::class, 'destroy'])->whereNumber('id');
+
             // Chat Helpdesk Management. `adminIndex` sengaja tidak memuat seluruh
             // pesan — isinya diambil `adminShow` saat satu percakapan dibuka.
             Route::get('/chat', [ChatController::class, 'adminIndex']);
@@ -565,6 +659,22 @@ Route::prefix(config('api.version'))->group(function () {
 
             // Ringkasan kepuasan layanan (SKM)
             Route::get('/ratings/summary', [RatingController::class, 'summary']);
+
+            /*
+             * Lonceng panel, langganan push, dan keadaan kanal notifikasi.
+             *
+             * Seluruhnya milik pemakai yang sedang masuk — tidak ada endpoint
+             * yang dapat membaca notifikasi akun lain.
+             */
+            Route::get('/notifications', [NotificationController::class, 'index']);
+            Route::get('/notifications/status', [NotificationController::class, 'status']);
+            Route::post('/notifications/test', [NotificationController::class, 'test']);
+            Route::put('/notifications/read-all', [NotificationController::class, 'markAllRead']);
+            Route::put('/notifications/{id}/read', [NotificationController::class, 'markRead']);
+            Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
+
+            Route::post('/push/subscribe', [NotificationController::class, 'subscribe']);
+            Route::delete('/push/unsubscribe', [NotificationController::class, 'unsubscribe']);
 
             // Permohonan Informasi Publik. Unduhan berkas hanya lewat sini —
             // scan KTP pemohon tidak punya URL publik.

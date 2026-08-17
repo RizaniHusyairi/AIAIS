@@ -101,7 +101,43 @@ NEXT_PUBLIC_API_VERSION=v2
 ./deploy.sh
 ```
 
-### 1.5 Jalankan frontend sebagai layanan
+### 1.5 Tautan penyimpanan dan cron
+
+**Tautan penyimpanan.** Tanpa ini, setiap gambar yang diunggah lewat panel —
+foto aset, foto suku cadang, salinan unggahan Instagram — membalas 403.
+Gejalanya membingungkan: datanya ada di basis data, hanya gambarnya yang tidak
+pernah muncul.
+
+```bash
+cd /var/www/aiais/backend && php artisan storage:link
+```
+
+**Cron.** Portal punya pekerjaan terjadwal (sinkronisasi Instagram tiap 3 jam,
+penyegaran tokennya harian, pemusnahan laporan kehilangan bulanan) **dan
+pemroses antrean tiap menit**. Tanpa satu baris ini, semuanya **tidak pernah
+berjalan** — dan tidak ada galat apa pun; isinya sekadar tidak berubah, yang
+jauh lebih sulit dikenali daripada kegagalan yang berisik.
+
+Khusus untuk notifikasi, akibatnya paling menyesatkan: lonceng di panel tetap
+terisi (kanal itu berjalan langsung), sehingga sekilas semuanya tampak normal —
+sementara WhatsApp dan push tidak pernah terkirim satu pun, dan pekerjaannya
+menumpuk di tabel `jobs`.
+
+```bash
+crontab -e
+```
+
+```
+* * * * * cd /var/www/aiais/backend && php artisan schedule:run >> /dev/null 2>&1
+```
+
+Periksa jadwalnya terbaca:
+
+```bash
+php artisan schedule:list
+```
+
+### 1.6 Jalankan frontend sebagai layanan
 
 ```bash
 cd /var/www/aiais/frontend
@@ -110,7 +146,7 @@ pm2 save
 pm2 startup          # ikuti perintah yang dicetaknya, agar hidup lagi sesudah reboot
 ```
 
-### 1.6 Arahkan web server
+### 1.7 Arahkan web server
 
 Nginx meneruskan `/api` ke Laravel dan sisanya ke Next.js:
 
@@ -149,7 +185,7 @@ server {
 `X-Forwarded-Proto` bukan pelengkap: tanpa itu cookie sesi tidak ditandai
 `Secure` di produksi.
 
-### 1.7 Nyalakan penggelaran otomatis
+### 1.8 Nyalakan penggelaran otomatis
 
 Inilah langkah yang membuat `git pull` cukup:
 
@@ -205,6 +241,134 @@ git checkout <commit-sebelumnya>
 Kode kembali, **tetapi migrasi tidak ikut mundur** — dan memang tidak boleh:
 seluruh migrasi v2 bersifat aditif, jadi kode lama tetap berjalan di atas skema
 yang lebih baru. `migrate:rollback` justru berbahaya di sini.
+
+---
+
+## Notifikasi petugas — prasyarat di luar kode
+
+Portal memberi tahu petugas saat ada kiriman baru lewat Pusat Bantuan
+(pengaduan, chat, laporan kehilangan, permohonan informasi, penilaian). Ada
+tiga kanal, dan hanya yang pertama bekerja tanpa penyiapan apa pun.
+
+### Lonceng di panel — sudah jalan
+
+Tidak perlu disetel. Berjalan langsung tanpa antrean, tanpa pihak ketiga.
+
+### Push peramban
+
+Butuh sepasang kunci VAPID. Dibuat **sekali**, lalu jangan pernah diganti:
+mengganti kunci membatalkan seluruh langganan yang sudah ada, dan tiap petugas
+harus menyalakan notifikasinya lagi satu per satu tanpa diberi tahu.
+
+```bash
+cd /var/www/aiais/backend
+php -r 'require "vendor/autoload.php";
+  $k = Minishlink\WebPush\VAPID::createVapidKeys();
+  echo "WEBPUSH_PUBLIC_KEY={$k["publicKey"]}\nWEBPUSH_PRIVATE_KEY={$k["privateKey"]}\n";'
+```
+
+Tempel keduanya ke `backend/.env` bersama:
+
+```dotenv
+WEBPUSH_ENABLED=true
+WEBPUSH_SUBJECT=mailto:mail.aptpranotoairport@gmail.com
+```
+
+Petugas menyalakannya sendiri per perangkat lewat **/admin/notifikasi →
+Nyalakan di perangkat ini**. Izin notifikasi hanya dapat diminta dari klik
+pemakai, jadi tidak ada cara menyalakannya dari sisi server.
+
+Di iPhone, portal harus dipasang ke layar utama lebih dulu (Bagikan → Tambahkan
+ke Layar Utama); Safari tidak melayani push pada tab biasa.
+
+### WhatsApp
+
+Portal memakai **gateway milik bandara sendiri**, `https://wg.aptpairport.id`.
+Bentuk permintaannya sudah menjadi nilai bawaan di `backend/config/whatsapp.php`,
+jadi yang perlu ada di `.env` hanya ini:
+
+```dotenv
+WA_ENABLED=true
+WA_TOKEN=wag_<prefix>.<secret>     # dibuat di menu API Keys gateway
+WA_RECIPIENTS=628xxxxxxxxxx        # boleh beberapa, dipisah koma
+WA_DAILY_CAP=200
+# WA_DEVICE_ID=1                   # hanya bila kunci tidak punya perangkat bawaan
+```
+
+Kunci API-nya harus punya scope **`message.send`**. Sesudah menyunting `.env`,
+jalankan `php artisan config:clear` — Laravel menyimpan konfigurasi ke cache dan
+nilai lama akan terus dipakai.
+
+Bawaan yang sudah terpasang untuk gateway ini:
+
+| Variabel | Nilai | Keterangan |
+|---|---|---|
+| `WA_ENDPOINT` | `https://wg.aptpairport.id/api/v1/messages/send` | |
+| `WA_AUTH_HEADER` | `X-API-Key` | kunci telanjang, tanpa awalan `Bearer` |
+| `WA_FORMAT` | `json` | gateway menolak `form`; galatnya tidak menyebut sebabnya |
+| `WA_FIELD_TARGET` | `to` | |
+| `WA_FIELD_MESSAGE` | `body` | |
+
+Untuk berpindah ke Fonnte, Wablas, atau sejenisnya cukup mengubah kelima
+variabel itu — tidak ada kode yang perlu disentuh. Padanan Fonnte tercantum di
+`backend/config/whatsapp.php`.
+
+Gateway ini membalas dengan amplop `{ success, message, data }` dan dapat
+**menolak pesan sambil tetap membalas HTTP 200** (kunci tanpa scope, nomor tidak
+terdaftar di WhatsApp, perangkat terputus). `WhatsAppGateway` karena itu memeriksa
+`success` pada badan balasan, bukan hanya status HTTP — penolakan seperti itu
+tidak boleh terhitung sebagai terkirim dan tidak boleh memakan kuota harian.
+
+> **Nomor pengirimnya WAJIB nomor bot terpisah — bukan nomor layanan publik
+> bandara.**
+>
+> Gateway semacam ini menumpang WhatsApp Web tanpa izin Meta — **termasuk
+> gateway milik sendiri**. Memilikinya sendiri menghilangkan risiko kebocoran ke
+> vendor, tetapi tidak menghilangkan risiko pemblokiran: yang melarang adalah
+> ketentuan layanan WhatsApp, bukan penyedia gateway. Nomor yang dipakai **dapat
+> diblokir permanen** kapan saja. Bila itu terjadi pada nomor bot, yang hilang
+> hanya kanal notifikasi internal; lonceng panel dan push tetap berjalan. Bila
+> itu terjadi pada nomor layanan resmi, yang hilang adalah kanal bandara ke
+> masyarakat.
+
+**Isi pesannya sengaja hanya jenis kiriman, nomor tiket, dan tautan panel** —
+tanpa nama, nomor ponsel, maupun isi laporan warga. Pesan WhatsApp melewati
+server penyedia gateway yang tidak terikat perjanjian pemrosesan data apa pun.
+Jangan menambahkan rincian ke dalamnya.
+
+### Memastikan semuanya hidup
+
+Buka **/admin/notifikasi** lalu tekan **Kirim Notifikasi Uji**. Lonceng terisi
+seketika; WhatsApp dan push menyusul dalam satu menit (menunggu giliran cron).
+Bila keduanya tidak datang, periksa baris cron pada 1.5 lebih dulu — itu
+penyebab yang paling sering.
+
+---
+
+## Instagram di beranda — prasyarat di luar kode
+
+Seksi "Informasi Terbaru" pada beranda menarik unggahan
+**@aptpranotoairport**. Kodenya sudah siap; empat hal berikut ada di luar repo
+dan tanpa keempatnya seksi itu tidak akan pernah terisi.
+
+1. **Akun harus Business atau Creator.** Akun personal tidak dilayani API
+   Instagram sama sekali.
+2. **Aplikasi Meta Developer + App Review** untuk izin
+   `instagram_business_basic`. Instagram Basic Display API dimatikan Meta pada
+   4 Desember 2024, jadi tidak ada jalan pintas yang lebih ringan.
+3. **Token dipasang lewat panel** — `/admin/instagram` → *Pasang Token*. Token
+   diperiksa ke Instagram sebelum disimpan, jadi salah ketik ditolak saat itu
+   juga.
+4. **Cron pada 1.5 harus jalan.** Sinkronisasi dan penyegaran token keduanya
+   bergantung padanya.
+
+Sesudah tersambung, panel menampilkan **hitung mundur umur token**. Angka itu
+yang perlu diperhatikan: token berumur ±60 hari, dan bila penyegaran otomatis
+tidak berjalan, sambungannya putus tanpa gejala — beranda tetap menampilkan
+unggahan lama dan tak seorang pun menyadarinya.
+
+Selama belum tersambung, **seksinya tidak dirender sama sekali** di beranda —
+bukan tampil kosong.
 
 ---
 

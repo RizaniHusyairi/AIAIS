@@ -22,7 +22,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import PpidHero, { FlightArc } from '@/components/ppid/PpidHero';
 import { Field, ImageField, inputCls } from '@/components/ui/FormField';
 import {
-  StatusChip, TicketStub, MessageBubble, RatingPanel, OutsideHoursNotice,
+  StatusChip, TicketStub, DaftarPesan, RatingPanel, OutsideHoursNotice,
   EmptyChat, ALT_CHANNELS, isClosed,
 } from '@/components/helpdesk/shared';
 import { gabungFaq, type FaqTampil } from '@/lib/faqData';
@@ -32,12 +32,15 @@ import type { FaqItem } from '@/types';
 import {
   HELP_CATEGORIES, useServiceHours, useChatThread, startChat, sendChatMessage,
   submitComplaint, trackComplaint, trackInformationRequest, ticketKind,
+  submitLostReport, trackLostReport,
   savedTicket, saveTicket, clearTicket, isRated,
 } from '@/lib/helpdesk';
-import type { ComplaintTracking } from '@/types';
+import { KATEGORI_BARANG, AREA_KEHILANGAN, STATUS_LAPORAN } from '@/lib/laporHilang';
+import type { ComplaintTracking, LostReportTracking } from '@/types';
 import {
   Search, MessageCircle, FileWarning, Ticket, Send, ChevronDown, ArrowRight,
   CircleCheck, CircleAlert, ExternalLink, Sparkles, X, Paperclip, RefreshCw,
+  PackageSearch, MapPin, Clock3,
 } from 'lucide-react';
 
 const rise = {
@@ -46,15 +49,50 @@ const rise = {
 };
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } };
 
-type Mode = 'chat' | 'complaint';
+type Mode = 'chat' | 'complaint' | 'lost';
 type Galat = Record<string, string>;
 
 const KOSONG_CHAT = { visitor_name: '', visitor_email: '', visitor_phone: '', category: HELP_CATEGORIES[0] as string, subject: '', message: '' };
 const KOSONG_ADUAN = { reporter_name: '', reporter_email: '', reporter_phone: '', category: HELP_CATEGORIES[1] as string, subject: '', description: '' };
+const KOSONG_HILANG = {
+  reporter_name: '', reporter_phone: '', reporter_email: '',
+  category: KATEGORI_BARANG[0] as string,
+  item_description: '',
+  lost_area: AREA_KEHILANGAN[0] as string,
+  lost_at: '',
+  flight_number: '',
+};
+
+/**
+ * Batas atas medan waktu kehilangan.
+ *
+ * Backend menolak tanggal di masa depan; memberi batasnya di peramban membuat
+ * penolakan itu tidak pernah perlu terjadi. Bentuknya `YYYY-MM-DDTHH:mm`,
+ * yang diminta `<input type="datetime-local">`, dan dihitung dalam waktu LOKAL
+ * peramban — `toISOString()` akan menggesernya ke UTC dan membuat batasnya
+ * meleset delapan jam bagi pengunjung di Samarinda.
+ */
+function batasWaktuSekarang(): string {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
 
 /* ================================================================ */
 
-export default function PusatBantuanView() {
+/**
+ * Petakan `?mode=` ke tab pembuka.
+ *
+ * Nilainya berasal dari URL — apa pun boleh sampai ke sini. Yang tidak dikenali
+ * jatuh ke `chat`, bukan menghasilkan tab kosong.
+ */
+function modeDariQuery(nilai?: string): Mode {
+  if (nilai === 'hilang' || nilai === 'lost') return 'lost';
+  if (nilai === 'aduan' || nilai === 'complaint') return 'complaint';
+  return 'chat';
+}
+
+export default function PusatBantuanView({ modeAwal }: { modeAwal?: string }) {
   const jamLayanan = useServiceHours();
 
   /* ---------- lapis 1: cari jawaban ---------- */
@@ -84,9 +122,12 @@ export default function PusatBantuanView() {
   }, [cari, faqs]);
 
   /* ---------- lapis 2 & 3: intake ---------- */
-  const [mode, setMode] = useState<Mode>('chat');
+  const [mode, setMode] = useState<Mode>(() => modeDariQuery(modeAwal));
   const [formChat, setFormChat] = useState(KOSONG_CHAT);
   const [formAduan, setFormAduan] = useState(KOSONG_ADUAN);
+  const [formHilang, setFormHilang] = useState(KOSONG_HILANG);
+  const [fotoHilang, setFotoHilang] = useState<File | null>(null);
+  const [tiketHilang, setTiketHilang] = useState<string | null>(null);
   const [lampiran, setLampiran] = useState<File | null>(null);
   const [galat, setGalat] = useState<Galat>({});
   const [galatUmum, setGalatUmum] = useState('');
@@ -105,6 +146,7 @@ export default function PusatBantuanView() {
   const [melacak, setMelacak] = useState(false);
   const [galatLacak, setGalatLacak] = useState('');
   const [hasilAduan, setHasilAduan] = useState<ComplaintTracking | null>(null);
+  const [hasilHilang, setHasilHilang] = useState<LostReportTracking | null>(null);
 
   // Pulihkan sesi chat yang tertinggal.
   useEffect(() => {
@@ -161,6 +203,26 @@ export default function PusatBantuanView() {
     setLampiran(null);
   };
 
+  const kirimLaporanHilang = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setGalat({});
+    setGalatUmum('');
+    setMengirim(true);
+
+    const res = await submitLostReport({ ...formHilang, photo: fotoHilang });
+    setMengirim(false);
+
+    if (!res.ok || !res.data) {
+      setGalat(petakanGalat(res.errors));
+      if (!res.errors) setGalatUmum(res.message);
+      return;
+    }
+
+    setTiketHilang(res.data.ticket_number);
+    setFormHilang(KOSONG_HILANG);
+    setFotoHilang(null);
+  };
+
   const kirimPesan = async (e: React.FormEvent) => {
     e.preventDefault();
     const teks = pesanBaru.trim();
@@ -186,6 +248,7 @@ export default function PusatBantuanView() {
     setMelacak(true);
     setGalatLacak('');
     setHasilAduan(null);
+    setHasilHilang(null);
 
     // Awalan tiket menentukan endpointnya — pengunjung tidak perlu ingat
     // tiketnya berjenis apa, cukup menempelkan nomornya.
@@ -218,8 +281,16 @@ export default function PusatBantuanView() {
       return;
     }
 
+    if (jenis === 'lost') {
+      const res = await trackLostReport(t);
+      setMelacak(false);
+      if (res.ok && res.data) setHasilHilang(res.data);
+      else setGalatLacak(res.message);
+      return;
+    }
+
     setMelacak(false);
-    setGalatLacak('Nomor tiket tidak dikenali. Awalannya CHAT-, TKT-, atau PIP-.');
+    setGalatLacak('Nomor tiket tidak dikenali. Awalannya CHAT-, TKT-, PIP-, atau HLG-.');
   };
 
   const tutupChat = () => {
@@ -235,7 +306,7 @@ export default function PusatBantuanView() {
         title="Pusat"
         accent="Bantuan"
         subtitle="Bandar Udara APT Pranoto Samarinda"
-        lead="Cari jawabannya sendiri, tanyakan langsung kepada petugas, atau sampaikan pengaduan resmi berlampiran bukti. Semua dapat dilacak dengan nomor tiket — tanpa perlu membuat akun."
+        lead="Cari jawabannya sendiri, tanyakan langsung kepada petugas, sampaikan pengaduan resmi berlampiran bukti, atau laporkan barang yang tertinggal di bandara. Semua dapat dilacak dengan nomor tiket — tanpa perlu membuat akun."
         showBack={false}
       >
         {/* Lencana jam layanan dihitung dari waktu Samarinda yang sebenarnya.
@@ -388,7 +459,10 @@ export default function PusatBantuanView() {
                   </button>
                 </div>
 
-                <div className="h-[420px] overflow-y-auto bg-slate-50 px-4 py-4 space-y-3">
+                {/* Tanpa `space-y-3`: jarak antarpesan kini urusan
+                    `DaftarPesan`, yang merapatkan pesan berurutan dari
+                    pengirim yang sama. */}
+                <div className="h-[420px] overflow-y-auto bg-slate-50 px-4 py-4">
                   {loading && messages.length === 0 ? (
                     <div className="flex items-center justify-center h-full gap-2 text-slate-400 text-[12.5px]">
                       <RefreshCw className="w-4 h-4 animate-spin" /> Memuat percakapan...
@@ -404,7 +478,7 @@ export default function PusatBantuanView() {
                   ) : messages.length === 0 ? (
                     <EmptyChat />
                   ) : (
-                    messages.map((m) => <MessageBubble key={m.id} msg={m} />)
+                    <DaftarPesan messages={messages} />
                   )}
                   <div ref={akhirPesan} />
                 </div>
@@ -450,11 +524,15 @@ export default function PusatBantuanView() {
           >
             <motion.div variants={rise} className="lg:col-span-2">
               <div className="bg-white rounded-3xl ring-1 ring-slate-200 shadow-lg shadow-slate-200/50 overflow-hidden">
-                {/* pemilih mode */}
-                <div className="flex border-b border-slate-100">
+                {/* Pemilih mode. Bertumpuk di layar sempit: tiga tab
+                    bersebelahan pada lebar ponsel menyisakan sekitar 120 px per
+                    tab, dan labelnya terpotong justru di bagian yang
+                    membedakannya. */}
+                <div className="flex flex-col sm:flex-row border-b border-slate-100 divide-y sm:divide-y-0 divide-slate-100">
                   {([
                     { id: 'chat' as Mode, label: 'Tanya Petugas', desc: 'Jawaban lewat percakapan', icon: MessageCircle },
                     { id: 'complaint' as Mode, label: 'Pengaduan Resmi', desc: 'Berlampiran foto, ditindaklanjuti', icon: FileWarning },
+                    { id: 'lost' as Mode, label: 'Lapor Kehilangan', desc: 'Barang tertinggal di bandara', icon: PackageSearch },
                   ]).map((t) => {
                     const on = mode === t.id;
                     const Icon = t.icon;
@@ -497,8 +575,42 @@ export default function PusatBantuanView() {
                     </div>
                   )}
 
-                  {/* ---------- tiket pengaduan terbit ---------- */}
-                  {mode === 'complaint' && tiketAduan ? (
+                  {/* ---------- tiket laporan kehilangan terbit ---------- */}
+                  {mode === 'lost' && tiketHilang ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2.5 text-emerald-700">
+                        <CircleCheck className="w-5 h-5" />
+                        <p className="text-[14px] font-black">Laporan kehilangan Anda sudah kami terima</p>
+                      </div>
+
+                      <TicketStub
+                        ticket={tiketHilang}
+                        subtitle="Simpan nomor ini. Tempelkan pada kotak lacak di samping untuk melihat perkembangan pencariannya."
+                      />
+
+                      {/* Harapan yang jujur. Barang temuan kerap baru sampai ke
+                          pos beberapa hari sesudah tertinggal, dan pelapor yang
+                          mengira pencarian berlangsung seketika akan menyimpulkan
+                          laporannya diabaikan. */}
+                      <div className="rounded-xl bg-amber-50 ring-1 ring-amber-200 px-4 py-3 flex items-start gap-2.5">
+                        <Clock3 className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                        <p className="text-[12px] text-amber-800 leading-relaxed">
+                          Barang temuan sering baru diserahkan ke pos layanan beberapa hari setelah
+                          tertinggal. Petugas akan menghubungi nomor yang Anda cantumkan bila ada
+                          barang yang cocok — mohon menunggu, dan periksa status laporan Anda dari
+                          waktu ke waktu.
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setTiketHilang(null)}
+                        className="text-[12.5px] font-bold text-blue-600 hover:text-blue-700 cursor-pointer"
+                      >
+                        Laporkan kehilangan lain
+                      </button>
+                    </div>
+                  ) : mode === 'complaint' && tiketAduan ? (
                     <div className="space-y-4">
                       <div className="flex items-center gap-2.5 text-emerald-700">
                         <CircleCheck className="w-5 h-5" />
@@ -591,7 +703,7 @@ export default function PusatBantuanView() {
                         {mengirim ? 'Membuka percakapan...' : <>Mulai Percakapan <ArrowRight className="w-4 h-4" /></>}
                       </button>
                     </form>
-                  ) : (
+                  ) : mode === 'complaint' ? (
                     /* ---------- formulir pengaduan ---------- */
                     <form onSubmit={kirimAduan} className="space-y-4" noValidate>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -672,6 +784,134 @@ export default function PusatBantuanView() {
                         {mengirim ? 'Mengirim...' : <>Kirim Pengaduan <Paperclip className="w-4 h-4" /></>}
                       </button>
                     </form>
+                  ) : (
+                    /* ---------- formulir lapor kehilangan ---------- */
+                    <form onSubmit={kirimLaporanHilang} className="space-y-4" noValidate>
+                      <div className="rounded-xl bg-blue-50 ring-1 ring-blue-200 px-4 py-3 flex items-start gap-2.5">
+                        <PackageSearch className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                        <p className="text-[12px] text-blue-900 leading-relaxed">
+                          Semakin rinci ciri-ciri barang yang Anda sebutkan, semakin besar
+                          kemungkinan petugas mengenalinya di antara barang temuan lain.
+                          Sebutkan merek, warna, dan tanda khusus yang hanya Anda ketahui.
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <Field label="Nama Anda" error={galat.reporter_name}>
+                          <input
+                            className={inputCls}
+                            value={formHilang.reporter_name}
+                            onChange={(e) => setFormHilang({ ...formHilang, reporter_name: e.target.value })}
+                            placeholder="Nama lengkap"
+                          />
+                        </Field>
+
+                        <Field
+                          label="Telepon"
+                          hint="Petugas menghubungi nomor ini bila barangnya ditemukan"
+                          error={galat.reporter_phone}
+                        >
+                          <input
+                            className={inputCls}
+                            value={formHilang.reporter_phone}
+                            onChange={(e) => setFormHilang({ ...formHilang, reporter_phone: e.target.value })}
+                            placeholder="08xx xxxx xxxx"
+                          />
+                        </Field>
+                      </div>
+
+                      {/* `required={false}` — tanpa itu `Field` memasang tanda
+                          bintang merah di sebelah label yang keterangannya
+                          berbunyi "Opsional". */}
+                      <Field label="Surel" hint="Opsional" required={false} error={galat.reporter_email}>
+                        <input
+                          type="email"
+                          className={inputCls}
+                          value={formHilang.reporter_email}
+                          onChange={(e) => setFormHilang({ ...formHilang, reporter_email: e.target.value })}
+                          placeholder="nama@email.com"
+                        />
+                      </Field>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <Field label="Jenis Barang" error={galat.category}>
+                          <select
+                            className={inputCls}
+                            value={formHilang.category}
+                            onChange={(e) => setFormHilang({ ...formHilang, category: e.target.value })}
+                          >
+                            {KATEGORI_BARANG.map((c) => <option key={c} value={c}>{c}</option>)}
+                          </select>
+                        </Field>
+
+                        <Field label="Lokasi Perkiraan" error={galat.lost_area}>
+                          <select
+                            className={inputCls}
+                            value={formHilang.lost_area}
+                            onChange={(e) => setFormHilang({ ...formHilang, lost_area: e.target.value })}
+                          >
+                            {AREA_KEHILANGAN.map((a) => <option key={a} value={a}>{a}</option>)}
+                          </select>
+                        </Field>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <Field label="Perkiraan Waktu Kehilangan" error={galat.lost_at}>
+                          <input
+                            type="datetime-local"
+                            max={batasWaktuSekarang()}
+                            className={inputCls}
+                            value={formHilang.lost_at}
+                            onChange={(e) => setFormHilang({ ...formHilang, lost_at: e.target.value })}
+                          />
+                        </Field>
+
+                        <Field
+                          label="Nomor Penerbangan"
+                          hint="Opsional — sangat membantu bila barang tertinggal di pesawat atau bagasi"
+                          required={false}
+                          error={galat.flight_number}
+                        >
+                          <input
+                            className={`${inputCls} uppercase placeholder:normal-case`}
+                            value={formHilang.flight_number}
+                            onChange={(e) => setFormHilang({ ...formHilang, flight_number: e.target.value })}
+                            placeholder="Contoh: GA-561"
+                          />
+                        </Field>
+                      </div>
+
+                      <Field
+                        label="Ciri-ciri Barang"
+                        hint="Merek, warna, ukuran, isi, dan tanda khusus. Sebutkan hal yang hanya pemiliknya tahu."
+                        error={galat.item_description}
+                      >
+                        <textarea
+                          rows={5}
+                          maxLength={5000}
+                          className={`${inputCls} resize-none`}
+                          value={formHilang.item_description}
+                          onChange={(e) => setFormHilang({ ...formHilang, item_description: e.target.value })}
+                          placeholder="Contoh: Dompet kulit cokelat merek Eiger, ada jahitan lepas di sudut kanan bawah, berisi kartu ATM dan SIM A."
+                        />
+                      </Field>
+
+                      <ImageField
+                        label="Foto Barang"
+                        hint="Opsional. Foto lama barang tersebut sangat mempercepat pengenalan oleh petugas."
+                        file={fotoHilang}
+                        onPick={setFotoHilang}
+                        error={galat.photo}
+                      />
+
+                      <button
+                        type="submit"
+                        disabled={mengirim}
+                        className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold text-[13.5px] px-6 py-3.5 rounded-full shadow-lg shadow-blue-600/20 transition-colors cursor-pointer"
+                      >
+                        {mengirim ? 'Mengirim...' : <>Kirim Laporan <PackageSearch className="w-4 h-4" /></>}
+                      </button>
+                    </form>
                   )}
                 </div>
               </div>
@@ -686,7 +926,9 @@ export default function PusatBantuanView() {
                   </span>
                   <div>
                     <h3 className="text-[14px] font-black text-slate-900">Lacak Tiket</h3>
-                    <p className="text-[11.5px] text-slate-500">Chat, pengaduan, atau permohonan informasi</p>
+                    <p className="text-[11.5px] text-slate-500">
+                      Chat, pengaduan, permohonan informasi, atau laporan kehilangan
+                    </p>
                   </div>
                 </div>
 
@@ -694,7 +936,7 @@ export default function PusatBantuanView() {
                   <input
                     value={lacak}
                     onChange={(e) => setLacak(e.target.value)}
-                    placeholder="CHAT-… / TKT-… / PIP-…"
+                    placeholder="CHAT-… / TKT-… / PIP-… / HLG-…"
                     aria-label="Nomor tiket"
                     className={`${inputCls} font-mono uppercase placeholder:normal-case placeholder:font-sans`}
                   />
@@ -760,6 +1002,81 @@ export default function PusatBantuanView() {
 
                         {isClosed(hasilAduan.status) && !isRated(hasilAduan.ticket_number) && (
                           <RatingPanel ticket={hasilAduan.ticket_number} />
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* hasil pelacakan laporan kehilangan */}
+                <AnimatePresence>
+                  {hasilHilang && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="mt-4 pt-4 border-t border-dashed border-slate-200 space-y-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-[13px] font-black text-slate-900 leading-snug">
+                              {hasilHilang.category}
+                            </p>
+                            <p className="text-[11px] text-slate-400 font-mono mt-0.5">
+                              {hasilHilang.ticket_number}
+                            </p>
+                          </div>
+                          {/* Lencana status memakai palet `STATUS_LAPORAN`, bukan
+                              `StatusChip` — status laporan kehilangan berbeda
+                              dari status pengaduan, dan memaksakan satu komponen
+                              untuk keduanya akan menampilkan label yang keliru. */}
+                          <span
+                            className="flex-shrink-0 text-[10.5px] font-bold px-2.5 py-1 rounded-full"
+                            style={{
+                              backgroundColor: STATUS_LAPORAN[hasilHilang.status].latar,
+                              color: STATUS_LAPORAN[hasilHilang.status].warna,
+                            }}
+                          >
+                            {STATUS_LAPORAN[hasilHilang.status].label}
+                          </span>
+                        </div>
+
+                        <p className="flex items-start gap-1.5 text-[11.5px] text-slate-500">
+                          <MapPin className="w-3.5 h-3.5 flex-shrink-0 mt-px text-slate-400" />
+                          {hasilHilang.lost_area}
+                          {hasilHilang.flight_number && ` · ${hasilHilang.flight_number}`}
+                        </p>
+
+                        {hasilHilang.photo_url && (
+                          <a
+                            href={hasilHilang.photo_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1.5 text-[11.5px] font-bold text-blue-600 hover:text-blue-700"
+                          >
+                            <Paperclip className="w-3.5 h-3.5" /> Lihat foto yang Anda lampirkan
+                          </a>
+                        )}
+
+                        {/* Keterangan status lebih dulu, catatan petugas sesudahnya.
+                            Yang pertama selalu ada dan menjawab "apa yang harus saya
+                            lakukan"; yang kedua hanya ada bila petugas menulis sesuatu. */}
+                        <div className="rounded-xl bg-slate-50 ring-1 ring-slate-200 p-3">
+                          <p className="text-[12.5px] text-slate-700 leading-relaxed">
+                            {STATUS_LAPORAN[hasilHilang.status].jelas}
+                          </p>
+                        </div>
+
+                        {hasilHilang.admin_note && (
+                          <div className="rounded-xl bg-blue-50 ring-1 ring-blue-200 p-3">
+                            <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-blue-500">
+                              Catatan Petugas
+                            </p>
+                            <p className="mt-1 text-[12.5px] text-blue-900 leading-relaxed whitespace-pre-wrap">
+                              {hasilHilang.admin_note}
+                            </p>
+                          </div>
                         )}
                       </div>
                     </motion.div>

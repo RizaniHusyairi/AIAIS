@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { ArrowRight } from 'lucide-react';
 import AuthShell, { Isian } from '@/components/akun/AuthShell';
 import { masuk } from '@/lib/akunApi';
 
@@ -64,9 +65,10 @@ export default function MasukView() {
         <button
           type="submit"
           disabled={mengirim}
-          className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white font-bold text-[13.5px] py-3.5 transition-colors cursor-pointer"
+          className="group w-full rounded-xl bg-gradient-to-r from-sky-600 to-blue-700 hover:from-sky-500 hover:to-blue-600 disabled:from-slate-300 disabled:to-slate-300 text-white font-bold text-[13.5px] py-3.5 shadow-lg shadow-blue-600/25 disabled:shadow-none transition-all cursor-pointer inline-flex items-center justify-center gap-2"
         >
           {mengirim ? 'Memproses...' : 'Masuk'}
+          {!mengirim && <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />}
         </button>
       </form>
     </AuthShell>

@@ -8,7 +8,7 @@ import { fetchApi } from '@/lib/api';
 import { Flight } from '@/types';
 import { StatusBar, AppHeader, ShareButton } from '@/components/pwa/ui';
 import {
-  AirlineLogo, splitPlace, statusTheme, shortTime, fmtFlightDate, relativeUpdated,
+  AirlineLogo, splitPlace, statusTheme, shortTime, fmtFlightDate, relativeUpdated, namaGate,
 } from '@/components/flights/shared';
 import FlightMap from '@/components/map/FlightMap';
 import SimulationNotice from '@/components/map/SimulationNotice';
@@ -199,10 +199,14 @@ export default function DetailPenerbanganScreen() {
               />
               <Detail
                 label={isArrival ? 'Conveyor' : 'Gate'}
+                /* Gate dipetakan lewat `namaGate` — FIDS mengirim nomor urut,
+                   sedangkan papan terminal menyebut A1/A2/A3/B1. Sebelumnya
+                   halaman ini merendernya mentah, sehingga menampilkan "1"
+                   ketika halaman lain sudah menampilkan "A1". */
                 value={
                   isArrival
                     ? flight.baggage_belt != null ? String(flight.baggage_belt) : 'Belum ditentukan'
-                    : flight.gate || 'Belum ditentukan'
+                    : namaGate(flight.gate) ?? 'Belum ditentukan'
                 }
                 valueClass={
                   (isArrival ? flight.baggage_belt != null : !!flight.gate)

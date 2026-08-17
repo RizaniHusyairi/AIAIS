@@ -11,10 +11,22 @@
  * Datanya ada di `lib/orgStructure.ts` — termasuk provenans dan alasan
  * beberapa salah ketik pada bagan asli sengaja dipertahankan.
  *
+ * Sebaran pegawainya ada di `lib/pegawai.ts` — hanya nomenklatur jabatan dan
+ * BERAPA ORANG yang mengisinya. Tidak ada nama pegawai di mana pun, dan itu
+ * disengaja: berkas data ikut terkirim ke peramban setiap pengunjung, sehingga
+ * apa pun yang ditaruh di sana terbit ke publik entah dirender atau tidak.
+ *
+ * DUA DAFTAR JABATAN SENGAJA DITAMPILKAN TERPISAH: nomenklatur bagan dan
+ * nomenklatur rekap BKN mirip tetapi tidak sama ("Teknisi Penerbangan
+ * Pelaksana/Terampil" vs "Teknisi Penerbangan Terampil"), sehingga
+ * menyandingkannya lewat pencocokan teks akan gagal senyap untuk sebagian
+ * besar baris. Alasan lengkapnya di kepala `lib/pegawai.ts`.
+ *
  * Interaksi:
- *   - tiap unit dapat dibuka untuk melihat jabatan fungsionalnya;
- *   - pencarian menyaring nama jabatan di seluruh unit sekaligus, membuka
- *     unit yang cocok dan meredupkan yang tidak;
+ *   - tiap unit dapat dibuka untuk melihat jabatan fungsional pada bagan dan
+ *     sebaran jumlah pegawainya;
+ *   - pencarian menyaring kedua daftar jabatan itu sekaligus, membuka unit
+ *     yang cocok dan meredupkan yang tidak;
  *   - kartu pejabat membuka dialog riwayat yang sudah ada di halaman profil.
  */
 
@@ -22,13 +34,17 @@ import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Network, Search, ChevronDown, Users, Briefcase, ShieldCheck, Building2,
-  Store, Radio, X, Info, IdCard,
+  Store, Radio, X, Info,
 } from 'lucide-react';
 import { OFFICIALS, type Official } from '@/lib/airportProfile';
 import {
   ORG_HEAD, ORG_OVERSIGHT, ORG_UNITS, ORG_BUSINESS_UNIT, ALL_ORG_UNITS,
   TOTAL_JABATAN, JABATAN_UNIK, type OrgUnit,
 } from '@/lib/orgStructure';
+import {
+  PEGAWAI_PER_UNIT, JUMLAH_PEGAWAI_UNIT, TOTAL_PEGAWAI, REKAP_TANGGAL, jabatanUnit,
+  type KelompokJabatan,
+} from '@/lib/pegawai';
 
 const rise = {
   hidden: { opacity: 0, y: 18 },
@@ -51,6 +67,42 @@ const officialBySlug = (slug?: string): Official | undefined =>
   slug ? OFFICIALS.find((o) => o.slug === slug) : undefined;
 
 const cocok = (teks: string, q: string) => teks.toLowerCase().includes(q);
+
+/** Menyaring kelompok jabatan menurut kata kunci. */
+const saringKelompok = (kel: KelompokJabatan[], q: string): KelompokJabatan[] =>
+  q ? kel.filter((k) => cocok(k.jabatan, q)) : kel;
+
+const hitungOrang = (kel: KelompokJabatan[]) => kel.reduce((n, k) => n + k.jumlah, 0);
+
+/** Satu baris sebaran: nomenklatur jabatan dan berapa orang yang mengisinya. */
+function BarisJabatan({
+  kelompok, accent, query,
+}: {
+  kelompok: KelompokJabatan;
+  accent: string;
+  query: string;
+}) {
+  const sorot = query.length > 0 && cocok(kelompok.jabatan, query);
+  return (
+    <li
+      className={`flex items-start gap-2 text-[12px] leading-snug rounded-lg px-2 py-1.5 transition-colors ${
+        sorot ? 'bg-amber-50 text-amber-900 font-semibold' : 'text-slate-600'
+      }`}
+    >
+      <span
+        className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5"
+        style={{ backgroundColor: sorot ? '#d97706' : accent }}
+      />
+      <span className="flex-1 min-w-0">{kelompok.jabatan}</span>
+      <span
+        className="flex-shrink-0 tabular-nums text-[11px] font-bold px-1.5 py-0.5 rounded-md"
+        style={{ backgroundColor: `${accent}14`, color: accent }}
+      >
+        {kelompok.jumlah}
+      </span>
+    </li>
+  );
+}
 
 /* ================================================================
    Kartu satu unit
@@ -75,9 +127,22 @@ function UnitCard({
 
   const hasil = query ? unit.jabatan.filter((j) => cocok(j, query)) : unit.jabatan;
 
+  const kelompok = jabatanUnit(unit.slug);
+  const kelompokTampil = saringKelompok(kelompok, query);
+  const jumlahPegawai = JUMLAH_PEGAWAI_UNIT[unit.slug] ?? 0;
+  const pegawaiCocok = query ? hitungOrang(kelompokTampil) : 0;
+
+  // Kepala unit ikut terhitung sebagai pegawai pada penghitung global, tetapi
+  // tidak pernah muncul di daftar bawah — ia tampil sebagai kartu berfoto.
+  const pejabatCocok =
+    query.length > 0 &&
+    (PEGAWAI_PER_UNIT[unit.slug] ?? []).some((k) => k.pejabat && cocok(k.jabatan, query));
+  const hanyaPejabatCocok = pejabatCocok && kelompokTampil.length === 0;
+
   // Saat mencari, unit tanpa kecocokan tetap ditampilkan tetapi diredupkan —
   // menghilangkannya akan membuat bagan tampak berubah bentuk.
-  const redup = query.length > 0 && hasil.length === 0 && !cocok(unit.name, query);
+  const redup =
+    query.length > 0 && hasil.length === 0 && pegawaiCocok === 0 && !cocok(unit.name, query);
 
   return (
     <motion.div
@@ -125,15 +190,23 @@ function UnitCard({
               {unit.jabatan.length} jabatan
             </span>
 
+            {/* Jumlah pegawai terlihat tanpa harus membuka kartunya. */}
+            {jumlahPegawai > 0 && (
+              <span className="inline-flex items-center gap-1 text-[10.5px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                <Users className="w-2.5 h-2.5" />
+                {jumlahPegawai} pegawai
+              </span>
+            )}
+
             {unit.dashed && (
               <span className="inline-flex items-center gap-1 text-[10.5px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
                 Garis koordinasi
               </span>
             )}
 
-            {query && hasil.length > 0 && (
+            {query && hasil.length + pegawaiCocok > 0 && (
               <span className="inline-flex items-center gap-1 text-[10.5px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
-                {hasil.length} cocok
+                {hasil.length + pegawaiCocok} cocok
               </span>
             )}
           </span>
@@ -173,16 +246,9 @@ function UnitCard({
                   <span className="min-w-0 flex-1">
                     <span className="block text-[12.5px] font-bold text-slate-900 truncate">{pejabat.name}</span>
                     <span className="block text-[11px] text-slate-500 truncate">{pejabat.shortTitle}</span>
-                    {/* Golongan dan NIP diambil dari bagan; keduanya memang
-                        tercantum di sana dan tidak ada di data pejabat. */}
-                    <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10.5px] text-slate-400">
-                      {unit.golongan && <span>{unit.golongan}</span>}
-                      {unit.nip && (
-                        <span className="inline-flex items-center gap-1 tabular-nums">
-                          <IdCard className="w-3 h-3" /> {unit.nip}
-                        </span>
-                      )}
-                    </span>
+                    {/* NIP dan pangkat/golongan sudah tidak ditampilkan —
+                        keduanya juga tidak lagi ada di `lib/orgStructure.ts`.
+                        Lihat catatan PDP di kepala berkas itu. */}
                   </span>
                 </button>
               )}
@@ -217,6 +283,45 @@ function UnitCard({
                   </ul>
                 </>
               )}
+
+              {/* ---------- pengisi jabatan ----------
+                  Disembunyikan bila yang cocok dengan pencarian justru kepala
+                  unitnya sendiri: ia sudah tampil sebagai kartu berfoto di
+                  atas, dan menambahkan "tidak ada yang cocok" di bawahnya
+                  hanya membantah kartu itu pada kartu yang sama. */}
+              {!(hanyaPejabatCocok) && (
+              <div className="pt-2 border-t border-slate-100">
+                {jumlahPegawai === 0 ? (
+                  <p className="text-[11.5px] text-slate-400 leading-relaxed">
+                    Rekap kepegawaian tidak mencantumkan pegawai pada unit ini.
+                  </p>
+                ) : (
+                  <>
+                    <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                      {pejabat ? 'Sebaran Pegawai Lainnya' : 'Sebaran Pegawai'} ·{' '}
+                      {hitungOrang(kelompok)} orang
+                    </p>
+
+                    {kelompokTampil.length === 0 ? (
+                      <p className="mt-2 text-[11.5px] text-slate-400">
+                        Tidak ada jabatan pegawai yang cocok dengan pencarian.
+                      </p>
+                    ) : (
+                      <ul className="mt-1.5 space-y-1">
+                        {kelompokTampil.map((k) => (
+                          <BarisJabatan
+                            key={k.jabatan}
+                            kelompok={k}
+                            accent={unit.accent}
+                            query={query}
+                          />
+                        ))}
+                      </ul>
+                    )}
+                  </>
+                )}
+              </div>
+              )}
             </div>
           </motion.div>
         )}
@@ -240,7 +345,10 @@ export default function OrgChart({ onOpenOfficial }: { onOpenOfficial: (o: Offic
    * pernah tertinggal satu render di belakang kata yang diketik.
    */
   const terbuka = (u: OrgUnit) =>
-    dibuka.has(u.slug) || (q.length > 0 && u.jabatan.some((j) => cocok(j, q)));
+    dibuka.has(u.slug) ||
+    (q.length > 0 &&
+      (u.jabatan.some((j) => cocok(j, q)) ||
+        (PEGAWAI_PER_UNIT[u.slug] ?? []).some((k) => cocok(k.jabatan, q))));
 
   const toggle = (slug: string) =>
     setDibuka((prev) => {
@@ -258,6 +366,14 @@ export default function OrgChart({ onOpenOfficial }: { onOpenOfficial: (o: Offic
       ALL_ORG_UNITS.reduce((n, u) => n + u.jabatan.filter((j) => cocok(j, q)).length, 0)
     : 0;
 
+  const pegawaiCocok = q
+    ? hitungOrang(Object.values(PEGAWAI_PER_UNIT).flat().filter((k) => cocok(k.jabatan, q)))
+    : 0;
+
+  // Rekap menempatkan sebagian pegawai langsung di Kantor UPBU, di luar
+  // keempat unit pelaksana; mereka ditampilkan pada kartu Kepala Kantor.
+  const kelompokKantor = saringKelompok(jabatanUnit('kantor'), q);
+
   const semuaTerbuka = dibuka.size >= ALL_ORG_UNITS.length;
 
   return (
@@ -271,7 +387,8 @@ export default function OrgChart({ onOpenOfficial }: { onOpenOfficial: (o: Offic
           <div>
             <h2 className="text-[17px] font-black text-slate-900">Struktur Organisasi</h2>
             <p className="text-[11.5px] text-slate-500">
-              {ALL_ORG_UNITS.length + 1} unit kerja · {TOTAL_JABATAN} jabatan · {JABATAN_UNIK} nomenklatur berbeda
+              {ALL_ORG_UNITS.length + 1} unit kerja · {TOTAL_JABATAN} jabatan · {JABATAN_UNIK} nomenklatur berbeda ·{' '}
+              {TOTAL_PEGAWAI} pegawai
             </p>
           </div>
         </div>
@@ -310,9 +427,17 @@ export default function OrgChart({ onOpenOfficial }: { onOpenOfficial: (o: Offic
 
       {q && (
         <p className="text-[12px] text-slate-500">
-          {totalCocok > 0
-            ? <>Ditemukan <span className="font-bold text-slate-800">{totalCocok}</span> jabatan yang cocok dengan &ldquo;{query.trim()}&rdquo;.</>
-            : <>Tidak ada jabatan yang cocok dengan &ldquo;{query.trim()}&rdquo;.</>}
+          {totalCocok + pegawaiCocok > 0 ? (
+            <>
+              Ditemukan{' '}
+              <span className="font-bold text-slate-800">{totalCocok}</span>{' '}
+              jabatan dan{' '}
+              <span className="font-bold text-slate-800">{pegawaiCocok}</span>{' '}
+              pegawai yang cocok dengan &ldquo;{query.trim()}&rdquo;.
+            </>
+          ) : (
+            <>Tidak ada jabatan atau pegawai yang cocok dengan &ldquo;{query.trim()}&rdquo;.</>
+          )}
         </p>
       )}
 
@@ -350,12 +475,6 @@ export default function OrgChart({ onOpenOfficial }: { onOpenOfficial: (o: Offic
                   {kepala?.name}
                 </span>
                 <span className="block text-[12px] text-blue-100/85 mt-0.5">{ORG_HEAD.unit}</span>
-                <span className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10.5px] text-blue-200/70">
-                  <span>{ORG_HEAD.golongan}</span>
-                  <span className="inline-flex items-center gap-1 tabular-nums">
-                    <IdCard className="w-3 h-3" /> {ORG_HEAD.nip}
-                  </span>
-                </span>
               </span>
             </button>
 
@@ -379,6 +498,37 @@ export default function OrgChart({ onOpenOfficial }: { onOpenOfficial: (o: Offic
                 ))}
               </ul>
             </div>
+
+            {/* Pegawai yang pada rekap ditempatkan langsung di Kantor UPBU,
+                di luar keempat unit pelaksana. */}
+            {kelompokKantor.length > 0 && (
+              <div className="relative mt-4 pt-4 border-t border-white/15">
+                <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-blue-200/70">
+                  Sebaran Pegawai Lainnya · {hitungOrang(kelompokKantor)} orang
+                </p>
+                <ul className="mt-2 flex flex-wrap gap-2">
+                  {kelompokKantor.map((k) => (
+                    <li
+                      key={k.jabatan}
+                      className={`inline-flex items-center gap-2 text-[11.5px] px-2.5 py-1 rounded-full border ${
+                        q && cocok(k.jabatan, q)
+                          ? 'bg-amber-300 text-amber-950 border-amber-300 font-bold'
+                          : 'bg-white/10 border-white/15 text-blue-50'
+                      }`}
+                    >
+                      {k.jabatan}
+                      <span
+                        className={`tabular-nums font-bold ${
+                          q && cocok(k.jabatan, q) ? 'text-amber-800' : 'text-cyan-200'
+                        }`}
+                      >
+                        {k.jumlah}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </motion.div>
 
@@ -456,6 +606,14 @@ export default function OrgChart({ onOpenOfficial }: { onOpenOfficial: (o: Offic
             bila berbeda dengan bagan arsip, yang berlaku adalah data pejabat.
             Tanda <span className="font-mono">*)</span> pada beberapa jabatan disalin apa adanya —
             bagan aslinya tidak memuat keterangan untuk tanda tersebut.
+          </p>
+          <p>
+            Sebaran pegawai bersumber dari rekap kepegawaian kantor per{' '}
+            <span className="font-semibold text-slate-600">{REKAP_TANGGAL}</span>, dengan kekuatan{' '}
+            {TOTAL_PEGAWAI} pegawai. Yang ditampilkan hanya jabatan dan jumlah pengisinya; nama
+            pegawai tidak diterbitkan. Nomenklatur pada sebaran itu mengikuti jabatan pelaksana
+            BKN, sehingga dapat berbeda penulisannya dari nomenklatur pada bagan — keduanya
+            karena itu ditampilkan terpisah, tidak digabungkan.
           </p>
         </div>
       </div>

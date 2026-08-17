@@ -1,24 +1,76 @@
 'use client';
 
-import React, { useState } from 'react';
+/**
+ * Direktori layanan — pintu ke seluruh cabang portal.
+ *
+ * MENGGANTIKAN TUJUH KARTU YANG SEBAGIAN BUNTU. Layar lama memuat "Lost &
+ * Found", "Booking Fasilitas", dan "Karir" yang `href`-nya menunjuk ke layar
+ * ini sendiri — pengunjung yang menekannya melihat halaman yang sama persis
+ * dan menyimpulkan aplikasinya rusak. Satu kartu lagi menunjuk `/faq`, di luar
+ * aplikasi.
+ *
+ * Sekarang seluruh entri berujung pada layar yang benar-benar ada, dan yang
+ * berdata menariknya dari API.
+ */
+
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { StatusBar, AppHeader, listContainer, listItem } from '@/components/pwa/ui';
-import { Search, MessageCircle, PackageSearch, Calendar, Plane, Briefcase, CircleHelp, ChevronRight, Palmtree } from 'lucide-react';
+import { fetchApi } from '@/lib/api';
+import type { ServiceItem } from '@/types';
+import { gabungLayanan, EXTERNAL_SERVICES, type Service } from '@/lib/serviceData';
+import { hostOf } from '@/lib/url';
+import {
+  StatusBar, AppHeader, KotakCari, Memuat, listContainer, listItem,
+} from '@/components/pwa/ui';
+import {
+  LifeBuoy, ShieldCheck, Scale, FileText, Download, Store, CircleHelp, Globe,
+  ChevronRight, ExternalLink, Building2, ClipboardList,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
-const SERVICES = [
-  { name: 'Pusat Bantuan', desc: 'Tanya petugas, adukan, atau lacak tiket', icon: MessageCircle, color: '#2563eb', bg: '#eff6ff', href: '/app/layanan/bantuan' },
-  { name: 'Lost & Found', desc: 'Layanan barang hilang', icon: PackageSearch, color: '#059669', bg: '#ecfdf5', href: '/app/layanan' },
-  { name: 'Booking Fasilitas', desc: 'Pesan ruang meeting & fasilitas', icon: Calendar, color: '#7c3aed', bg: '#f5f3ff', href: '/app/layanan' },
-  { name: 'Informasi Penerbangan', desc: 'Jadwal & status penerbangan', icon: Plane, color: '#0891b2', bg: '#ecfeff', href: '/app/penerbangan' },
-  { name: 'Wisata Terdekat', desc: 'Destinasi wisata di sekitar bandara', icon: Palmtree, color: '#16a34a', bg: '#f0fdf4', href: '/app/wisata' },
-  { name: 'Karir', desc: 'Lowongan pekerjaan di bandara', icon: Briefcase, color: '#ea580c', bg: '#fff7ed', href: '/app/layanan' },
-  { name: 'FAQ', desc: 'Pertanyaan yang sering diajukan', icon: CircleHelp, color: '#db2777', bg: '#fdf2f8', href: '/faq' },
+type Pintu = { href: string; nama: string; desc: string; icon: LucideIcon; warna: string; latar: string };
+
+/** Cabang informasi & dokumen. Semuanya punya layarnya sendiri di `/app`. */
+const INFORMASI: Pintu[] = [
+  { href: '/app/ppid', nama: 'PPID', desc: 'Keterbukaan informasi publik', icon: ShieldCheck, warna: '#2563eb', latar: '#eff6ff' },
+  { href: '/app/regulasi/keputusan', nama: 'Surat Keputusan', desc: 'Keputusan resmi Kepala Kantor UPBU', icon: Scale, warna: '#7c3aed', latar: '#f5f3ff' },
+  { href: '/app/regulasi/edaran', nama: 'Surat Edaran', desc: 'Edaran resmi operasional bandara', icon: FileText, warna: '#0891b2', latar: '#ecfeff' },
+  { href: '/app/unduhan', nama: 'Pusat Unduhan', desc: 'Dokumen dan formulir publik', icon: Download, warna: '#059669', latar: '#ecfdf5' },
+  { href: '/app/tenant', nama: 'Tenant', desc: 'Kuliner, retail, lounge, dan layanan', icon: Store, warna: '#d97706', latar: '#fffbeb' },
+  { href: '/app/faq', nama: 'FAQ', desc: 'Pertanyaan yang sering diajukan', icon: CircleHelp, warna: '#db2777', latar: '#fdf2f8' },
+  { href: '/app/profil', nama: 'Profil Bandara', desc: 'Sejarah, visi-misi, tugas & fungsi', icon: Building2, warna: '#475569', latar: '#f1f5f9' },
+  { href: '/app/tautan', nama: 'Tautan Terkait', desc: 'Portal resmi instansi pemerintah', icon: Globe, warna: '#0d9488', latar: '#f0fdfa' },
 ];
 
 export default function LayananScreen() {
-  const [q, setQ] = useState('');
-  const items = SERVICES.filter((s) => s.name.toLowerCase().includes(q.toLowerCase()));
+  const [layanan, setLayanan] = useState<Service[] | null>(null);
+  const [cari, setCari] = useState('');
+
+  useEffect(() => {
+    fetchApi<ServiceItem[]>('/services').then((res) => {
+      setLayanan(res.success && Array.isArray(res.data) ? res.data.map(gabungLayanan) : []);
+    });
+  }, []);
+
+  const q = cari.trim().toLowerCase();
+
+  const pengajuan = useMemo(
+    () => (layanan ?? []).filter((s) => !q || s.name.toLowerCase().includes(q) || s.summary.toLowerCase().includes(q)),
+    [layanan, q],
+  );
+
+  const informasi = useMemo(
+    () => INFORMASI.filter((i) => !q || i.nama.toLowerCase().includes(q) || i.desc.toLowerCase().includes(q)),
+    [q],
+  );
+
+  const luar = useMemo(
+    () => EXTERNAL_SERVICES.filter((e) => !q || e.name.toLowerCase().includes(q) || e.summary.toLowerCase().includes(q)),
+    [q],
+  );
+
+  const kosong = pengajuan.length === 0 && informasi.length === 0 && luar.length === 0;
 
   return (
     <div className="min-h-full bg-slate-50">
@@ -26,45 +78,158 @@ export default function LayananScreen() {
         <StatusBar />
         <AppHeader title="Layanan" back={false} />
         <div className="px-4 pb-3">
-          <div className="relative">
-            <Search className="w-[18px] h-[18px] text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Cari layanan..."
-              className="w-full bg-slate-100 rounded-2xl pl-11 pr-4 py-3 text-[13px] text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-            />
-          </div>
+          <KotakCari value={cari} onChange={setCari} placeholder="Cari layanan…" />
         </div>
       </div>
 
-      <div className="p-4">
-        <h2 className="text-[13px] font-bold text-slate-900 mb-3">Layanan Online</h2>
-        <motion.div variants={listContainer} initial="hidden" animate="show" className="space-y-3">
-          {items.map((s) => {
-            const Icon = s.icon;
-            return (
-              <motion.div key={s.name} variants={listItem}>
-                <Link
-                  href={s.href}
-                  className="w-full flex items-center gap-3.5 bg-white rounded-2xl p-3.5 shadow-sm shadow-slate-200/60 active:scale-[0.98] transition-transform"
-                >
-                  <div className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: s.bg }}>
-                    <Icon className="w-5 h-5" style={{ color: s.color }} strokeWidth={2.1} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-slate-900 text-[14px]">{s.name}</p>
-                    <p className="text-[11.5px] text-slate-500 truncate">{s.desc}</p>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-slate-300" />
-                </Link>
-              </motion.div>
-            );
-          })}
-          {items.length === 0 && (
-            <p className="text-center text-slate-400 text-[13px] py-10">Tidak ada layanan yang cocok.</p>
+      <div className="mx-auto w-full max-w-3xl p-4 space-y-5">
+        {/* ---- Pusat Bantuan, ditonjolkan ---- */}
+        {!q && (
+          <Link
+            href="/app/bantuan"
+            className="relative block overflow-hidden rounded-3xl bg-gradient-to-br from-sky-500 to-blue-700 p-5 text-white shadow-lg shadow-blue-600/25 active:scale-[0.99] transition-transform"
+          >
+            <span className="relative flex items-center gap-4">
+              <span className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center flex-shrink-0">
+                <LifeBuoy className="w-6 h-6" />
+              </span>
+              <span className="flex-1 min-w-0">
+                <span className="block text-[15px] font-black">Pusat Bantuan</span>
+                <span className="block text-[12px] text-blue-100 leading-snug mt-0.5">
+                  Tanya petugas, adukan, lapor kehilangan, atau lacak tiket
+                </span>
+              </span>
+              <ChevronRight className="w-5 h-5 flex-shrink-0" />
+            </span>
+            <LifeBuoy className="absolute -bottom-6 -right-5 w-28 h-28 text-white/10" aria-hidden="true" />
+          </Link>
+        )}
+
+        {/* ---- pengajuan layanan ---- */}
+        <section className="space-y-2.5">
+          <h2 className="px-1 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">
+            Pengajuan Layanan
+          </h2>
+
+          {layanan === null ? (
+            <Memuat label="Memuat layanan…" />
+          ) : pengajuan.length === 0 ? (
+            !q && (
+              <p className="px-1 text-[12.5px] text-slate-500">
+                Daftar layanan pengajuan belum diisi petugas.
+              </p>
+            )
+          ) : (
+            <motion.div
+              variants={listContainer}
+              initial="hidden"
+              animate="show"
+              className="grid grid-cols-1 md:grid-cols-2 gap-2.5"
+            >
+              {pengajuan.map((s) => {
+                const Icon = s.icon;
+                return (
+                  <motion.div key={s.slug} variants={listItem}>
+                    <Link
+                      href={`/app/layanan/${s.slug}`}
+                      className="flex items-center gap-3.5 bg-white rounded-2xl p-3.5 shadow-sm shadow-slate-200/60 active:scale-[0.99] transition-transform"
+                    >
+                      <span
+                        className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0"
+                        style={{ backgroundColor: `${s.accent}14` }}
+                      >
+                        <Icon className="w-5 h-5" style={{ color: s.accent }} strokeWidth={2.1} />
+                      </span>
+                      <span className="flex-1 min-w-0">
+                        <span className="block font-bold text-slate-900 text-[14px]">{s.name}</span>
+                        <span className="block text-[11.5px] text-slate-500 leading-snug line-clamp-2">
+                          {s.summary}
+                        </span>
+                      </span>
+                      <ChevronRight className="w-5 h-5 text-slate-300 flex-shrink-0" />
+                    </Link>
+                  </motion.div>
+                );
+              })}
+            </motion.div>
           )}
-        </motion.div>
+        </section>
+
+        {/* ---- informasi & dokumen ---- */}
+        {informasi.length > 0 && (
+          <section className="space-y-2.5">
+            <h2 className="px-1 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">
+              Informasi &amp; Dokumen
+            </h2>
+
+            <motion.div
+              variants={listContainer}
+              initial="hidden"
+              animate="show"
+              className="grid grid-cols-1 md:grid-cols-2 gap-2.5"
+            >
+              {informasi.map((i) => {
+                const Icon = i.icon;
+                return (
+                  <motion.div key={i.href} variants={listItem}>
+                    <Link
+                      href={i.href}
+                      className="flex items-center gap-3.5 bg-white rounded-2xl p-3.5 shadow-sm shadow-slate-200/60 active:scale-[0.99] transition-transform"
+                    >
+                      <span
+                        className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0"
+                        style={{ backgroundColor: i.latar }}
+                      >
+                        <Icon className="w-5 h-5" style={{ color: i.warna }} strokeWidth={2.1} />
+                      </span>
+                      <span className="flex-1 min-w-0">
+                        <span className="block font-bold text-slate-900 text-[14px]">{i.nama}</span>
+                        <span className="block text-[11.5px] text-slate-500 leading-snug">{i.desc}</span>
+                      </span>
+                      <ChevronRight className="w-5 h-5 text-slate-300 flex-shrink-0" />
+                    </Link>
+                  </motion.div>
+                );
+              })}
+            </motion.div>
+          </section>
+        )}
+
+        {/* ---- sistem di luar portal ---- */}
+        {luar.length > 0 && (
+          <section className="space-y-2.5">
+            <h2 className="px-1 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">
+              Sistem di Luar Portal
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+              {luar.map((e) => (
+                <a
+                  key={e.url}
+                  href={e.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-start gap-3.5 bg-white rounded-2xl p-3.5 shadow-sm shadow-slate-200/60 active:scale-[0.99] transition-transform"
+                >
+                  <span className="w-11 h-11 rounded-2xl bg-slate-100 flex items-center justify-center flex-shrink-0">
+                    <ClipboardList className="w-5 h-5 text-slate-500" strokeWidth={2.1} />
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block font-bold text-slate-900 text-[14px]">{e.name}</span>
+                    <span className="block text-[11.5px] text-slate-500 leading-snug">{e.summary}</span>
+                    <span className="mt-1 inline-flex items-center gap-1 text-[11px] font-bold text-blue-600">
+                      {hostOf(e.url)} <ExternalLink className="w-3 h-3" />
+                    </span>
+                  </span>
+                </a>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {kosong && (
+          <p className="text-center text-slate-400 text-[13px] py-10">Tidak ada layanan yang cocok.</p>
+        )}
       </div>
     </div>
   );

@@ -13,7 +13,7 @@ import OrgChart from '@/components/profile/OrgChart';
 import {
   Plane, Compass, Target, Eye, ShieldCheck, Award, MapPin, Ruler, Building2, Users,
   Radio, Flame, ArrowRight, Quote, CheckCircle2, Sparkles, Navigation, Clock, Globe2, Heart,
-  ScrollText, Scale, Route, Phone, Mail, X, GraduationCap, Briefcase,
+  ScrollText, Scale, Route, Phone, Mail, X, Briefcase,
 } from 'lucide-react';
 
 /* ================================================================
@@ -222,8 +222,24 @@ function OfficialDialog({ official, onClose }: { official: Official | null; onCl
             {/* isi */}
             <div className="overflow-y-auto p-5 sm:p-6 space-y-5">
               <DialogList icon={Briefcase} title="Riwayat Jabatan" items={official.riwayatJabatan} color="#2563eb" />
-              <DialogList icon={GraduationCap} title="Pendidikan" items={official.pendidikan} color="#0d9488" />
               <DialogList icon={Award} title="Penghargaan" items={official.penghargaan} color="#d97706" />
+
+              {/* Keterangan penyensoran.
+                  Ditaruh DI DALAM dialog pejabat, bukan hanya di kaki halaman:
+                  di sinilah pembaca menyadari ada bagian yang tidak ada, dan
+                  keterangan yang jauh dari tempat itu tidak menjawab apa pun. */}
+              <div className="flex items-start gap-2.5 rounded-xl bg-slate-50 ring-1 ring-slate-200 px-4 py-3">
+                <ShieldCheck className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
+                <p className="text-[11.5px] text-slate-500 leading-relaxed">
+                  Riwayat pendidikan, NIP, dan pangkat/golongan tidak ditampilkan sebagai
+                  pelindungan data pribadi sesuai{' '}
+                  <strong className="text-slate-600">
+                    Undang-Undang Nomor 27 Tahun 2022 tentang Pelindungan Data Pribadi
+                  </strong>
+                  . Nama, jabatan, riwayat jabatan, dan penghargaan kedinasan tetap diumumkan
+                  sebagai informasi publik menurut UU Nomor 14 Tahun 2008.
+                </p>
+              </div>
             </div>
           </motion.div>
         </div>

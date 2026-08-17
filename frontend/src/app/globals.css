@@ -106,6 +106,71 @@
   100% { transform: translateX(20px); }
 }
 
+/* ==================================================================
+   Animasi sambutan perayaan (components/events/)
+
+   Ditulis sebagai @keyframes CSS, BUKAN sebagai animasi framer-motion.
+   Kibaran bendera memerlukan dua puluh empat lajur yang bergerak dengan
+   beda fase; dua puluh empat komponen motion berarti dua puluh empat
+   langganan rAF yang dihitung ulang di utas utama tiap bingkai. Sebagai
+   keyframes, seluruhnya berjalan di utas kompositor dan tetap 60fps di
+   ponsel kelas menengah — dan itu satu-satunya cara kibarannya terasa
+   seperti kain, bukan seperti gambar yang bergoyang.
+   ================================================================== */
+
+/* Satu lajur kain. Jeda mulai yang bergeser tiap lajur membuat puncak
+   gelombang MERAMBAT dari tiang ke ujung, bukan bergerak serentak.
+
+   TANPA `skewY`. Memiringkan lajur membuat tepi kiri-kanannya tidak lagi
+   tegak, sehingga di antara lajur yang bersebelahan terbuka celah berbentuk
+   baji — dan latar langit menyembul sebagai garis-garis tegak yang langsung
+   membongkar bahwa kainnya sebenarnya potongan-potongan. Gelombangnya cukup
+   dibentuk oleh geser tegak dan renggangan; keduanya menjaga tepi lajur tetap
+   tegak sehingga saling tumpang dengan rapat. */
+@keyframes kibarKain {
+  0%   { transform: translateY(calc(var(--amp) * -1px)) scaleY(0.965); }
+  50%  { transform: translateY(calc(var(--amp) * 1px)) scaleY(1.035); }
+  100% { transform: translateY(calc(var(--amp) * -1px)) scaleY(0.965); }
+}
+
+/* Bayangan yang menyapu permukaan kain.
+
+   Jeda mulainya sengaja SETENGAH periode di belakang lajurnya: lembah
+   gelombang menghadap menjauhi cahaya dan karenanya paling gelap, sementara
+   puncaknya paling terang. Tanpa beda fase ini kainnya bergerak tetapi rata
+   warnanya, dan mata membacanya sebagai gambar yang bergoyang. */
+@keyframes kilauKain {
+  0%   { opacity: 0.01; }
+  50%  { opacity: 0.2; }
+  100% { opacity: 0.01; }
+}
+
+/* Awan latar yang melintas; dua lapis dengan laju berbeda memberi kedalaman. */
+@keyframes awanLintas {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+/* Kelip bintang dan percik kembang api. */
+@keyframes kerlip {
+  0%, 100% { opacity: 0.25; transform: scale(0.85); }
+  50%      { opacity: 1; transform: scale(1); }
+}
+
+/* Lampion dan ketupat yang bergoyang pelan pada talinya. */
+@keyframes ayunGantung {
+  0%, 100% { transform: rotate(-3.5deg); }
+  50%      { transform: rotate(3.5deg); }
+}
+
+/* Turunnya salju, kelopak bunga, atau abu — arah dan putarannya sama. */
+@keyframes luruh {
+  0%   { transform: translateY(-10%) translateX(0) rotate(0deg); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translateY(115vh) translateX(var(--geser, 30px)) rotate(360deg); opacity: 0; }
+}
+
 /* Used by the news detail feedback confirmation */
 .animate-fadeIn {
   animation: fadeIn 0.4s ease both;

@@ -671,6 +671,99 @@ export interface ComplaintTracking {
   attachment_url?: string | null;
 }
 
+/* ------------------------------------------------------------------ */
+/*  Lapor Kehilangan Barang                                            */
+/* ------------------------------------------------------------------ */
+
+export type LostReportStatus = 'submitted' | 'searching' | 'matched' | 'returned' | 'not_found';
+
+/** Keadaan barang temuan di gudang petugas. */
+export type FoundItemStatus = 'stored' | 'matched' | 'returned' | 'disposed';
+
+/**
+ * Barang temuan — SEPENUHNYA internal.
+ *
+ * Tidak ada endpoint publik yang mengembalikan bentuk ini, dan itu disengaja:
+ * katalog barang temuan yang terbuka memberi siapa saja seluruh keterangan
+ * yang dibutuhkan untuk mengaku sebagai pemiliknya.
+ *
+ * `receiver_id_number` sengaja TIDAK ada di sini — model backend
+ * menyembunyikannya, jadi ia tidak pernah sampai ke peramban. Nomornya hanya
+ * tercetak pada berita acara. Jangan menambahkannya.
+ */
+export interface FoundItem {
+  id: number;
+  code: string;
+  category: string;
+  description: string;
+  found_area: string;
+  found_at: string;
+  finder_name?: string | null;
+  storage_location?: string | null;
+  photo?: string | null;
+  /** `$appends` dari backend; null bila berkasnya tidak ada di cakram. */
+  photo_url?: string | null;
+  status: FoundItemStatus;
+  returned_at?: string | null;
+  receiver_name?: string | null;
+  receiver_id_type?: string | null;
+  handover_officer?: string | null;
+  handover_note?: string | null;
+  lost_report?: LostReport | null;
+  created_at: string;
+}
+
+/** Laporan kehilangan sebagaimana dilihat petugas — lengkap dengan kontak pelapor. */
+export interface LostReport {
+  id: number;
+  ticket_number: string;
+  reporter_name: string;
+  reporter_phone: string;
+  reporter_email?: string | null;
+  category: string;
+  item_description: string;
+  lost_area: string;
+  lost_at: string;
+  flight_number?: string | null;
+  photo?: string | null;
+  photo_url?: string | null;
+  status: LostReportStatus;
+  found_item_id?: number | null;
+  found_item?: FoundItem | null;
+  admin_note?: string | null;
+  responded_at?: string | null;
+  created_at: string;
+}
+
+/**
+ * Bentuk pelacakan publik — SENGAJA tanpa identitas pelapor, dan tanpa apa pun
+ * tentang barang temuan yang tercocokkan.
+ *
+ * Dua hal yang tidak boleh ditambahkan ke sini, keduanya bukan sekadar
+ * kerapian:
+ *
+ *   - medan `reporter_*`, karena nomor tiket dapat ditebak;
+ *   - medan apa pun dari `FoundItem`, terutama `storage_location`. Menampilkan
+ *     "barang Anda ketemu, disimpan di loker X" mengubah nomor tiket menjadi
+ *     kunci pengambilan barang.
+ *
+ * Yang perlu disampaikan kepada pelapor ditulis petugas sendiri di
+ * `admin_note`, dengan pertimbangannya sendiri.
+ */
+export interface LostReportTracking {
+  ticket_number: string;
+  category: string;
+  item_description: string;
+  lost_area: string;
+  lost_at: string;
+  flight_number?: string | null;
+  status: LostReportStatus;
+  submitted_at: string;
+  admin_note?: string | null;
+  responded_at?: string | null;
+  photo_url?: string | null;
+}
+
 /**
  * Permohonan Informasi Publik (UU 14/2008).
  *
@@ -959,4 +1052,77 @@ export interface Meeting {
   is_active: boolean;
   attendances_count?: number;
   attendances?: Attendance[];
+}
+
+/* ---------------- Instagram ---------------- */
+
+/**
+ * Satu unggahan Instagram yang sudah disalin ke portal.
+ *
+ * `image_url` SELALU menunjuk salinan lokal, tidak pernah CDN Meta — URL
+ * Instagram mati dalam hitungan jam. Jangan pernah menggantinya dengan
+ * `media_url` dari API.
+ */
+/**
+ * Asal unggahan.
+ *
+ *   api    — ditarik sinkronisasi dari Graph API; tidak dapat disunting lewat
+ *            panel, karena sinkronisasi berikutnya menimpanya kembali.
+ *   manual — dimasukkan petugas. Tidak punya `ig_id`, dan `permalink`-nya
+ *            boleh kosong.
+ */
+export type InstagramSource = 'api' | 'manual';
+
+/**
+ * Sumber konten Instagram pada beranda.
+ *
+ *   auto   — sinkronisasi terjadwal menarik dari Graph API; menuntut token.
+ *   manual — petugas memasukkan sendiri, dan kedua pekerjaan terjadwal di
+ *            server berhenti di awal.
+ */
+export type InstagramMode = 'auto' | 'manual';
+
+export interface InstagramPost {
+  id: number;
+  source?: InstagramSource;
+  /** Boleh null pada unggahan manual yang tidak mencantumkan tautan. */
+  permalink: string | null;
+  media_type: 'IMAGE' | 'VIDEO' | 'CAROUSEL_ALBUM';
+  image_url: string | null;
+  caption: string | null;
+  caption_excerpt: string | null;
+  posted_at: string | null;
+  is_visible?: boolean;
+  synced_at?: string | null;
+  /** Turunan `$appends`; benar bila medianya video, bukan gambar. */
+  is_video?: boolean;
+}
+
+/**
+ * Keadaan sambungan Instagram.
+ *
+ * Tidak memuat token — hanya kapan ia habis. `days_left` adalah angka
+ * terpenting di panel: satu-satunya cara integrasi ini mati diam-diam adalah
+ * token yang lewat tanggal tanpa ada yang menyadarinya.
+ */
+export interface InstagramStatus {
+  /**
+   * Sumber konten beranda yang sedang berlaku.
+   *
+   * `manual` menghentikan KEDUA pekerjaan terjadwal di server — bukan sekadar
+   * menyaring tampilan. Panel token hanya relevan pada mode `auto`.
+   */
+  mode: InstagramMode;
+  api_posts: number;
+  manual_posts: number;
+  connected: boolean;
+  account_username: string | null;
+  expires_at: string | null;
+  days_left: number | null;
+  needs_refresh: boolean;
+  last_refreshed_at: string | null;
+  last_synced_at: string | null;
+  total_posts: number;
+  visible_posts: number;
+  display_limit: number;
 }

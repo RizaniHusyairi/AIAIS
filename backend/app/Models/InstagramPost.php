@@ -17,6 +17,17 @@ class InstagramPost extends Model
     /** Jenis media yang dikenali Graph API. */
     public const MEDIA_TYPES = ['IMAGE', 'VIDEO', 'CAROUSEL_ALBUM'];
 
+    /**
+     * Asal unggahan.
+     *
+     *   api    — ditarik sinkronisasi dari Graph API. HANYA baris inilah yang
+     *            boleh disentuh `InstagramSync`, dan menyuntingnya lewat panel
+     *            percuma karena sinkronisasi berikutnya menimpanya.
+     *   manual — dimasukkan petugas lewat panel. Tidak punya `ig_id`, dan
+     *            `permalink`-nya boleh kosong.
+     */
+    public const SOURCES = ['api', 'manual'];
+
     /** Cakram penyimpanan salinan gambar — publik, isinya memang publik. */
     public const DISK = 'public';
 
@@ -24,11 +35,11 @@ class InstagramPost extends Model
     public const FOLDER = 'instagram';
 
     protected $fillable = [
-        'ig_id', 'permalink', 'media_type', 'local_image_path',
-        'caption', 'posted_at', 'synced_at',
+        'source', 'ig_id', 'permalink', 'media_type', 'local_image_path',
+        'caption', 'posted_at', 'synced_at', 'is_visible',
     ];
 
-    protected $appends = ['image_url', 'caption_excerpt'];
+    protected $appends = ['image_url', 'caption_excerpt', 'is_video'];
 
     protected function casts(): array
     {
@@ -59,6 +70,19 @@ class InstagramPost extends Model
         $lintasan = $this->attributes['local_image_path'] ?? null;
 
         return $lintasan ? Storage::disk(self::DISK)->url($lintasan) : null;
+    }
+
+    /**
+     * Benar bila medianya video, bukan gambar.
+     *
+     * Diturunkan di sini dan ikut dikirim sebagai medan tersendiri supaya
+     * tampilan tidak perlu tahu daftar nilai `media_type` milik Graph API.
+     * Tanpa penanda ini, beranda merender video di dalam `<img>` — hasilnya
+     * kotak rusak tanpa satu pun pesan galat.
+     */
+    public function getIsVideoAttribute(): bool
+    {
+        return ($this->attributes['media_type'] ?? '') === 'VIDEO';
     }
 
     /**

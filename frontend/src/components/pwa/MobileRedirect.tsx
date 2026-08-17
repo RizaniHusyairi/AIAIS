@@ -2,65 +2,7 @@
 
 import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-
-/* marketing route -> app screen */
-const TO_APP: [string, string][] = [
-  ['/flights', '/app/penerbangan'],
-  ['/facilities', '/app/fasilitas'],
-  ['/news', '/app/berita'],
-  ['/tenants', '/app/layanan'],
-  ['/complaints', '/app/layanan'],
-  ['/downloads', '/app/layanan'],
-  ['/profile', '/app/profil'],
-];
-
-/* app screen -> marketing route (reverse) */
-const TO_DESKTOP: [string, string][] = [
-  ['/app/penerbangan', '/flights'],
-  ['/app/fasilitas', '/facilities'],
-  ['/app/peta', '/facilities'],
-  ['/app/berita', '/news'],
-  ['/app/layanan', '/tenants'],
-  ['/app/profil', '/profile'],
-];
-
-/**
- * Halaman yang TIDAK boleh dialihkan ke PWA.
- *
- * `toAppRoute` mengembalikan '/app' untuk lintasan yang tidak dikenalnya, jadi
- * setiap halaman baru tanpa padanan PWA akan melemparkan pengunjung ponsel ke
- * beranda aplikasi — halaman yang dicari lenyap tanpa jejak.
- *
- * Halaman PPID adalah kewajiban UU 14/2008 tentang Keterbukaan Informasi
- * Publik dan harus dapat dibuka dari perangkat apa pun. Keduanya sudah
- * responsif sampai lebar 375 px, jadi versi ini disajikan apa adanya di ponsel
- * alih-alih dialihkan. Hapus dari daftar ini hanya bila layar PWA-nya sudah
- * benar-benar dibuat.
- *
- * Catatan: `proxy.ts` di sisi server memang tidak mencocokkan '/ppid', jadi
- * pengecualian ini membuat kedua lapisan sepakat.
- */
-const KEEP_RESPONSIVE = ['/ppid'];
-
-function toAppRoute(pathname: string): string {
-  // Keep the article: /news/<slug> -> /app/berita/<slug>
-  if (pathname.startsWith('/news')) {
-    const slug = pathname.replace(/^\/news\/?/, '').split('/')[0];
-    return slug ? `/app/berita/${slug}` : '/app/berita';
-  }
-  for (const [from, to] of TO_APP) if (pathname.startsWith(from)) return to;
-  return '/app';
-}
-
-function toDesktopRoute(pathname: string): string {
-  // Keep the article: /app/berita/<slug> -> /news/<slug>
-  if (pathname.startsWith('/app/berita')) {
-    const slug = pathname.replace(/^\/app\/berita\/?/, '').split('/')[0];
-    return slug ? `/news/${slug}` : '/news';
-  }
-  for (const [from, to] of TO_DESKTOP) if (pathname.startsWith(from)) return to;
-  return '/';
-}
+import { toAppRoute, toDesktopRoute, keepResponsive } from '@/lib/pwaRoutes';
 
 function hasDesktopPref(): boolean {
   return typeof document !== 'undefined' && document.cookie.includes('aptView=desktop');
@@ -70,20 +12,22 @@ function isStandalone(): boolean {
   return (
     window.matchMedia('(display-mode: standalone)').matches ||
     // iOS Safari
-    (window.navigator as any).standalone === true
+    (window.navigator as { standalone?: boolean }).standalone === true
   );
 }
 
 const AUTO_KEY = 'aptAutoMobile';
 
 /**
- * Keeps the layout in sync with the viewport:
- *  - Phone-sized viewport on a marketing page  -> matching PWA screen.
- *  - Widened back to desktop while we auto-switched -> return to the desktop page.
+ * Menjaga tata letak tetap sejalan dengan lebar viewport:
+ *  - Halaman publik menyempit ke ukuran ponsel -> layar PWA yang sepadan.
+ *  - Dilebarkan lagi setelah kita sendiri yang mengalihkan -> kembali ke
+ *    halaman publiknya.
  *
- * Real phones are already handled server-side by proxy.ts. An installed PWA
- * (standalone) and an explicit `aptView=desktop` choice are never overridden,
- * and opening `/app` directly on desktop stays in the app (no reverse bounce).
+ * Peta rutenya diimpor dari `lib/pwaRoutes.ts`, sumber yang sama dengan
+ * `proxy.ts`. Ponsel sungguhan sudah ditangani proxy di sisi server; PWA
+ * terpasang (standalone) dan pilihan `aptView=desktop` tidak pernah ditimpa,
+ * dan membuka `/app` langsung dari desktop tetap tinggal di aplikasi.
  */
 export default function MobileRedirect() {
   const pathname = usePathname();
@@ -92,7 +36,7 @@ export default function MobileRedirect() {
   useEffect(() => {
     if (!pathname) return;
     if (pathname.startsWith('/admin')) return;
-    if (KEEP_RESPONSIVE.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return;
+    if (keepResponsive(pathname)) return;
     if (isStandalone()) return;
 
     const isApp = pathname.startsWith('/app');
@@ -102,11 +46,11 @@ export default function MobileRedirect() {
       if (hasDesktopPref()) return;
 
       if (!isApp && !wide.matches) {
-        // Desktop/marketing page shrunk to phone size -> go to the app.
+        // Halaman publik menyempit ke ukuran ponsel -> masuk ke aplikasi.
         sessionStorage.setItem(AUTO_KEY, '1');
         router.replace(toAppRoute(pathname));
       } else if (isApp && wide.matches && sessionStorage.getItem(AUTO_KEY) === '1') {
-        // We only auto-switched into the app; widening returns to desktop.
+        // Hanya yang kita alihkan sendiri yang dikembalikan saat dilebarkan.
         sessionStorage.removeItem(AUTO_KEY);
         router.replace(toDesktopRoute(pathname));
       }

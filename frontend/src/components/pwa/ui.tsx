@@ -4,7 +4,8 @@ import React from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Home, Newspaper, LayoutGrid, User, ChevronLeft, Share2 } from 'lucide-react';
+import { ChevronLeft, Share2, Search, Inbox, LoaderCircle } from 'lucide-react';
+import { TABS_PWA, tabAktif } from './nav';
 
 /* ------------------------------------------------------------------ */
 /*  Jarak aman di sisi atas layar                                      */
@@ -126,35 +127,65 @@ export function Segmented<T extends string>({
 }
 
 /* ------------------------------------------------------------------ */
-/*  Bottom tab navigation                                              */
+/*  Navigasi utama — dua bentuk, satu daftar                           */
+/*                                                                     */
+/*  Ponsel  : bilah bawah lima slot, Pusat Bantuan terangkat di tengah.*/
+/*  Tablet  : rail kiri, Pusat Bantuan jadi pil terisi di puncaknya.   */
+/*                                                                     */
+/*  Keduanya membaca `TABS_PWA` dari `./nav`, jadi menambah tujuan     */
+/*  cukup satu suntingan.                                              */
 /* ------------------------------------------------------------------ */
-const TABS = [
-  { href: '/app', label: 'Beranda', icon: Home },
-  { href: '/app/berita', label: 'Berita', icon: Newspaper },
-  { href: '/app/layanan', label: 'Layanan', icon: LayoutGrid },
-  { href: '/app/profil', label: 'Profil', icon: User },
-];
+
+/** Warna tunggal untuk tujuan yang ditonjolkan; dipakai bilah bawah & rail. */
+const KILAU_UTAMA = 'bg-gradient-to-br from-sky-500 to-blue-700 shadow-lg shadow-blue-600/35';
 
 export function BottomNav() {
   const pathname = usePathname();
+
   return (
     <nav
-      className="flex-shrink-0 bg-white/90 backdrop-blur-xl border-t border-slate-100 px-2 pt-1.5"
+      aria-label="Navigasi utama"
+      className="md:hidden flex-shrink-0 relative bg-white/92 backdrop-blur-xl border-t border-slate-100 px-1 pt-1.5"
       style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
     >
-      <div className="flex items-stretch justify-around">
-        {TABS.map((t) => {
-          const active = t.href === '/app' ? pathname === '/app' : pathname.startsWith(t.href);
+      <div className="flex items-end justify-around">
+        {TABS_PWA.map((t) => {
+          const aktif = tabAktif(t.href, pathname);
           const Icon = t.icon;
+
+          /* ---- slot tengah yang ditonjolkan ---- */
+          if (t.utama) {
+            return (
+              <Link
+                key={t.href}
+                href={t.href}
+                aria-current={aktif ? 'page' : undefined}
+                className="flex-1 flex flex-col items-center gap-1 min-w-0"
+              >
+                <motion.span
+                  whileTap={{ scale: 0.88 }}
+                  className={`-mt-7 w-14 h-14 rounded-full ring-4 ring-white flex items-center justify-center ${KILAU_UTAMA}`}
+                >
+                  <Icon className="w-[26px] h-[26px] text-white" strokeWidth={2.2} />
+                </motion.span>
+                <span className={`text-[10.5px] font-bold ${aktif ? 'text-blue-700' : 'text-blue-600'}`}>
+                  {t.label}
+                </span>
+              </Link>
+            );
+          }
+
           return (
             <Link
               key={t.href}
               href={t.href}
-              className="relative flex flex-col items-center gap-1 py-1.5 px-3 flex-1"
+              aria-current={aktif ? 'page' : undefined}
+              /* min-h 44px: ambang target sentuh, bukan angka selera. */
+              className="relative flex-1 min-w-0 flex flex-col items-center justify-end gap-1 min-h-[44px] py-1.5 px-1"
             >
-              <motion.div whileTap={{ scale: 0.85 }} className="flex flex-col items-center gap-1">
-                <div className="relative">
-                  {active && (
+              <motion.span whileTap={{ scale: 0.85 }} className="flex flex-col items-center gap-1">
+                <span className="relative">
+                  {aktif && (
                     <motion.span
                       layoutId="tab-glow"
                       className="absolute -inset-2 rounded-2xl bg-blue-50"
@@ -162,19 +193,156 @@ export function BottomNav() {
                     />
                   )}
                   <Icon
-                    className={`relative w-[22px] h-[22px] transition-colors ${active ? 'text-blue-600' : 'text-slate-400'}`}
-                    strokeWidth={active ? 2.4 : 2}
+                    className={`relative w-[22px] h-[22px] transition-colors ${aktif ? 'text-blue-600' : 'text-slate-400'}`}
+                    strokeWidth={aktif ? 2.4 : 2}
                   />
-                </div>
-                <span className={`text-[10.5px] font-semibold transition-colors ${active ? 'text-blue-600' : 'text-slate-400'}`}>
+                </span>
+                <span className={`text-[10.5px] font-semibold transition-colors ${aktif ? 'text-blue-600' : 'text-slate-400'}`}>
                   {t.label}
                 </span>
-              </motion.div>
+              </motion.span>
             </Link>
           );
         })}
       </div>
     </nav>
+  );
+}
+
+/**
+ * Rail navigasi tablet.
+ *
+ * Menggantikan bilah bawah mulai `md`. Pada layar selebar itu bilah bawah
+ * memaksa ibu jari menyeberangi seluruh tinggi layar untuk berpindah tujuan,
+ * sementara sisi kiri justru ruang yang menganggur.
+ */
+export function SideRail() {
+  const pathname = usePathname();
+  const utama = TABS_PWA.find((t) => t.utama);
+  const sisanya = TABS_PWA.filter((t) => !t.utama);
+
+  return (
+    <nav
+      aria-label="Navigasi utama"
+      className="hidden md:flex flex-shrink-0 w-[92px] flex-col items-center gap-1 bg-white border-r border-slate-100 py-4"
+      style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top))' }}
+    >
+      <Link href="/app" className="mb-3" aria-label="Beranda aplikasi">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/icon-192.png" alt="APT Pranoto" className="w-10 h-10 rounded-xl" />
+      </Link>
+
+      {utama && (
+        <>
+          <Link
+            href={utama.href}
+            aria-current={tabAktif(utama.href, pathname) ? 'page' : undefined}
+            className={`w-16 rounded-2xl py-2.5 flex flex-col items-center gap-1 text-white transition-transform active:scale-95 ${KILAU_UTAMA}`}
+          >
+            <utama.icon className="w-[22px] h-[22px]" strokeWidth={2.2} />
+            <span className="text-[10.5px] font-bold">{utama.label}</span>
+          </Link>
+          <span className="my-2 w-8 h-px bg-slate-200" aria-hidden="true" />
+        </>
+      )}
+
+      {sisanya.map((t) => {
+        const aktif = tabAktif(t.href, pathname);
+        const Icon = t.icon;
+        return (
+          <Link
+            key={t.href}
+            href={t.href}
+            aria-current={aktif ? 'page' : undefined}
+            className={`relative w-16 rounded-2xl py-2.5 flex flex-col items-center gap-1 transition-colors ${
+              aktif ? 'bg-blue-50' : 'hover:bg-slate-50'
+            }`}
+          >
+            {aktif && (
+              <motion.span
+                layoutId="rail-mark"
+                /* -10px, bukan -14px: selokan rail tepat 14px, dan menempatkan
+                   penandanya di angka itu membuatnya menempel pada tepi layar
+                   sampai terlihat separuh terpotong. */
+                className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-1 h-7 rounded-full bg-blue-600"
+                transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+              />
+            )}
+            <Icon
+              className={`w-[22px] h-[22px] transition-colors ${aktif ? 'text-blue-600' : 'text-slate-400'}`}
+              strokeWidth={aktif ? 2.4 : 2}
+            />
+            <span className={`text-[10.5px] font-semibold ${aktif ? 'text-blue-600' : 'text-slate-400'}`}>
+              {t.label}
+            </span>
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Keadaan layar: memuat, kosong, pencarian                           */
+/*                                                                     */
+/*  Ketiganya berulang di hampir setiap layar berdata. Ditulis sekali  */
+/*  di sini supaya "sedang memuat" dan "tidak ada isinya" terlihat     */
+/*  sama di seluruh aplikasi — dua keadaan yang paling sering dibiarkan*/
+/*  berbeda-beda dan membuat aplikasi terasa tambal sulam.             */
+/* ------------------------------------------------------------------ */
+
+export function Memuat({ label = 'Memuat…' }: { label?: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-2.5 py-14 text-slate-400">
+      <LoaderCircle className="w-6 h-6 animate-spin" />
+      <p className="text-[12.5px] font-semibold">{label}</p>
+    </div>
+  );
+}
+
+export function LayarKosong({
+  judul,
+  pesan,
+  icon: Icon = Inbox,
+  aksi,
+}: {
+  judul: string;
+  pesan?: string;
+  icon?: React.ElementType;
+  aksi?: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-2 py-14 px-8 text-center">
+      <span className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center">
+        <Icon className="w-7 h-7 text-slate-400" />
+      </span>
+      <p className="mt-1 text-[14px] font-bold text-slate-700">{judul}</p>
+      {pesan && <p className="text-[12.5px] text-slate-500 leading-relaxed">{pesan}</p>}
+      {aksi && <div className="mt-3">{aksi}</div>}
+    </div>
+  );
+}
+
+export function KotakCari({
+  value,
+  onChange,
+  placeholder = 'Cari…',
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <div className="relative">
+      <Search className="w-[18px] h-[18px] text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        aria-label={placeholder}
+        className="w-full bg-slate-100 rounded-2xl pl-11 pr-4 py-3 text-[13px] text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+      />
+    </div>
   );
 }
 

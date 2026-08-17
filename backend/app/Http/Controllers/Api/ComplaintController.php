@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Helpers\ApiResponse;
 use App\Models\Complaint;
+use App\Support\Notifikasi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
@@ -87,6 +88,8 @@ class ComplaintController extends Controller
         $validated['status'] = 'submitted';
 
         $complaint = Complaint::create($validated);
+
+        Notifikasi::kirim('pengaduan', $complaint->ticket_number);
 
         return ApiResponse::success([
             'ticket_number' => $complaint->ticket_number,

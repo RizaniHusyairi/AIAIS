@@ -52,7 +52,44 @@ class SettingController extends Controller
         // dari satu tempat, bukan setengahnya dari panel dan setengahnya dari kode.
         'skm_title' => 'Ikut Serta dalam Survei Kepuasan Masyarakat',
         'skm_text' => 'Penilaian Anda kami olah menjadi Indeks Kepuasan Masyarakat, dan laporan hasilnya diterbitkan pada halaman ini.',
+
+        /*
+         * Sumber konten Instagram pada beranda: 'auto' atau 'manual'.
+         *
+         *   auto   — sinkronisasi terjadwal menarik unggahan dari Graph API.
+         *            Menuntut token yang sudah lolos App Review Meta.
+         *   manual — petugas memasukkan unggahannya sendiri lewat panel, dan
+         *            KEDUA pekerjaan terjadwal berhenti di awal.
+         *
+         * Bawaannya sengaja `manual`. Token Meta belum ada; kalau bawaannya
+         * `auto`, tiap pemasangan baru langsung menjadwalkan pekerjaan yang
+         * pasti gagal tiap tiga jam — tanpa gejala apa pun di portal.
+         *
+         * Ditaruh di `settings` dan bukan di `instagram_credentials`: ini
+         * sakelar tampilan, bukan rahasia. Pola yang sama dipakai
+         * `skm_is_active`.
+         */
+        'instagram_mode' => 'manual',
     ];
+
+    /** Mode yang dikenali; dipakai pula sebagai aturan validasi. */
+    public const INSTAGRAM_MODES = ['auto', 'manual'];
+
+    /**
+     * Mode Instagram yang sedang berlaku.
+     *
+     * Dibaca perintah terjadwal dan `InstagramController`. Nilai yang tidak
+     * dikenali dianggap `manual` — keadaan yang tidak menjadwalkan apa pun
+     * lebih aman daripada keadaan yang memanggil Meta dengan token entah ada
+     * entah tidak.
+     */
+    public static function modeInstagram(): string
+    {
+        $nilai = Setting::where('key', 'instagram_mode')->value('value')
+            ?? self::DEFAULTS['instagram_mode'];
+
+        return in_array($nilai, self::INSTAGRAM_MODES, true) ? $nilai : 'manual';
+    }
 
     /** Ambil seluruh pengaturan, digabung dengan nilai bawaan. */
     public function index()

@@ -83,7 +83,7 @@ Level token estimates (within the response window):
 - 50%  → `min + (max - min) × 0.50`
 - 75%  → `min + (max - min) × 0.75`
 - 100% → `max`
-
+1
 ### Step 4 — Respond at the chosen level
 
 | Level            | Target length       | Include                                             | Omit                                              |

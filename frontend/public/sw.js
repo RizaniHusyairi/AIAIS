@@ -9,7 +9,15 @@
 // ada yang perlu menyunting berkas ini.
 const VERSION = new URL(self.location.href).searchParams.get('v') || 'dev';
 const CACHE = `apt-pranoto-${VERSION}`;
-const APP_SHELL = ['/app', '/icon-app.svg', '/manifest.webmanifest'];
+// Aset yang harus tersedia saat jaringan mati.
+//
+// SELURUHNYA WAJIB BENAR-BENAR ADA. `cache.addAll` bersifat semua-atau-tidak:
+// satu berkas yang hilang membatalkan seluruh pemanggilan, dan karena
+// kegagalannya ditelan `.catch()` di bawah, akibatnya tidak ada satu pun aset
+// yang ter-cache — tanpa gejala apa pun. Persis itu yang terjadi ketika
+// `/icon-app.svg` dihapus saat penggantian favicon tetapi tetap tercantum di
+// sini.
+const APP_SHELL = ['/app', '/icon-192.png', '/manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -67,6 +75,64 @@ self.addEventListener('fetch', (event) => {
         })
         .catch(() => cached);
       return cached || network;
+    })
+  );
+});
+
+/* ==================================================================
+   Notifikasi push untuk petugas panel
+   ==================================================================
+
+   Muatannya disusun App\Notifications\AktivitasPusatBantuan::toWebPush()
+   di backend, dan SENGAJA tidak memuat data pribadi pelapor — notifikasi
+   muncul di layar kunci ponsel pribadi petugas, tempat siapa pun yang
+   kebetulan melihat layarnya ikut membacanya.
+   ================================================================== */
+
+self.addEventListener('push', (event) => {
+  // Muatan yang tidak dapat diurai tetap ditampilkan sebagai pemberitahuan
+  // umum. Notifikasi yang gagal muncul sama sekali jauh lebih buruk daripada
+  // notifikasi yang judulnya kurang tepat.
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = {};
+  }
+
+  const title = data.title || 'Kiriman baru di Pusat Bantuan';
+
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: data.body || 'Buka panel untuk melihat rinciannya.',
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      // `tag` membuat notifikasi sejenis saling menimpa alih-alih menumpuk
+      // sepuluh baris di panel notifikasi ponsel.
+      tag: data.tag || 'aiais',
+      data: { path: data.path || '/admin/dashboard' },
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  const tujuan = (event.notification.data && event.notification.data.path) || '/admin/dashboard';
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((daftar) => {
+      // Kalau panelnya sudah terbuka di suatu tab, fokuskan tab itu dan
+      // arahkan — membuka tab baru tiap notifikasi meninggalkan belasan tab
+      // panel yang sama pada akhir hari kerja.
+      for (const klien of daftar) {
+        if (klien.url.includes('/admin') && 'focus' in klien) {
+          klien.navigate(tujuan);
+          return klien.focus();
+        }
+      }
+
+      return self.clients.openWindow(tujuan);
     })
   );
 });

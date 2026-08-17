@@ -27,6 +27,26 @@
  *   ejaan, tanda baca, atau kapitalisasinya — ini kutipan dokumen resmi,
  *   bukan salinan yang boleh disunting.
  * ────────────────────────────────────────────────────────────────────────
+ * PELINDUNGAN DATA PRIBADI — UU 27/2022
+ *
+ *   RIWAYAT PENDIDIKAN PEJABAT DIHAPUS DARI BERKAS INI, bukan sekadar
+ *   disembunyikan dari tampilan.
+ *
+ *   Alasannya menentukan: berkas ini modul `lib/` yang ikut dibundel dan
+ *   DIKIRIM KE PERAMBAN SETIAP PENGUNJUNG. Data yang hanya disembunyikan
+ *   lewat CSS atau percabangan render tetap terbaca siapa pun yang membuka
+ *   berkas JavaScript-nya. Satu-satunya penyensoran yang berarti adalah
+ *   datanya tidak pernah berangkat dari server.
+ *
+ *   Yang TETAP ADA di sini dan memang wajib diumumkan: nama, nomenklatur
+ *   jabatan, foto resmi kedinasan, riwayat jabatan, dan penghargaan
+ *   kedinasan — UU 14/2008 tentang Keterbukaan Informasi Publik menuntutnya,
+ *   dan seluruhnya melekat pada JABATAN, bukan pada pribadi pemangkunya.
+ *
+ *   Jangan menambahkan kembali: pendidikan, NIP, pangkat/golongan, tanggal
+ *   lahir, agama, alamat rumah, nomor ponsel, atau nomor identitas apa pun.
+ *   Lihat agen `.claude/agents/sensor-data-pribadi.md`.
+ * ────────────────────────────────────────────────────────────────────────
  */
 
 import { AIRPORTS, HOME_IATA } from '@/lib/airports';
@@ -47,8 +67,15 @@ export interface Official {
   /** Path publik, selalu huruf kecil (server produksi peka huruf besar-kecil). */
   photo: string;
   riwayatJabatan: string[];
-  pendidikan: string[];
   penghargaan: string[];
+  /*
+   * `pendidikan` SENGAJA TIDAK ADA — lihat catatan PDP di kepala berkas.
+   *
+   * Medannya dihapus dari antarmuka, bukan sekadar dikosongkan isinya:
+   * selama medannya masih ada, penambahan data pejabat berikutnya akan
+   * mengisinya kembali tanpa siapa pun menyadari bahwa itu keputusan yang
+   * pernah dicabut.
+   */
 }
 
 /** Instansi tempat seluruh pejabat di bawah bernaung. */
@@ -67,12 +94,6 @@ export const OFFICIALS: Official[] = [
       'Kepala Bidang Pelayanan dan Pengoperasian Bandar Udara Kantor Otoritas Bandara Wilayah IV Bali (2024-2025)',
       'Kepala BLU Kantor UPBU Kelas I A.P.T. Pranoto – Samarinda (2025 – sekarang)',
     ],
-    pendidikan: [
-      'D-II Lalu Lintas Udara PLP Curug',
-      'D-III Lalu Lintas Udara ATKP Makassar',
-      'D-IV Lalu Lintas Udara STPI Curug',
-      'S-1 Ilmu Komunikasi Universitas Terbuka Palu',
-    ],
     penghargaan: [
       'Satya Lancana Karya Satya 10 Tahun (2014)',
       'Satya Lancana Karya Satya 20 Tahun (2018)',
@@ -88,7 +109,6 @@ export const OFFICIALS: Official[] = [
       'Kepala Kantor UPBU Maratua (2020–2024)',
       'Kepala Subbagian Tata Usaha (2024–Sekarang)',
     ],
-    pendidikan: ['D-III PTBL PLP Curug.'],
     penghargaan: ['Satya Lancana Karya Satya 10.'],
   },
   {
@@ -103,11 +123,6 @@ export const OFFICIALS: Official[] = [
       'Kepala Seksi Teknik dan Operasi (2024–2025)',
       'Kepala Seksi Keamanan Penerbangan dan Pelayanan Darurat (2025–Sekarang).',
     ],
-    pendidikan: [
-      'D-III PTM PLP Curug',
-      'S-1 Ilmu Ekonomi',
-      'S-2 Manajemen Transportasi STMT Trisakti.',
-    ],
     penghargaan: ['Satya Lancana Karya Satya 10 Tahun 2021.'],
   },
   {
@@ -120,7 +135,6 @@ export const OFFICIALS: Official[] = [
       'Kepala Seksi Pelayanan Bandara Juwata Tarakan (2018-2025)',
       'Kepala Seksi Pelayanan dan Kerjasama (2025-sekarang)',
     ],
-    pendidikan: ['S-1 Manajemen STIE Bulungan Tarakan.'],
     penghargaan: [
       'Satya Lancana Karya Satya 10 Tahun 2012',
       'Satya Lancana Karya Satya 20 Tahun 2020',
@@ -138,7 +152,6 @@ export const OFFICIALS: Official[] = [
       'Kepala Seksi Keamanan Penerbangan dan Pelayann Darurat UPBU Kelas III A.P.T. Pranoto. (2023–2025)',
       'Kepala Seksi Teknik dan Operasi UPBU Kelas III A.P.T. Pranoto. (2025–Sekarang)',
     ],
-    pendidikan: ['D-III PTL PLP Curug.', 'S-1 Ilmu Hukum Universitas Terbuka.'],
     penghargaan: [
       'Satya Lancana Karya Satya 10 Tahun 2012.',
       'Satya Lancana Karya Satya 20 Tahun 2021',

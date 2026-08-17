@@ -30,6 +30,22 @@ class User extends Authenticatable
     /** Peran yang dikenali; dipakai pula sebagai aturan validasi. */
     public const ROLES = ['admin', 'staff', 'user'];
 
+    /**
+     * Penerima notifikasi masuknya aktivitas Pusat Bantuan.
+     *
+     * DISARING LEWAT `is_admin`, BUKAN `role`. `role` adalah accessor di atas
+     * `is_admin`/`is_staff` dan tidak punya kolom sendiri — `where('role',
+     * 'admin')` akan selalu mengembalikan kosong TANPA melempar galat apa pun,
+     * dan notifikasinya diam-diam tidak pernah sampai ke siapa-siapa.
+     *
+     * Aturan penerimanya sengaja hanya ada di sini. Peran `staff` akan dihapus
+     * tak lama lagi; saat itu tiba, yang perlu disunting cuma satu tempat ini.
+     */
+    public function scopePenerimaNotifikasi($query)
+    {
+        return $query->where('is_admin', 1)->where('is_accepted', 1);
+    }
+
     /** Cache kewenangan per instance; lihat `hasPermission()`. */
     protected ?array $permissionsCache = null;
 

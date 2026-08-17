@@ -1,12 +1,13 @@
 {
+  "_catatan_scope": "scope '/' bukan '/app'. Aplikasi tetap MULAI di /app (start_url), tetapi sebagian alur warga — daftar akun dan formulir pengajuan layanan yang mengunggah dokumen — hanya ada sebagai halaman responsif di luar /app. Dengan scope '/app', tiap tautan ke sana melempar pengguna keluar dari aplikasi terpasang ke jendela peramban, di tengah pengisian formulir.",
   "name": "APT Pranoto Samarinda",
   "short_name": "APT Pranoto",
   "description": "Aplikasi resmi Bandar Udara APT Pranoto Samarinda — jadwal penerbangan, fasilitas, layanan, dan informasi bandara dalam genggaman Anda.",
   "id": "/app",
   "start_url": "/app",
-  "scope": "/app",
+  "scope": "/",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "any",
   "background_color": "#0b1e5b",
   "theme_color": "#0b1e5b",
   "categories": [
@@ -50,10 +51,10 @@
       "description": "Temukan fasilitas di terminal"
     },
     {
-      "name": "Layanan Online",
-      "short_name": "Layanan",
-      "url": "/app/layanan",
-      "description": "Pengaduan, lost & found, dan lainnya"
+      "name": "Pusat Bantuan",
+      "short_name": "Bantuan",
+      "url": "/app/bantuan",
+      "description": "Tanya petugas, adukan, lapor kehilangan, atau lacak tiket"
     }
   ]
 }

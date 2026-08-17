@@ -11,8 +11,8 @@ import {
   Newspaper, MessageSquareWarning, Info, UserRound, MapPin, Clock,
   CloudSun, Globe, ArrowRight, PlaneTakeoff, ShieldCheck,
   FileText, ClipboardList, Scale, FolderOpen, TrendingUp, CircleHelp,
-  Megaphone, Store, ExternalLink, LayoutGrid, UserCircle,
-  BarChart3, CalendarRange,
+  Megaphone, Store, ExternalLink, LayoutGrid,
+  BarChart3, CalendarRange, PackageSearch,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { RELATED_LINKS } from '@/lib/relatedLinks';
@@ -130,6 +130,10 @@ const MENU: MenuItem[] = [
       // Portal Aplikasi. Tanpa entri ini, kanal pengaduan hanya tersisa di
       // footer — terlalu dalam untuk sesuatu yang sifatnya mendesak.
       { name: 'Pusat Bantuan', href: '/complaints', icon: MessageSquareWarning, desc: 'Pengaduan, pertanyaan, dan chat petugas' },
+      // Menunjuk ke tab Pusat Bantuan, bukan rute sendiri: `/complaints` sudah
+      // punya pemetaan ke layar PWA, dan rute baru yang lupa didaftarkan di
+      // `proxy.ts` tidak akan pernah terbuka dari ponsel.
+      { name: 'Lapor Kehilangan Barang', href: '/complaints?mode=hilang', icon: PackageSearch, desc: 'Laporkan barang yang tertinggal di area bandara' },
       { name: 'Beauty Contest', href: '/layanan/beauty-contest', icon: Building2, desc: 'Seleksi mitra usaha bandara' },
       { name: 'Extend Advance', href: '/layanan/extend-advance', icon: ClipboardList, desc: 'Perpanjangan uang muka' },
       { name: 'Field Trip', href: '/layanan/field-trip', icon: Users, desc: 'Kunjungan edukasi ke area bandara' },
@@ -578,17 +582,10 @@ export default function Navbar() {
                 <Moon className="w-[18px] h-[18px]" />
               </motion.button>
 
-              {/* Akun layanan warga — pintu menuju formulir pengajuan.
-                  Sengaja bergaya tenang, bukan tombol penuh: yang membutuhkannya
-                  datang dengan tujuan dan mencarinya, sedangkan sebagian besar
-                  pengunjung portal hanya menengok jadwal penerbangan. */}
-              <Link
-                href="/akun"
-                className="ml-1 inline-flex items-center gap-1.5 text-[13px] font-semibold text-blue-100 hover:text-white px-3 h-10 rounded-full hover:bg-white/10 transition-colors"
-              >
-                <UserCircle className="w-[18px] h-[18px]" />
-                <span>Akun</span>
-              </Link>
+              {/* Entri "Akun" DIPINDAHKAN, bukan dihapus.
+                  Pintu akun layanan warga kini berada di Portal Aplikasi
+                  bersama pintu petugas — satu halaman untuk kedua kalangan.
+                  Tombol di bawah inilah jalannya. */}
 
               {/* Tombol utama menuju Portal Aplikasi (sistem kedinasan pegawai).
                   Sebelumnya tempat ini ditempati "Kontak Kami"; Pusat Bantuan

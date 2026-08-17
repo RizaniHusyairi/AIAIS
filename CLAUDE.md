@@ -73,7 +73,11 @@ Gaya visual publik: Tailwind v4, framer-motion, ikon lucide, hero gradien langit
 
 **Navigasi.** Menu publik didaftarkan di `components/layout/Navbar.tsx`, menu admin di `app/admin/layout.tsx`. Rute baru wajib didaftarkan di salah satunya, kalau tidak halamannya tidak akan pernah ditemukan pengunjung.
 
-**Proxy mobile.** `src/proxy.ts` mengalihkan pengunjung ponsel dari rute publik ke layar PWA `/app/*`. Menambah rute publik baru berarti menambahkan pemetaannya di `toAppRoute()`.
+**PWA (`app/app/*`).** Melayani **ponsel dan tablet**: di bawah `md` memakai bilah bawah lima slot dengan Pusat Bantuan menonjol di tengah, di `md` ke atas bilah itu berganti rail kiri dan isinya jadi dua kolom. Daftar tujuannya ada di `components/pwa/nav.ts`; kit layarnya (`StatusBar`, `AppHeader`, `Segmented`, `KotakCari`, `Memuat`, `LayarKosong`) di `components/pwa/ui.tsx`. Daftar dokumen apa pun memakai `components/pwa/DaftarDokumen.tsx` dengan adaptor di `lib/pwaDokumen.ts` — jangan menulis layar daftar sendiri.
+
+**Proxy mobile.** `src/proxy.ts` (sisi server) dan `components/pwa/MobileRedirect.tsx` (sisi klien) sama-sama membaca **`lib/pwaRoutes.ts`** — satu-satunya tempat pemetaan rute publik ⇄ layar PWA boleh ditulis. Rute publik baru berarti satu baris di `TABEL` sana **dan** satu baris di `config.matcher` proxy (matcher wajib literal statis; skrip verifikasi membandingkan keduanya). Halaman tanpa padanan layar PWA masuk `KEEP_RESPONSIVE`, bukan dipetakan ke layar terdekat.
+
+**Isi PWA harus berdata.** Layar PWA menarik isinya dari API yang sama dengan desktop. Daftar konstan di dalam `app/app/**` tidak diperbolehkan kecuali bersumber `lib/` yang berprovenans (`tourismData.ts`, `relatedLinks.ts`, `airportProfile.ts`).
 
 ---
 
@@ -86,6 +90,8 @@ Gaya visual publik: Tailwind v4, framer-motion, ikon lucide, hero gradien langit
 **Modul baru mengubah banyak berkas sekaligus** — migration, model, controller, route, seeder, tipe, halaman admin, halaman publik, navbar, proxy. Gunakan skill `add-crud-module` agar tidak ada yang terlewat.
 
 **Skill terpasang:** `fix-module-bug` (debug lintas lapisan), `release-version` (prosedur rilis), `public-static-page` (halaman statis baru), `precommit-checklist` (kualitas sebelum selesai), serta `token-budget-advisor` dan `context-budget` (kontrol pemakaian token).
+
+**Agent terpasang:** `sensor-data-pribadi` — menyisir data pribadi yang wajib disensor menurut UU 27/2022. Jalankan saat menambah data pejabat/pegawai, membuat modul yang menyimpan identitas orang, menyiapkan seeder atau ekspor, dan sebelum rilis. Ia **melaporkan, tidak menyunting**; nama dan jabatan pejabat sengaja dikecualikan karena UU 14/2008 justru mewajibkan keduanya diumumkan.
 
 ---
 

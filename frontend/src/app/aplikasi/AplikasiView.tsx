@@ -43,7 +43,6 @@ import SkyParticles from '@/components/effects/SkyParticles';
 import PlaneCursor from '@/components/effects/PlaneCursor';
 import CometField from '@/components/effects/CometField';
 import { EMPLOYEE_APPS, TOTAL_EMPLOYEE_APPS, type EmployeeApp } from '@/lib/employeeApps';
-import { hostOf } from '@/lib/url';
 import {
   BOOT, EASE_ENTER, CORE_BREATH, RING_SPIN, AIRCRAFT_ORBIT,
   NODE_PULSE_DELAY, NODE_PULSE_DURATION, NODE_FLOAT_DURATION,
@@ -52,7 +51,7 @@ import {
 } from './motion';
 import {
   Wallet, CircuitBoard, IdCard, MonitorPlay, SquarePen,
-  Plane, ArrowUpRight, ArrowRight, Clock, KeyRound, LayoutGrid,
+  Plane, ArrowUpRight, ArrowRight, Clock, KeyRound, LayoutGrid, UserRound,
   ExternalLink, LogIn, Home,
 } from 'lucide-react';
 
@@ -95,9 +94,6 @@ const APP_META: Record<string, { icon: typeof Wallet; accent: string }> = {
 };
 
 const metaOf = (slug: string) => APP_META[slug] ?? { icon: Plane, accent: '#38bdf8' };
-
-/** Alamat yang ditampilkan: host untuk tautan luar, lintasan apa adanya untuk internal. */
-const addressOf = (app: EmployeeApp) => (app.external ? hostOf(app.url) : app.url);
 
 /* ------------------------------------------------------------------ */
 /*  Angka menghitung naik saat boot                                    */
@@ -308,7 +304,11 @@ function OrbitNode({
           >
             {app.name}
           </p>
-          <p className="mt-0.5 text-[10.5px] font-mono text-slate-400 truncate">{addressOf(app)}</p>
+          {/* Alamat aplikasinya sengaja TIDAK ditampilkan. Halaman ini justru
+              ada supaya tidak ada lagi alamat yang perlu dihafal — mencetaknya
+              di bawah tiap nama mengembalikan persoalan yang hendak dihapus,
+              dan mengisi label dengan teks yang tak seorang pun perlu baca.
+              Tautannya tetap ada pada kartunya. */}
           {/* Dipangkas dua baris: keterangan utuh membuat blok label setinggi
               ±130px dan sudut-sudutnya menyerempet label tetangga. Teks
               lengkapnya tetap tampil pada ubin di layar sempit. */}
@@ -641,6 +641,85 @@ function OrbitDiagram() {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Jalur warga                                                        */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Pintu masuk akun layanan warga.
+ *
+ * SENGAJA BERWARNA TERANG di tengah halaman yang gelap. Seluruh sisa halaman
+ * ini milik petugas — orbit kedinasan, panel status, tombol Masuk Pengelolaan —
+ * dan semuanya bergaya gelap. Kartu warga yang ikut gelap akan terbaca sebagai
+ * satu aplikasi kedinasan lagi, persis kesalahan yang hendak dihindari.
+ * Kontrasnya bukan hiasan: itulah yang memberi tahu warga bahwa bagian ini
+ * untuk dirinya.
+ *
+ * Mengantar ke `/masuk`, tidak memuat formulirnya sendiri. Halaman ini
+ * dirancang muat satu layar tanpa gulir; menanam formulir berikut galat
+ * validasi dan tautan daftar di dalamnya akan merusak aturan itu pada layar
+ * pendek — dan formulir yang setengah terpotong lebih buruk daripada satu klik
+ * tambahan.
+ */
+function KartuAkunWarga() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 18 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: BOOT.desc + 0.15, duration: 0.6, ease: EASE_ENTER }}
+      className="mt-5 max-w-md"
+    >
+      <Link
+        href="/masuk"
+        className="group relative block overflow-hidden rounded-3xl bg-gradient-to-br from-white to-sky-50 ring-1 ring-white/40 shadow-[0_18px_40px_-18px_rgba(2,132,199,0.55)] hover:shadow-[0_22px_50px_-16px_rgba(2,132,199,0.7)] transition-shadow duration-300 focus:outline-none focus-visible:ring-4 focus-visible:ring-sky-400/60"
+      >
+        {/* Semburat yang bergeser saat disorot — memberi kesan kartunya hidup
+            tanpa menggerakkan apa pun yang sedang dibaca. */}
+        <span
+          className="pointer-events-none absolute -top-16 -right-10 w-44 h-44 rounded-full bg-sky-400/20 blur-2xl group-hover:bg-sky-400/30 transition-colors duration-500"
+          aria-hidden="true"
+        />
+
+        <span className="relative flex items-center gap-4 p-5">
+          <span className="w-12 h-12 rounded-2xl bg-gradient-to-br from-sky-500 to-blue-700 shadow-lg shadow-sky-600/30 flex items-center justify-center flex-shrink-0 transition-transform duration-300 group-hover:scale-105 group-hover:-rotate-6">
+            <UserRound className="w-6 h-6 text-white" />
+          </span>
+
+          <span className="min-w-0 flex-1">
+            <span className="block text-[10px] font-bold uppercase tracking-[0.18em] text-sky-700">
+              Untuk Warga
+            </span>
+            <span className="block mt-0.5 text-[16px] font-black text-slate-900 leading-tight">
+              Akun Layanan Bandara
+            </span>
+            <span className="block mt-1 text-[12px] text-slate-600 leading-snug">
+              Kirim pengajuan layanan dan pantau perkembangannya.
+            </span>
+          </span>
+
+          <span className="w-9 h-9 rounded-full bg-slate-900 flex items-center justify-center flex-shrink-0 transition-transform duration-300 group-hover:translate-x-1">
+            <ArrowRight className="w-4 h-4 text-white" />
+          </span>
+        </span>
+
+        {/* Garis landas kecil di kaki kartu — bahasa yang sama dengan Quick
+            Access di beranda. */}
+        <span
+          className="block h-1 bg-gradient-to-r from-sky-500 via-cyan-400 to-transparent scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-500"
+          aria-hidden="true"
+        />
+      </Link>
+
+      <p className="mt-2.5 text-[11.5px] text-slate-400">
+        Belum punya akun?{' '}
+        <Link href="/daftar" className="font-bold text-sky-300 hover:text-sky-200 transition-colors">
+          Daftar di sini
+        </Link>
+      </p>
+    </motion.div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Ubin ringkas (layar sempit)                                        */
 /* ------------------------------------------------------------------ */
 function AppTile({ app, index }: { app: EmployeeApp; index: number }) {
@@ -694,8 +773,10 @@ function AppTile({ app, index }: { app: EmployeeApp; index: number }) {
               ? <ExternalLink className="w-3 h-3 text-slate-500 flex-shrink-0" />
               : <ArrowUpRight className="w-3 h-3 text-slate-500 flex-shrink-0" />}
           </span>
-          <span className="block mt-0.5 text-[10px] font-mono text-slate-500 truncate">
-            {addressOf(app)}
+          {/* Alamat aplikasinya sengaja tidak ditampilkan di sini juga —
+              lihat alasannya pada label orbit. */}
+          <span className="block mt-0.5 text-[11px] text-slate-400 leading-snug line-clamp-2">
+            {app.description}
           </span>
         </span>
       </AppLink>
@@ -846,7 +927,12 @@ export default function AplikasiView() {
                 animate={reduced ? undefined : { opacity: [0.55, 1, 0.55] }}
                 transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut', delay: BOOT.idle }}
               />
-              Aplikasi Internal
+              {/* Bukan lagi "Aplikasi Internal": halaman ini kini pintu masuk
+                  DUA kalangan sekaligus — warga menuju akun layanannya, petugas
+                  menuju sistem kedinasan. Penanda yang menyebut "internal"
+                  membuat warga menyimpulkan halaman ini bukan untuknya lalu
+                  pergi sebelum melihat kartunya. */}
+              Portal Masuk
             </motion.span>
           </div>
 
@@ -877,7 +963,12 @@ export default function AplikasiView() {
         </header>
 
         {/* ---- badan ---- */}
-        <div className="flex-1 min-h-0 grid grid-cols-1 xl:grid-cols-[268px_minmax(0,1fr)] 2xl:grid-cols-[300px_minmax(0,1fr)_300px] gap-6 xl:gap-x-5 xl:gap-y-4 items-center py-4 xl:py-2">
+        {/* `min-h-0` HANYA di `xl` ke atas. Di bawahnya, kolomnya menumpuk dan
+            isinya lebih tinggi daripada layar; memaksa tingginya menyusut
+            membuat baris kisi saling menimpa (ubin aplikasi tertutup panel
+            status) alih-alih mendorong wadah gulir. Biarkan tingginya mengikuti
+            isi — `overflow-y-auto` di wadah luar yang mengurus sisanya. */}
+        <div className="flex-1 xl:min-h-0 grid grid-cols-1 xl:grid-cols-[268px_minmax(0,1fr)] 2xl:grid-cols-[300px_minmax(0,1fr)_300px] gap-6 xl:gap-x-5 xl:gap-y-4 items-start xl:items-center py-4 xl:py-2">
           {/* ======== KIRI: judul ======== */}
           <div>
             <h1 className="text-[2rem] sm:text-4xl 2xl:text-5xl font-black tracking-tight leading-[1.06]">
@@ -890,9 +981,12 @@ export default function AplikasiView() {
               transition={{ delay: BOOT.desc, duration: 0.6, ease: EASE_ENTER }}
               className="mt-4 text-[13px] text-slate-400 leading-relaxed max-w-md"
             >
-              Akses cepat ke seluruh aplikasi kedinasan Bandar Udara APT Pranoto,
-              lengkap dengan keterangan gunanya masing-masing.
+              Satu pintu untuk keduanya: <span className="text-slate-200 font-semibold">warga</span> menuju
+              akun layanan bandara, <span className="text-slate-200 font-semibold">petugas</span> menuju
+              sistem kedinasan.
             </motion.p>
+
+            <KartuAkunWarga />
           </div>
 
           {/* ======== TENGAH: orbit (xl ke atas) ======== */}
@@ -969,8 +1063,13 @@ export default function AplikasiView() {
 
             <div className="relative mt-4 pt-4 border-t border-white/10 flex items-center gap-2.5">
               <KeyRound className="w-3.5 h-3.5 text-amber-300 flex-shrink-0" />
+              {/* Disebut "aplikasi kedinasan", bukan "seluruhnya": sejak halaman
+                  ini juga menjadi pintu warga, kalimat yang menyamaratakan
+                  membuat warga menyangka akun layanannya pun menuntut akun
+                  kedinasan. Tanpa kata penunjuk arah pula ("di bawah"/"di
+                  samping") — tata letaknya berpindah antar lebar layar. */}
               <span className="text-[11px] text-slate-400 leading-snug">
-                Seluruhnya memerlukan akun kedinasan
+                Aplikasi kedinasan memerlukan akun pegawai
               </span>
             </div>
           </motion.aside>

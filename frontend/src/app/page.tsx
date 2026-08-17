@@ -8,15 +8,14 @@ import { useSetting } from '@/lib/settings';
 import { TOURISM_SPOTS, TOURISM_CAT_META } from '@/lib/tourismData';
 import { OFFICIALS, ORG_NAME } from '@/lib/airportProfile';
 import HeroParticles from '@/components/effects/HeroParticles';
-import {
-  AirlineLogo, splitPlace, shortTime, statusTheme, gateLabel, counterLabel,
-} from '@/components/flights/shared';
-import { Flight, NewsItem } from '@/types';
+import NamaBandaraHero from '@/components/home/NamaBandaraHero';
+import HeroBoardingPass from '@/components/home/HeroBoardingPass';
+import { LampuLandasan, JudulBagian } from '@/components/home/AviasiDekor';
+import { NewsItem, InstagramPost } from '@/types';
 import {
   Plane, ArrowRight, Building2, ChevronRight, ChevronLeft, Users, MapPin, Star, Car,
   ParkingSquare, Headphones, Play, Wifi, Sofa, UtensilsCrossed, MoonStar, Baby, Accessibility,
   Ruler, Award, CarFront, Bus, Mail, Share2, Send, Navigation, Calendar, Palmtree, Clock,
-  DoorOpen, ClipboardList, Luggage,
 } from 'lucide-react';
 
 /* ================================================================
@@ -90,22 +89,28 @@ const fmtDate = (d: string) =>
   new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
 export default function HomePage() {
-  const [flights, setFlights] = useState<Flight[]>([]);
+  /* Unggahan Instagram — kini mengisi kolom kanan hero, menggantikan papan
+     penerbangan. Dibaca dari tabel LOKAL portal, bukan dari Instagram: token
+     tidak boleh sampai ke peramban, dan gangguan di Instagram tidak boleh ikut
+     merusak beranda.
+
+     Sumbernya bisa sinkronisasi API atau masukan petugas; beranda tidak perlu
+     tahu bedanya — keduanya baris yang sama di tabel yang sama. */
+  const [igPosts, setIgPosts] = useState<InstagramPost[]>([]);
   const [news, setNews] = useState<NewsItem[]>([]);
-  const [tab, setTab] = useState<'departure' | 'arrival'>('departure');
   const [exec, setExec] = useState(0);
   const [auto, setAuto] = useState(true);
 
   const heroBg = useSetting('bg_home');
 
   useEffect(() => {
-    fetchApi<{ flights: Flight[] }>('/flights').then((res) => {
-      const raw: any = res.data;
-      const list = Array.isArray(raw) ? raw : raw?.flights;
-      if (Array.isArray(list)) setFlights(list);
-    });
     fetchApi<NewsItem[]>('/news').then((res) => {
       if (res.success && Array.isArray(res.data)) setNews(res.data);
+    });
+    // Gagal diam-diam: seksinya memang tidak dirender bila kosong, jadi
+    // beranda tidak perlu tahu bedanya "belum tersambung" dan "sedang gagal".
+    fetchApi<InstagramPost[]>('/instagram-posts').then((res) => {
+      if (res.success && Array.isArray(res.data)) setIgPosts(res.data);
     });
   }, []);
 
@@ -115,7 +120,6 @@ export default function HomePage() {
     return () => clearInterval(t);
   }, [auto]);
 
-  const apiFlights = flights.filter((f) => f.flight_type === tab);
   const current = EXECUTIVES[exec];
   const others = EXECUTIVES.filter((_, i) => i !== exec).slice(0, 4);
   const latestNews = news.slice(0, 3);
@@ -137,12 +141,10 @@ export default function HomePage() {
         <div className="relative z-10 max-w-[1400px] mx-auto px-4 sm:px-6 pt-12 pb-24 lg:pt-16 lg:pb-28 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* teks */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="lg:col-span-6 space-y-5 pt-6">
-            <span className="text-blue-600 font-semibold text-base">Selamat Datang di</span>
-            <h1 className="text-5xl sm:text-6xl font-black leading-[1.05] tracking-tight">
-              <span className="text-slate-900">Bandar Udara</span><br />
-              <span className="text-slate-900">APT Pranoto</span><br />
-              <span className="text-blue-600">Samarinda</span>
-            </h1>
+            {/* Lockup nama resmi — termasuk sambutan "Selamat Datang di" dan
+                baris kota, supaya seluruh susunannya muncul sebagai satu
+                kesatuan. Lihat komponennya untuk urutan animasinya. */}
+            <NamaBandaraHero />
             <p className="text-slate-600 text-base leading-relaxed max-w-md">
               Gerbang udara Kalimantan Timur yang menghubungkan Anda ke berbagai destinasi di Indonesia dan dunia.
             </p>
@@ -153,130 +155,70 @@ export default function HomePage() {
               <Link href="/facilities" className="bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 font-semibold text-sm px-6 py-3.5 rounded-full shadow-sm flex items-center gap-2 transition-all">
                 <Building2 className="w-4 h-4 text-blue-600" /> Lihat Fasilitas
               </Link>
-            </div>
-          </motion.div>
-
-          {/* kartu FIDS */}
-          <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.15 }} className="lg:col-span-6">
-            <div className="bg-white rounded-2xl shadow-2xl shadow-slate-300/40 border border-slate-100 overflow-hidden">
-              <div className="px-6 pt-5 pb-3">
-                <h3 className="font-bold text-slate-900 text-lg flex items-center gap-2">
-                  <Plane className="w-5 h-5 text-blue-600" /> Informasi Penerbangan
-                </h3>
-              </div>
-
-              <div className="flex items-center gap-8 px-6 border-b border-slate-100">
-                {(['departure', 'arrival'] as const).map((v) => (
-                  <button
-                    key={v}
-                    onClick={() => setTab(v)}
-                    className={`relative flex items-center gap-2 pb-3 text-sm font-semibold transition-colors cursor-pointer ${
-                      tab === v ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'
-                    }`}
-                  >
-                    <Plane className={`w-4 h-4 ${v === 'arrival' ? 'rotate-90' : ''}`} />
-                    {v === 'departure' ? 'Keberangkatan' : 'Kedatangan'}
-                    {tab === v && <motion.span layoutId="fids-underline" className="absolute -bottom-px left-0 right-0 h-0.5 bg-blue-600 rounded-full" />}
-                  </button>
-                ))}
-              </div>
-
-              <div className="divide-y divide-slate-50">
-                {apiFlights.slice(0, 5).map((f) => {
-                  const place = splitPlace(tab === 'departure' ? f.destination : f.origin);
-                  const st = statusTheme(f.status);
-                  const g = gateLabel(f);
-                  const c = counterLabel(f);
-                  const departing = f.flight_type === 'departure';
-
-                  return (
-                    <Link
-                      key={f.id}
-                      href={`/flights/${f.id}`}
-                      className="block px-6 py-3 hover:bg-slate-50 transition-colors"
-                    >
-                      <div className="flex items-center gap-4">
-                        <AirlineLogo airline={f.airline} logo={f.airline_logo} code={f.airline_code} color={f.airline_color} size={36} />
-                        <div className="w-28 flex-shrink-0">
-                          <p className="font-bold text-slate-900 text-sm">{f.flight_number}</p>
-                          <p className="text-xs text-slate-500 truncate">{f.airline}</p>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-bold text-slate-900 text-sm truncate">{place.code}</p>
-                          <p className="text-xs text-slate-500 truncate">{place.city}</p>
-                        </div>
-                        <p className="font-bold text-slate-900 text-sm w-14 text-right tabular-nums">
-                          {shortTime(f.scheduled_time)}
-                        </p>
-                        {/* Status sebenarnya dari FIDS. Sebelumnya baris ini
-                            selalu tertulis "Terjadwal" — penerbangan yang
-                            sedang boarding, delay, bahkan dibatalkan pun
-                            tampil hijau seolah normal. */}
-                        <span className={`text-[11px] font-semibold w-20 text-right leading-tight ${st.text}`}>
-                          {st.label}
-                        </span>
-                      </div>
-
-                      {/* Titik layan penumpang: Gate + Konter untuk yang
-                          berangkat, Conveyor untuk yang datang. */}
-                      <div className="mt-1.5 ml-[3.25rem] flex flex-wrap items-center gap-x-3 gap-y-1">
-                        <HomeDeskFact
-                          icon={departing ? DoorOpen : Luggage}
-                          label={g.label}
-                          value={g.bare}
-                          assigned={g.assigned}
-                        />
-                        {departing && (
-                          <HomeDeskFact
-                            icon={ClipboardList}
-                            label="Konter"
-                            value={c.assigned ? c.list.join(', ') : 'Belum ditentukan'}
-                            assigned={c.assigned}
-                          />
-                        )}
-                      </div>
-                    </Link>
-                  );
-                })}
-
-                {/* Umpan FIDS kosong — katakan apa adanya, jangan diisi contoh. */}
-                {apiFlights.length === 0 && (
-                  <div className="px-6 py-10 text-center">
-                    <Plane className="w-6 h-6 text-slate-300 mx-auto" />
-                    <p className="mt-3 text-sm font-bold text-slate-700">
-                      Belum ada jadwal {tab === 'departure' ? 'keberangkatan' : 'kedatangan'}
-                    </p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      Jadwal akan muncul begitu diterbitkan sistem informasi bandara.
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              <Link href="/flights" className="flex items-center justify-center gap-2 py-4 text-sm font-semibold text-blue-600 hover:bg-blue-50/50 transition-colors border-t border-slate-100">
-                Lihat Semua Penerbangan <ArrowRight className="w-4 h-4" />
+              {/* Wisata terdekat. Bergaya sekunder seperti Fasilitas: hero
+                  hanya boleh punya satu ajakan utama, dan "Cek Penerbangan"
+                  yang paling sering dicari pengunjung bandara. */}
+              <Link href="/tourism" className="bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 font-semibold text-sm px-6 py-3.5 rounded-full shadow-sm flex items-center gap-2 transition-all">
+                <Palmtree className="w-4 h-4 text-emerald-600" /> Lihat Destinasi Wisata
               </Link>
             </div>
           </motion.div>
+
+          <HeroBoardingPass posts={igPosts} />
+
         </div>
+
+        {/* Lampu tepi landasan sebagai batas bawah hero.
+
+            Ditaruh pada `bottom-16`, bukan di tepi paling bawah: kartu Quick
+            Access di bawahnya bergeser naik (`-mt-12`) dan menutupi sekitar 48
+            piksel terakhir hero, sehingga lampu di tepi bawah tidak akan pernah
+            terlihat sama sekali. */}
+        <LampuLandasan className="absolute inset-x-0 bottom-16 z-10" />
       </section>
 
       {/* ================= 2. QUICK ACCESS ================= */}
       <section className="max-w-[1400px] mx-auto px-4 sm:px-6 -mt-12 relative z-20">
-        <motion.div variants={container} initial="hidden" whileInView="show" viewport={{ once: true }} className="bg-white rounded-2xl shadow-lg shadow-slate-200/60 border border-slate-100 px-6 py-5">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 divide-y md:divide-y-0 md:divide-x divide-slate-100">
+        <motion.div
+          variants={container}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true }}
+          className="relative bg-white rounded-2xl shadow-xl shadow-slate-300/40 ring-1 ring-slate-200/80 px-6 py-5 overflow-hidden"
+        >
+          {/* Pita gradien di tepi atas — penanda yang sama dipakai kartu unit
+              pada bagan organisasi dan kartu panel admin. */}
+          <span
+            className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-600 via-cyan-400 to-blue-600"
+            aria-hidden="true"
+          />
+
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 divide-y md:divide-y-0 md:divide-x divide-dashed divide-slate-200">
             {QUICK.map((s) => {
               const Icon = s.icon;
               return (
                 <motion.div key={s.title} variants={rise}>
-                  <Link href={s.href} className="flex items-center gap-3 px-4 py-3 md:py-1 group">
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105" style={{ backgroundColor: s.bg }}>
+                  <Link
+                    href={s.href}
+                    className="relative flex items-center gap-3 px-4 py-3 md:py-2 group rounded-xl transition-colors hover:bg-slate-50/80"
+                  >
+                    <div
+                      className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6"
+                      style={{ backgroundColor: s.bg }}
+                    >
                       <Icon className="w-5 h-5" style={{ color: s.color }} />
                     </div>
                     <div className="min-w-0">
-                      <h4 className="font-bold text-slate-900 text-sm group-hover:text-blue-600 transition-colors truncate">{s.title}</h4>
+                      <h4 className="font-bold text-slate-900 text-sm group-hover:text-blue-600 transition-colors truncate">
+                        {s.title}
+                      </h4>
                       <p className="text-xs text-slate-500 truncate">{s.desc}</p>
                     </div>
+                    {/* Garis landas kecil yang memanjang saat disentuh kursor. */}
+                    <span
+                      className="absolute left-4 right-4 bottom-1 h-0.5 rounded-full bg-gradient-to-r from-blue-500 to-cyan-400 scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-300"
+                      aria-hidden="true"
+                    />
                   </Link>
                 </motion.div>
               );
@@ -289,7 +231,7 @@ export default function HomePage() {
       <section className="max-w-[1400px] mx-auto px-4 sm:px-6 mt-8">
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 sm:p-7 grid grid-cols-1 lg:grid-cols-12 gap-7 items-center">
           <motion.div initial={{ opacity: 0, x: -24 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="lg:col-span-7">
-            <h2 className="text-[22px] font-black text-slate-900 tracking-tight">Tentang Bandar Udara APT Pranoto</h2>
+            <JudulBagian kicker="Profil Bandara">Tentang Bandar Udara APT Pranoto</JudulBagian>
             <p className="mt-3 text-slate-500 text-[13.5px] leading-relaxed max-w-xl">
               Bandar Udara APT Pranoto Samarinda merupakan gerbang utama Kalimantan Timur yang melayani penerbangan
               domestik dan terus berkembang menjadi bandara modern berstandar internasional.
@@ -334,8 +276,8 @@ export default function HomePage() {
       <section className="max-w-[1400px] mx-auto px-4 sm:px-6 mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Berita */}
         <div className="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-[19px] font-black text-slate-900">Berita &amp; Pengumuman</h2>
+          <div className="flex items-start justify-between gap-3 mb-5">
+            <JudulBagian kicker="Kabar Terkini">Berita &amp; Pengumuman</JudulBagian>
             <Link href="/news" className="text-[13px] font-semibold text-blue-600 flex items-center gap-1.5 hover:gap-2.5 transition-all">
               Lihat Semua <ArrowRight className="w-4 h-4" />
             </Link>
@@ -369,8 +311,8 @@ export default function HomePage() {
 
         {/* Fasilitas Unggulan */}
         <div className="lg:col-span-5 bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-[19px] font-black text-slate-900">Fasilitas Unggulan</h2>
+          <div className="flex items-start justify-between gap-3 mb-5">
+            <JudulBagian kicker="Kenyamanan">Fasilitas Unggulan</JudulBagian>
             <Link href="/facilities" className="text-[13px] font-semibold text-blue-600 flex items-center gap-1.5 hover:gap-2.5 transition-all">
               Lihat Semua <ArrowRight className="w-4 h-4" />
             </Link>
@@ -398,7 +340,7 @@ export default function HomePage() {
       {/* ================= 5. PEJABAT BANDARA ================= */}
       <section className="max-w-[1400px] mx-auto px-4 sm:px-6 mt-6">
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-          <h2 className="text-[19px] font-black text-slate-900 mb-5">Pejabat Bandara Udara APT Pranoto Samarinda</h2>
+          <JudulBagian kicker="Tata Kelola" className="mb-5">Pejabat Bandara Udara APT Pranoto Samarinda</JudulBagian>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
             {/* kartu utama dengan latar bandara */}
@@ -504,7 +446,7 @@ export default function HomePage() {
       <section className="max-w-[1400px] mx-auto px-4 sm:px-6 mt-6 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
         {/* moda transportasi */}
         <div className="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-          <h2 className="text-[19px] font-black text-slate-900 mb-5">Akses Menuju Bandara</h2>
+          <JudulBagian kicker="Transportasi" className="mb-5">Akses Menuju Bandara</JudulBagian>
           <motion.div variants={container} initial="hidden" whileInView="show" viewport={{ once: true }} className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {AKSES.map((a) => {
               const Icon = a.icon;

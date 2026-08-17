@@ -174,6 +174,39 @@ export function relativeUpdated(iso?: string | null): string {
  * - `bare`  : nomornya saja, untuk baris yang sudah punya label sendiri
  * - `value` : label + nomor, untuk tampilan mandiri tanpa keterangan kolom
  */
+/**
+ * Nama gate yang tertulis di terminal, dipetakan dari nomor kiriman FIDS.
+ *
+ * Server FIDS mengirim nomor urut (`"1"`, `"2"`, …) sedangkan papan penunjuk
+ * dan pengumuman suara di terminal menyebut **A1, A2, A3, B1**. Menampilkan
+ * angka mentahnya membuat penumpang mencari "Gate 4" yang tidak ada tulisannya
+ * di mana pun.
+ *
+ * Nilainya datang sebagai STRING dari API (`"gate":"1"`), bukan angka —
+ * berbeda dari `baggage_belt` yang berupa angka.
+ *
+ * Nilai di luar daftar ini DITERUSKAN APA ADANYA, tidak ditebak. Menebak nama
+ * gate di bandara berarti mengirim penumpang ke pintu yang salah; bila kelak
+ * ada gate baru, tambahkan barisnya di sini setelah namanya dipastikan.
+ */
+const NAMA_GATE: Record<string, string> = {
+  '1': 'A1',
+  '2': 'A2',
+  '3': 'A3',
+  '4': 'B1',
+};
+
+/** Terjemahkan nomor gate FIDS ke nama yang tertulis di terminal. */
+export function namaGate(gate: string | number | null | undefined): string | null {
+  if (gate === null || gate === undefined) return null;
+
+  const kunci = String(gate).trim();
+
+  if (kunci === '') return null;
+
+  return NAMA_GATE[kunci] ?? kunci;
+}
+
 export function gateLabel(flight: Flight): {
   label: string;
   bare: string;
@@ -191,9 +224,15 @@ export function gateLabel(flight: Flight): {
     };
   }
 
-  const assigned = !!flight.gate;
-  const bare = assigned ? String(flight.gate) : 'Belum ditentukan';
-  return { label: 'Gate', bare, value: assigned ? `Gate ${flight.gate}` : 'Belum ditentukan', assigned };
+  const nama = namaGate(flight.gate);
+  const assigned = nama !== null;
+
+  return {
+    label: 'Gate',
+    bare: nama ?? 'Belum ditentukan',
+    value: nama ? `Gate ${nama}` : 'Belum ditentukan',
+    assigned,
+  };
 }
 
 /**

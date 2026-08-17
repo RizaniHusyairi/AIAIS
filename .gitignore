@@ -46,3 +46,16 @@ Thumbs.db
 # Temporary test / brain output
 brain/
 scratch/
+
+# Data pribadi pegawai (CRITICAL — jangan pernah masuk riwayat git)
+#
+# Rekap kepegawaian memuat NIK, NIP, ID BKN, Karpeg, agama, alamat rumah,
+# email, dan nomor ponsel 128 pegawai. Agama termasuk data pribadi bersifat
+# spesifik menurut UU 27/2022 Pasal 4 ayat (2).
+#
+# Yang boleh terbit dari berkas itu hanya nama, jabatan, dan unit kerja —
+# ketiganya sudah disalin ke frontend/src/lib/pegawai.ts. Berkas mentahnya
+# tidak punya alasan untuk ada di repositori. Sekali ter-commit, ia ada
+# selamanya di riwayat meski berkasnya dihapus belakangan.
+docs/Daftar Pegawai.xlsx
+docs/*.xlsx

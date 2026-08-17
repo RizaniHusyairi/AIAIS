@@ -185,7 +185,18 @@ export function StatCard({
 }) {
   const theme = useAdminTheme();
   const fg = aksenTeks(accent, theme);
-  const numeric = typeof value === 'number' ? value : Number(String(value).replace(/[^\d]/g, ''));
+  /**
+   * Angka yang dianimasikan, atau NaN bila nilainya memang teks.
+   *
+   * Syarat `\d` itu penting: tanpa itu, nilai teks murni seperti
+   * "Belum tersambung" berubah menjadi `Number('')` yaitu **0** — angka yang
+   * lolos `Number.isFinite` — sehingga kartunya menampilkan "0" alih-alih
+   * teksnya. Nilai bercampur seperti "12 unit" tetap dianimasikan ke 12
+   * seperti sebelumnya.
+   */
+  const numeric = typeof value === 'number'
+    ? value
+    : /\d/.test(String(value)) ? Number(String(value).replace(/[^\d]/g, '')) : NaN;
   const [shown, setShown] = useState(0);
 
   useEffect(() => {
@@ -339,7 +350,10 @@ export function Field({
   // papan ketik yang sesuai.
   // `time` dipakai jurnal pemeliharaan inventaris; seperti `date`, ia
   // diteruskan apa adanya sehingga peramban menyediakan pemilih jamnya sendiri.
-  type?: 'text' | 'textarea' | 'select' | 'checkbox' | 'date' | 'time' | 'number' | 'password' | 'email';
+  // `datetime-local` dipakai catatan barang temuan, yang menuntut tanggal DAN
+  // jam dalam satu nilai — memecahnya menjadi dua medan membuka celah petugas
+  // mengisi salah satunya saja.
+  type?: 'text' | 'textarea' | 'select' | 'checkbox' | 'date' | 'time' | 'datetime-local' | 'number' | 'password' | 'email';
   options?: { value: string; label: string }[];
   rows?: number;
   placeholder?: string;

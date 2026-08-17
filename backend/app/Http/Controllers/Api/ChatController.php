@@ -7,7 +7,9 @@ use App\Helpers\ApiResponse;
 use App\Models\ChatThread;
 use App\Models\ChatMessage;
 use App\Models\Complaint;
+use App\Support\Notifikasi;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 /**
@@ -61,6 +63,8 @@ class ChatController extends Controller
             'message'        => $validated['message'],
             'is_read'        => false,
         ]);
+
+        Notifikasi::kirim('chat', $thread->ticket_number);
 
         return ApiResponse::success(
             $thread->fresh()->publicView(),
@@ -134,6 +138,25 @@ class ChatController extends Controller
             'status'           => in_array($thread->status, ChatThread::CLOSED_STATUSES, true) ? 'open' : $thread->status,
             'last_activity_at' => now(),
         ]);
+
+        /*
+         * Pesan susulan diberitahukan SECUKUPNYA saja.
+         *
+         * Satu percakapan bisa berisi puluhan pesan. Tanpa jeda ini, pengunjung
+         * yang mengetik sepuluh baris berturut-turut mengirim sepuluh pesan
+         * WhatsApp ke petugas — dan petugas yang kebanjiran akan mematikan
+         * notifikasinya, yang sama saja dengan tidak punya notifikasi.
+         *
+         * Penanda jedanya disimpan di cache dan bukan di kolom baru: ia
+         * sepenuhnya sementara, dan hilang saat cache dibersihkan pun tidak
+         * merugikan apa pun.
+         */
+        $kunciJeda = 'notif:chat:' . $thread->id;
+
+        if (! Cache::has($kunciJeda)) {
+            Cache::put($kunciJeda, true, now()->addMinutes(10));
+            Notifikasi::kirim('chat', $thread->ticket_number);
+        }
 
         return ApiResponse::success($thread->fresh()->publicView(), 'Pesan berhasil dikirim.');
     }

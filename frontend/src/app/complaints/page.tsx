@@ -15,10 +15,34 @@ import PusatBantuanView from './PusatBantuanView';
 export const metadata: Metadata = {
   title: 'Pusat Bantuan | Bandara APT Pranoto Samarinda',
   description:
-    'Cari jawaban, mulai percakapan dengan petugas, atau sampaikan pengaduan resmi berlampiran bukti di Bandara APT Pranoto Samarinda. Lacak penanganannya dengan nomor tiket, tanpa perlu membuat akun.',
+    'Cari jawaban, mulai percakapan dengan petugas, sampaikan pengaduan resmi, atau laporkan barang yang hilang di Bandara APT Pranoto Samarinda. Lacak penanganannya dengan nomor tiket, tanpa perlu membuat akun.',
   alternates: { canonical: '/complaints' },
 };
 
-export default function PusatBantuanPage() {
-  return <PusatBantuanView />;
+/**
+ * `?mode=` memilih tab mana yang terbuka saat halaman dimuat.
+ *
+ * Dipakai menu Navbar untuk menunjuk langsung ke "Lapor Kehilangan" tanpa
+ * membuat rute baru. Rutenya sengaja tetap `/complaints`: ia sudah dipetakan
+ * ke layar PWA `/app/bantuan` di `lib/pwaRoutes.ts`, dan rute baru yang lupa
+ * didaftarkan di sana membuat fiturnya tak terjangkau dari ponsel.
+ *
+ * Pemetaan itu menandai `simpanQuery`, sehingga `?mode=` ikut terbawa saat
+ * pengunjung ponsel dialihkan. Tanpa penanda itu proxy membuang seluruh query
+ * dan pelapor mendarat di tab pertama — persis yang terjadi sampai sebelum
+ * layar PWA-nya diperbaiki.
+ *
+ * Dibaca DI SINI, bukan lewat `useSearchParams` di komponen kliennya: hook itu
+ * menuntut pembungkus `<Suspense>`, dan melewatkannya sebagai prop
+ * menghilangkan seluruh urusan itu. `searchParams` berupa Promise pada versi
+ * Next ini, jadi halamannya async.
+ */
+export default async function PusatBantuanPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const mode = (await searchParams).mode;
+
+  return <PusatBantuanView modeAwal={typeof mode === 'string' ? mode : undefined} />;
 }

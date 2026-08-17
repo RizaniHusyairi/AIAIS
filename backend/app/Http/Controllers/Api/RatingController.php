@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ChatThread;
 use App\Models\Complaint;
 use App\Models\ServiceRating;
+use App\Support\Notifikasi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -61,6 +62,10 @@ class RatingController extends Controller
             'score' => $validated['score'],
             'comment' => $validated['comment'] ?? null,
         ]);
+
+        // Nomor tiket yang dinilai ikut dikirim — itu yang membuat petugas dapat
+        // langsung membuka kasusnya, dan ia bukan data pribadi.
+        Notifikasi::kirim('penilaian', $ticket);
 
         return ApiResponse::success(
             ['score' => $rating->score],
