@@ -91,9 +91,15 @@ MAIL_HOST=...
 Lalu `frontend/.env.production`:
 
 ```dotenv
-NEXT_PUBLIC_API_URL=https://aptpairport.id/api
+NEXT_PUBLIC_API_ORIGIN=https://aptpairport.id
 NEXT_PUBLIC_API_VERSION=v2
 ```
+
+Yang diisi **asal server**, bukan URL penuh. `lib/api.ts` menyusun sendiri
+`https://aptpairport.id/api/v2` dari kedua nilai itu. `NEXT_PUBLIC_API_URL`
+memang tersedia sebagai override, tetapi menang atas keduanya — mengisinya
+`https://aptpairport.id/api` (tanpa `/v2`) membuat panggilan backend mendarat
+di Route Handler Next.js sendiri, bukan di Laravel.
 
 ### 1.4 Penggelaran pertama
 
@@ -148,12 +154,15 @@ pm2 startup          # ikuti perintah yang dicetaknya, agar hidup lagi sesudah r
 
 ### 1.7 Arahkan web server
 
-Nginx meneruskan `/api` ke Laravel dan sisanya ke Next.js:
+Nginx meneruskan `/api/v2` ke Laravel dan **sisanya** ke Next.js:
 
 ```nginx
 server {
     server_name aptpairport.id;
     root /var/www/aiais/backend/public;
+
+    # Unggahan panel admin (scan KTP, lampiran surat) melebihi default 1 MB.
+    client_max_body_size 25m;
 
     # Berkas warisan v1 dilayani langsung dari direktori lamanya.
     location /uploads/ {
@@ -161,7 +170,14 @@ server {
         access_log off;
     }
 
-    location /api {
+    # Unggahan v2, lewat `php artisan storage:link`.
+    location /storage/ {
+        try_files $uri =404;
+        access_log off;
+    }
+
+    # HANYA prefiks versi kontrak yang milik Laravel — lihat catatan di bawah.
+    location /api/v2 {
         try_files $uri $uri/ /index.php?$query_string;
     }
 
@@ -175,6 +191,8 @@ server {
     location / {
         proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -182,8 +200,30 @@ server {
 }
 ```
 
+**`/api` bukan milik Laravel seorang diri.** Frontend punya Route Handler
+sendiri di bawah prefiks yang sama:
+
+| Path | Dilayani |
+|---|---|
+| `/api/v2/*` | Laravel — `backend/routes/api.php` |
+| `/api/session/login`, `/logout`, `/register` | Next.js — menukar kredensial jadi cookie `httpOnly` |
+| `/api/admin/*`, `/api/akun/*`, `/api/auth/*` | Next.js — proksi bersesi |
+
+Karena itu aturannya `location /api/v2`, bukan `location /api`. Yang terakhir
+merampas `/api/session/login` dan melemparnya ke PHP-FPM, sehingga **login
+panel mati dengan 502** sementara seluruh halaman lain tampak sehat — gejala
+yang menyesatkan, karena tidak ada yang salah pada Laravel maupun kredensialnya.
+
 `X-Forwarded-Proto` bukan pelengkap: tanpa itu cookie sesi tidak ditandai
 `Secure` di produksi.
+
+Periksa nama soket PHP-FPM sebelum memuat ulang — `ls /run/php/`. Bila server
+memakai PHP 8.3, kedua `fastcgi_pass` di atas harus ikut disesuaikan, kalau
+tidak `/api/v2` menjawab 502.
+
+```bash
+sudo nginx -t && sudo systemctl reload nginx
+```
 
 ### 1.8 Nyalakan penggelaran otomatis
 
@@ -382,3 +422,13 @@ bukan tampil kosong.
 - `/masuk` — halaman akun warga terbuka.
 
 Versi yang sedang berjalan dapat diperiksa di `GET /api/v2/version`.
+
+### Gejala yang menunjuk langsung ke penyebabnya
+
+| Gejala | Penyebab paling mungkin |
+|---|---|
+| `pm2 reload` gagal, `Process or Namespace not found` | Langkah 1.6 belum dijalankan. Build sudah selesai; cukup `pm2 start` sekali, tidak perlu mengulang `deploy.sh`. |
+| Login panel 502, halaman lain sehat | `location /api` merampas `/api/session/login`. Harus `location /api/v2` — lihat 1.7. |
+| Login panel 503, "Tidak dapat terhubung ke server" | `NEXT_PUBLIC_API_ORIGIN` menunjuk alamat yang tidak melayani. Berbeda dari 502: di sini Next.js hidup, Laravel-nya yang tak terjangkau. |
+| Seluruh portal 502 | Proses PM2 mati. `pm2 list`, lalu `pm2 logs aiais-frontend`. |
+| Halaman terbuka tapi seluruh data kosong | Cron belum terpasang, atau `/api/v2` tidak sampai ke Laravel. Uji langsung: `curl -i https://aptpairport.id/api/v2/version`. |
