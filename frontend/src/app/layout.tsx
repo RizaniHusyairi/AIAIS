@@ -8,6 +8,8 @@ import PemicuEvent from "@/components/events/PemicuEvent";
 import VisitorPing from "@/components/layout/VisitorPing";
 import ChatLauncher from "@/components/layout/ChatLauncher";
 import { THEME_INIT_SCRIPT } from "@/components/admin/themeShared";
+import { SITE_URL, SITE_NAME, ldBandara, ldSitus } from "@/lib/seo";
+import JsonLd from "@/components/JsonLd";
 import "./globals.css";
 
 /**
@@ -32,10 +34,96 @@ const serifDisplay = Playfair_Display({
   display: "swap",
 });
 
+const JUDUL_BAWAAN = "Bandara APT Pranoto Samarinda (AAP) | Sistem Informasi Terpadu AIAIS";
+const RINGKASAN_BAWAAN =
+  "Portal resmi informasi penerbangan FIDS, berita, pengumuman, fasilitas terminal, direktori tenant, dan pengaduan online Bandara Aji Pangeran Tumenggung Pranoto Samarinda.";
+
 export const metadata: Metadata = {
-  title: "Bandara APT Pranoto Samarinda (AAP) | Sistem Informasi Terpadu AIAIS",
-  description: "Portal resmi informasi penerbangan FIDS, berita, pengumuman, fasilitas terminal, direktori tenant, dan pengaduan online Bandara Aji Pangeran Tumenggung Pranoto Samarinda.",
+  /*
+   * Tanpa `metadataBase`, setiap `alternates.canonical` di seluruh halaman
+   * ditulis Next sebagai lintasan relatif ("/faq"), dan tag kanonik relatif
+   * tidak menggabungkan sinyal apa pun — sama saja dengan tidak memasangnya.
+   * Nilainya berasal dari `lib/seo.ts`, bukan literal, agar pindah domain
+   * cukup disunting di satu tempat.
+   */
+  metadataBase: new URL(SITE_URL),
+
+  /*
+   * Judul ditulis utuh di tiap halaman, TANPA `template`.
+   *
+   * Godaannya besar untuk memakai `template: "%s – Bandara APT Pranoto
+   * Samarinda"`, tetapi 31 halaman yang sudah ada menuliskan judulnya secara
+   * lengkap sampai "... | Bandara APT Pranoto Samarinda" — templat akan
+   * menempelkan nama portal untuk KEDUA kalinya pada semuanya sekaligus.
+   * Judul sepanjang itu dipotong Google jauh sebelum kata terakhirnya terbaca.
+   */
+  title: JUDUL_BAWAAN,
+  description: RINGKASAN_BAWAAN,
   keywords: ["APT Pranoto", "AAP Samarinda", "Bandara Samarinda", "Jadwal Penerbangan Samarinda", "FIDS AAP", "IKN Airport"],
+  authors: [{ name: SITE_NAME, url: SITE_URL }],
+  alternates: { canonical: "/" },
+
+  /*
+   * Kartu bagi bawaan, berlaku untuk SETIAP rute yang tidak menimpanya —
+   * termasuk halaman yang belum sempat diberi metadata sendiri. Sebelumnya
+   * tidak ada satu pun tag Open Graph di portal, sehingga tautan yang
+   * dibagikan lewat WhatsApp (kanal utama pengumuman bandara) muncul telanjang
+   * tanpa judul maupun gambar.
+   *
+   * Gambarnya sengaja tidak disebut: `app/opengraph-image.tsx` sudah
+   * dilampirkan Next ke seluruh rute lewat konvensi berkas, dan menyebutnya
+   * ulang di sini menghasilkan dua tag og:image yang bersaing — persoalan
+   * yang sama dengan ikon tab pada catatan di bawah.
+   */
+  openGraph: {
+    type: "website",
+    locale: "id_ID",
+    url: SITE_URL,
+    siteName: SITE_NAME,
+    title: JUDUL_BAWAAN,
+    description: RINGKASAN_BAWAAN,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: JUDUL_BAWAAN,
+    description: RINGKASAN_BAWAAN,
+  },
+
+  /*
+   * `max-image-preview:large` inilah yang membuat foto berita tampil besar di
+   * hasil pencarian; tanpanya Google membatasi diri pada thumbnail kecil.
+   * Halaman yang TIDAK boleh terindeks tidak diatur di sini melainkan di
+   * `robots.ts` dan pada metadata halamannya masing-masing.
+   */
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
+
+  /*
+   * Verifikasi kepemilikan di Google Search Console.
+   *
+   * Lewat variabel lingkungan, bukan literal: token ini milik satu akun
+   * Google tertentu, dan menuliskannya di dalam repo berarti siapa pun yang
+   * membaca kode dapat mengetahui akun mana yang memegang properti portal.
+   * Bila kosong, tagnya tidak dikirim sama sekali — jadi tidak ada
+   * `<meta name="google-site-verification" content="undefined">` yang justru
+   * menggagalkan verifikasi.
+   *
+   * Cara memakainya: ambil token dari Search Console (metode "tag HTML"),
+   * isi NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION di .env produksi, lalu build.
+   */
+  ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
+    ? { verification: { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION } }
+    : {}),
+
   manifest: "/manifest.webmanifest",
   applicationName: "APT Pranoto",
   appleWebApp: {
@@ -106,6 +194,20 @@ export default function RootLayout({
           dipakai halaman publik.
         */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        {/*
+          Data terstruktur tingkat situs.
+
+          Hanya dua skema yang benar-benar menggambarkan SELURUH portal yang
+          boleh ada di sini — identitas bandara dan identitas situsnya. Skema
+          yang menggambarkan satu jenis isi (berita, tanya jawab, remah jejak)
+          dipasang halamannya sendiri; menaburkannya dari layout akar berarti
+          menjanjikan kepada Google isi yang tidak ada di halaman itu, dan
+          Google memperlakukan janji yang meleset sebagai sinyal buruk.
+
+          Ikut terkirim di /admin dan /app juga. Itu tidak merugikan: keduanya
+          tidak diindeks (lihat robots.ts), dan muatannya di bawah 1 KB.
+        */}
+        <JsonLd data={[ldBandara(), ldSitus()]} />
         <PwaRegister />
         <MobileRedirect />
         {/* Mencatat kunjungan halaman publik; tidak menampilkan apa pun.

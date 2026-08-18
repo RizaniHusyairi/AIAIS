@@ -14,8 +14,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { fetchApi } from '@/lib/api';
-import { kunciTonton, TEMA_EVENT, type SiteEvent } from '@/lib/siteEvents';
+import { ambilPerayaanAktif } from '@/lib/perayaanAktif';
+import { kunciTonton, type SiteEvent } from '@/lib/siteEvents';
 import SambutanEvent from './SambutanEvent';
 
 /**
@@ -37,15 +37,11 @@ export default function PemicuEvent() {
 
     let batal = false;
 
-    fetchApi<SiteEvent | null>('/site-events/active').then((res) => {
-      if (batal) return;
-
-      const data = res.success ? res.data : null;
-
-      // Tema yang tidak dikenali frontend dilewati diam-diam: backend boleh
-      // saja punya nilai baru yang komponennya belum mendarat di sini, dan
-      // layar kosong lebih buruk daripada tidak ada layar sama sekali.
-      if (!data || !TEMA_EVENT[data.theme]) return;
+    // Permintaannya dibagi dengan hiasan beranda (`DekorEvent`), yang bertanya
+    // hal yang sama pada bingkai render yang sama. Penyaringan tema yang tidak
+    // dikenali frontend sudah dikerjakan di sana.
+    ambilPerayaanAktif().then((data) => {
+      if (batal || !data) return;
 
       // Dibaca DI SINI, bukan saat render: `sessionStorage` tidak ada di
       // server, dan membacanya saat render membuat keluaran server berbeda

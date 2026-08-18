@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { toAppRoute, simpanQuery, keepResponsive } from '@/lib/pwaRoutes';
+import { toAppRoute, simpanQuery, keepResponsive, adalahPerayap } from '@/lib/pwaRoutes';
 
 /*
  * Pengalihan pengunjung ponsel ke layar PWA.
@@ -54,6 +54,15 @@ export function proxy(request: NextRequest) {
   }
 
   const ua = request.headers.get('user-agent') || '';
+
+  /*
+   * Perayap lebih dulu — sebagian di antaranya tertangkap MOBILE_UA di bawah.
+   * Alasan lengkapnya ada pada `adalahPerayap` di lib/pwaRoutes.ts.
+   */
+  if (adalahPerayap(ua)) {
+    return NextResponse.next();
+  }
+
   if (!MOBILE_UA.test(ua)) {
     return NextResponse.next();
   }
@@ -65,7 +74,29 @@ export function proxy(request: NextRequest) {
   // query tanpa pandang bulu berarti parameter kampanye dan sisa formulir
   // ikut menempel di lintasan PWA yang tidak mengenalnya.
   if (!simpanQuery(pathname)) url.search = '';
-  return NextResponse.redirect(url);
+
+  /*
+   * 307, bukan 308. Pengalihan ini bergantung pada UA dan cookie `aptView`,
+   * jadi ia TIDAK permanen — pengunjung yang sama bisa memilih tampilan
+   * desktop pada permintaan berikutnya. 308 akan disimpan peramban selamanya
+   * dan membuat pilihan itu tidak pernah sampai ke server. (307 memang
+   * bawaan `NextResponse.redirect`; ditulis eksplisit agar tidak ada yang
+   * "merapikannya" menjadi permanen di kemudian hari.)
+   */
+  const res = NextResponse.redirect(url, 307);
+
+  /*
+   * `Vary` bertahan di SINI, dan hanya di sini.
+   *
+   * Pada respons yang diteruskan (`NextResponse.next()`) Next menimpa header
+   * ini dengan daftar Vary miliknya sendiri, dan jalur `headers()` di
+   * next.config.ts pun ikut tertimpa — keduanya sudah diuji pada build
+   * produksi. Karena itu penanda untuk respons 200 dipasang di Nginx; lihat
+   * blok `location /` pada docs/DEPLOY.md. Jangan menambahkannya kembali ke
+   * jalur `next()` di berkas ini dengan harapan ia bekerja.
+   */
+  res.headers.set('Vary', 'User-Agent');
+  return res;
 }
 
 /*

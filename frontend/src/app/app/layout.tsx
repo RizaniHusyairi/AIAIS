@@ -1,5 +1,28 @@
 import React from 'react';
+import type { Metadata } from 'next';
 import { BottomNav, SideRail } from '@/components/pwa/ui';
+
+/**
+ * Seluruh layar PWA tidak diindeks.
+ *
+ * Isinya bukan isi baru: setiap layar di sini menyajikan data yang sama dengan
+ * lintasan publiknya (`/app/berita` ⇄ `/news`, dan seterusnya — pemetaannya
+ * di `lib/pwaRoutes.ts`). Dua alamat dengan isi yang sama saling membagi
+ * sinyal peringkat, dan yang seharusnya menang adalah lintasan publik: hanya
+ * lintasan itu yang punya metadata, kanonik, dan tempat di sitemap.
+ *
+ * `follow: true`, bukan `noindex, nofollow`. Tautan di dalam layar PWA tetap
+ * boleh diikuti perayap supaya halaman yang ditujunya tetap ditemukan; yang
+ * dilarang hanya menaruh layar ini sendiri ke dalam indeks.
+ *
+ * Ini melengkapi — bukan menggantikan — penjaga perayap di `proxy.ts` dan
+ * `MobileRedirect.tsx`. Penjaga itu mencegah perayap SAMPAI ke sini; penanda
+ * ini yang menangani sisanya, yaitu perayap yang tiba lewat tautan langsung
+ * ke /app yang pernah dibagikan seseorang.
+ */
+export const metadata: Metadata = {
+  robots: { index: false, follow: true },
+};
 
 /**
  * Kerangka PWA — dua bentuk, satu isi.

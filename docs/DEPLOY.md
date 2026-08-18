@@ -196,6 +196,19 @@ server {
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+        # Satu alamat, dua isi: pengunjung ponsel dialihkan ke /app sedangkan
+        # desktop dan perayap tidak (src/proxy.ts). Tanpa baris ini, cache
+        # bersama di depan portal boleh menyajikan satu salinan kepada
+        # keduanya — dan yang paling merugikan adalah salinan milik Googlebot
+        # sampai ke pengunjung, atau sebaliknya.
+        #
+        # HARUS di Nginx. Next 16 menulis sendiri header Vary pada respons
+        # halaman (rsc, next-router-state-tree, ...) dan menimpa apa pun yang
+        # disetel dari middleware maupun dari `headers()` di next.config.ts;
+        # keduanya sudah dicoba dan tidak bertahan. `add_header` di sini
+        # berjalan sesudahnya.
+        add_header Vary "User-Agent" always;
     }
 }
 ```

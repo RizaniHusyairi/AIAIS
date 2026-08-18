@@ -4,6 +4,8 @@ import LayananDetailView from '../LayananDetailView';
 import { fetchApi } from '@/lib/api';
 import { getService } from '@/lib/serviceData';
 import type { ServiceItem } from '@/types';
+import { ldRemah, SITE_URL } from '@/lib/seo';
+import JsonLd from '@/components/JsonLd';
 
 /**
  * Halaman satu layanan.
@@ -55,7 +57,44 @@ export default async function LayananDetailPage({ params }: { params: Promise<{ 
   // ditembak sekali per render.
   const layanan = await ambilLayanan(slug);
 
-  if (!layanan && !getService(slug)) notFound();
+  const bawaan = getService(slug);
+  if (!layanan && !bawaan) notFound();
 
-  return <LayananDetailView slug={slug} />;
+  const nama = layanan?.title ?? bawaan?.title ?? '';
+
+  return (
+    <>
+      {/*
+        `GovernmentService` — bukan `Service` biasa.
+        
+        Yang dilayani halaman ini adalah layanan publik sebuah unit pelaksana
+        teknis Kementerian Perhubungan, dan Google memakai penyedianya untuk
+        menghubungkan halaman ini dengan entitas bandara yang sudah
+        diperkenalkan di layout akar lewat `@id`.
+      */}
+      <JsonLd
+        data={[
+          {
+            '@context': 'https://schema.org',
+            '@type': 'GovernmentService',
+            name: nama,
+            description: layanan?.description || layanan?.summary || bawaan?.description || undefined,
+            serviceType: nama,
+            provider: { '@id': `${SITE_URL}/#bandara` },
+            areaServed: { '@type': 'AdministrativeArea', name: 'Kalimantan Timur' },
+            availableChannel: {
+              '@type': 'ServiceChannel',
+              serviceUrl: `${SITE_URL}/layanan/${slug}`,
+            },
+          },
+          ldRemah([
+            { name: 'Beranda', path: '/' },
+            { name: 'Layanan', path: '/layanan' },
+            { name: nama, path: `/layanan/${slug}` },
+          ]),
+        ]}
+      />
+      <LayananDetailView slug={slug} />
+    </>
+  );
 }

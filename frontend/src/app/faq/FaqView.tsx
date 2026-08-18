@@ -15,14 +15,21 @@ import { fetchApi } from '@/lib/api';
 import SafeHtml from '@/components/SafeHtml';
 import type { FaqItem } from '@/types';
 
-export default function FaqView({ awal }: { awal: FaqTampil[] }) {
+export default function FaqView({ awal }: { awal: FaqItem[] }) {
+  /*
+   * Bentuk siap tampil dirakit DI SINI, bukan di server. `gabungFaq`
+   * melekatkan komponen ikon pada tiap butir, dan komponen tidak dapat
+   * dikirim menyeberangi batas Server → Client Component — lihat catatan
+   * panjang di `page.tsx`.
+   */
+  const awalTampil = useMemo(() => awal.map(gabungFaq), [awal]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState(SEMUA_KATEGORI);
-  const [openItems, setOpenItems] = useState<number[]>(awal[0] ? [awal[0].id] : []);
+  const [openItems, setOpenItems] = useState<number[]>(awalTampil[0] ? [awalTampil[0].id] : []);
   // Data awal datang dari server supaya halaman sudah berisi pada render
   // pertama — halaman FAQ justru paling sering ditemukan lewat mesin pencari.
-  const [items, setItems] = useState<FaqTampil[]>(awal);
-  const [loading, setLoading] = useState(awal.length === 0);
+  const [items, setItems] = useState<FaqTampil[]>(awalTampil);
+  const [loading, setLoading] = useState(awalTampil.length === 0);
 
   useEffect(() => {
     let batal = false;

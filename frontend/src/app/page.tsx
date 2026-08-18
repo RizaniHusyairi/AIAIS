@@ -8,6 +8,8 @@ import { useSetting } from '@/lib/settings';
 import { TOURISM_SPOTS, TOURISM_CAT_META } from '@/lib/tourismData';
 import { OFFICIALS, ORG_NAME } from '@/lib/airportProfile';
 import HeroParticles from '@/components/effects/HeroParticles';
+import DekorEvent, { PitaPerayaan } from '@/components/events/DekorEvent';
+import { usePerayaanAktif } from '@/lib/perayaanAktif';
 import NamaBandaraHero from '@/components/home/NamaBandaraHero';
 import HeroBoardingPass from '@/components/home/HeroBoardingPass';
 import { LampuLandasan, JudulBagian } from '@/components/home/AviasiDekor';
@@ -103,6 +105,11 @@ export default function HomePage() {
 
   const heroBg = useSetting('bg_home');
 
+  /* Perayaan yang sedang berlangsung — menghias hero bila ada, dan tidak
+     melakukan apa pun bila tidak. Permintaannya dibagi dengan layar sambutan
+     di tata letak akar, jadi memanggilnya di sini tidak menambah lalu lintas. */
+  const perayaan = usePerayaanAktif();
+
   useEffect(() => {
     fetchApi<NewsItem[]>('/news').then((res) => {
       if (res.success && Array.isArray(res.data)) setNews(res.data);
@@ -136,11 +143,21 @@ export default function HomePage() {
           <div className="absolute inset-0 bg-gradient-to-t from-slate-50 via-transparent to-transparent" />
           {/* Partikel cahaya, aliran udara & jejak pesawat */}
           <HeroParticles />
+          {/* Hiasan perayaan. Sengaja DI DALAM kotak latar ini, bukan sebagai
+              saudara kolom teks: kotaknya sudah `absolute inset-0` di bawah
+              lapisan isi, sehingga untaian bendera dan konfetinya tidak akan
+              pernah menutupi judul maupun tombol. */}
+          <DekorEvent event={perayaan} />
         </div>
 
         <div className="relative z-10 max-w-[1400px] mx-auto px-4 sm:px-6 pt-12 pb-24 lg:pt-16 lg:pb-28 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* teks */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="lg:col-span-6 space-y-5 pt-6">
+            {/* Ucapan perayaan. Sebaris di atas lockup, bukan menumpuk di
+                atasnya — pada layar sempit keduanya akan bertabrakan. Tidak
+                merender apa pun di luar masa perayaan, jadi tata letak hero
+                pada hari biasa persis seperti sebelumnya. */}
+            <PitaPerayaan event={perayaan} />
             {/* Lockup nama resmi — termasuk sambutan "Selamat Datang di" dan
                 baris kota, supaya seluruh susunannya muncul sebagai satu
                 kesatuan. Lihat komponennya untuk urutan animasinya. */}

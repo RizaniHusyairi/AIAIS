@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { toAppRoute, toDesktopRoute, keepResponsive } from '@/lib/pwaRoutes';
+import { toAppRoute, toDesktopRoute, keepResponsive, adalahPerayap } from '@/lib/pwaRoutes';
 
 function hasDesktopPref(): boolean {
   return typeof document !== 'undefined' && document.cookie.includes('aptView=desktop');
@@ -38,6 +38,18 @@ export default function MobileRedirect() {
     if (pathname.startsWith('/admin')) return;
     if (keepResponsive(pathname)) return;
     if (isStandalone()) return;
+
+    /*
+     * Perayap tidak pernah dipindahkan.
+     *
+     * Penjaga ini TIDAK cukup diletakkan di proxy saja. Pengalihan di berkas
+     * ini berpatokan pada LEBAR VIEWPORT, bukan User-Agent, dan Googlebot
+     * merender halaman pada lebar ponsel (~412px) — jadi tanpa baris ini
+     * Googlebot lolos dari proxy, memuat halaman publiknya, lalu didorong
+     * sendiri oleh React ke /app tepat setelah hidrasi. Yang terindeks
+     * akhirnya tetap layar PWA, bukan alamat kanoniknya.
+     */
+    if (adalahPerayap(navigator.userAgent)) return;
 
     const isApp = pathname.startsWith('/app');
     const wide = window.matchMedia('(min-width: 768px)');

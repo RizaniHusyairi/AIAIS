@@ -171,6 +171,48 @@
   100% { transform: translateY(115vh) translateX(var(--geser, 30px)) rotate(360deg); opacity: 0; }
 }
 
+/* ------------------------------------------------------------------
+   Hiasan beranda saat perayaan (components/events/DekorEvent)
+
+   Terpisah dari keyframes layar sambutan di atas karena umurnya berbeda:
+   yang di atas berjalan beberapa detik lalu komponennya dilepas, sedangkan
+   yang di bawah ini berputar SELAMA pengunjung membuka beranda. Karena itu
+   keduanya hanya menganimasikan `transform` dan `opacity` — dua properti
+   yang tidak pernah memaksa tata letak dihitung ulang, sehingga menggulir
+   halaman tetap ringan meski hiasannya terus berjalan.
+   ------------------------------------------------------------------ */
+
+/* Segitiga pada untaian bendera, berayun pada titik gantungnya.
+
+   Sudutnya kecil (4 derajat) dan disertai pergeseran tegak yang amat tipis:
+   kain yang tergantung pada tali ikut naik-turun sedikit ketika berayun,
+   dan tanpa itu ayunannya terbaca seperti jarum yang berputar pada poros. */
+@keyframes ayunUmbul {
+  0%, 100% { transform: rotate(-4deg) translateY(0); }
+  50%      { transform: rotate(4deg) translateY(1.5px); }
+}
+
+/* Konfeti merah-putih yang meluruh di dalam hero.
+
+   Jarak jatuhnya bersatuan piksel lewat `--jatuh`, BUKAN `vh` seperti
+   `luruh` di atas. Hiasan ini dikurung di dalam hero yang tingginya jauh
+   di bawah tinggi layar; dengan `vh`, sembilan persepuluh perjalanan tiap
+   keping terjadi di luar kotak yang terpotong — hasilnya konfeti yang
+   muncul sebentar di puncak lalu hilang, dengan jeda panjang yang kosong.
+
+   Putarannya 540 derajat, bukan 360: kelipatan penuh membuat tiap keping
+   kembali ke sudut yang sama persis pada tiap perulangan, dan pengulangan
+   itu terlihat justru karena rapi. */
+@keyframes luruhKonfeti {
+  0%   { transform: translate3d(0, -40px, 0) rotate(0deg); opacity: 0; }
+  10%  { opacity: var(--puncak, 0.7); }
+  85%  { opacity: var(--puncak, 0.7); }
+  100% {
+    transform: translate3d(var(--geser, 24px), var(--jatuh, 620px), 0) rotate(540deg);
+    opacity: 0;
+  }
+}
+
 /* Used by the news detail feedback confirmation */
 .animate-fadeIn {
   animation: fadeIn 0.4s ease both;
@@ -412,6 +454,13 @@
   .adm-beacon,
   [class*='adm-'] { animation: none !important; }
   .adm-lift:hover { transform: none; }
+
+  /* Hiasan perayaan pada beranda.
+     Untaian benderanya berhenti berayun — ia tetap tergantung dan hiasannya
+     tetap terbaca. Konfetinya justru DISEMBUNYIKAN, bukan sekadar dihentikan:
+     keping yang membeku di tengah udara bukan hiasan, melainkan noda. */
+  [style*='ayunUmbul'] { animation: none !important; }
+  [style*='luruhKonfeti'] { display: none !important; }
 }
 
 /* ================================================================

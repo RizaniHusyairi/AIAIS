@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import KeuanganView from './KeuanganView';
 import { fetchApi } from '@/lib/api';
 import type { FinanceStats } from '@/types';
+import { metaHalaman } from '@/lib/seo';
 
 /**
  * Kinerja keuangan BLU.
@@ -11,13 +12,12 @@ import type { FinanceStats } from '@/types';
  * mengambil ulang di sisi klien setiap penyaring tahun diubah.
  */
 
-export const metadata: Metadata = {
+export const metadata: Metadata = metaHalaman({
   title: 'Kinerja Keuangan | Bandara APT Pranoto Samarinda',
-  description:
-    'Rekapitulasi pemasukan dan anggaran Badan Layanan Umum Bandar Udara APT Pranoto '
+  description: 'Rekapitulasi pemasukan dan anggaran Badan Layanan Umum Bandar Udara APT Pranoto '
     + 'Samarinda beserta rincian pos belanjanya.',
-  alternates: { canonical: '/keuangan' },
-};
+  path: '/keuangan',
+});
 
 export default async function KeuanganPage() {
   const res = await fetchApi<FinanceStats>('/finances');

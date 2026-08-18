@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import PusatBantuanView from './PusatBantuanView';
+import { metaHalaman } from '@/lib/seo';
 
 /**
  * Server Component tipis — `metadata` hanya didukung di sini.
@@ -12,12 +13,11 @@ import PusatBantuanView from './PusatBantuanView';
  * menautkannya (Navbar, Footer, FAQ, beranda, proxy ponsel, dan lainnya).
  * Mengganti nama rute berarti churn besar demi keuntungan kosmetik.
  */
-export const metadata: Metadata = {
+export const metadata: Metadata = metaHalaman({
   title: 'Pusat Bantuan | Bandara APT Pranoto Samarinda',
-  description:
-    'Cari jawaban, mulai percakapan dengan petugas, sampaikan pengaduan resmi, atau laporkan barang yang hilang di Bandara APT Pranoto Samarinda. Lacak penanganannya dengan nomor tiket, tanpa perlu membuat akun.',
-  alternates: { canonical: '/complaints' },
-};
+  description: 'Cari jawaban, mulai percakapan dengan petugas, sampaikan pengaduan resmi, atau laporkan barang yang hilang di Bandara APT Pranoto Samarinda. Lacak penanganannya dengan nomor tiket, tanpa perlu membuat akun.',
+  path: '/complaints',
+});
 
 /**
  * `?mode=` memilih tab mana yang terbuka saat halaman dimuat.

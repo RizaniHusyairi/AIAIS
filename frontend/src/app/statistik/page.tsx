@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import StatistikView from './StatistikView';
 import { fetchApi } from '@/lib/api';
 import type { AirTrafficStats } from '@/types';
+import { metaHalaman } from '@/lib/seo';
 
 /**
  * Statistik lalu lintas udara.
@@ -12,13 +13,12 @@ import type { AirTrafficStats } from '@/types';
  * di sisi klien setiap penyaring tahun diubah.
  */
 
-export const metadata: Metadata = {
+export const metadata: Metadata = metaHalaman({
   title: 'Statistik Lalu Lintas Udara | Bandara APT Pranoto Samarinda',
-  description:
-    'Data pergerakan pesawat, penumpang, bagasi, dan kargo di Bandar Udara APT Pranoto '
+  description: 'Data pergerakan pesawat, penumpang, bagasi, dan kargo di Bandar Udara APT Pranoto '
     + 'Samarinda, dihimpun harian dan disajikan per periode.',
-  alternates: { canonical: '/statistik' },
-};
+  path: '/statistik',
+});
 
 export default async function StatistikPage() {
   const res = await fetchApi<AirTrafficStats>('/air-traffic');

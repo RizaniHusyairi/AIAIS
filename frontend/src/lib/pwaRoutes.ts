@@ -17,6 +17,36 @@
  * aman dijalankan di middleware Edge.
  */
 
+/* ------------------------------------------------------------------ */
+/*  Perayap                                                            */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Perayap mesin pencari dan pengambil pratayang tautan.
+ *
+ * Tinggal di sini karena alasan yang sama dengan tabel rute di bawah: KEDUA
+ * pengalih membacanya — `proxy.ts` dari header User-Agent, dan
+ * `MobileRedirect.tsx` dari `navigator.userAgent`. Menyalinnya ke masing-
+ * masing berkas adalah persis kesalahan yang dulu membuat `/complaints`
+ * menuju dua tempat berbeda menurut dua berkas yang berbeda.
+ *
+ * Perayap TIDAK BOLEH dialihkan ke /app. UA Googlebot Smartphone memuat token
+ * "Android" dan Bingbot Mobile memuat "iPhone", sehingga keduanya tertangkap
+ * penyaring ponsel — akibatnya seluruh alamat publik portal menjawab
+ * pengalihan bagi perayap utama Google, dan tidak satu pun URL kanoniknya
+ * pernah dirayapi apa adanya.
+ *
+ * Nama yang disebut eksplisit adalah yang TIDAK memuat "bot", "crawler",
+ * maupun "spider" di dalam UA-nya.
+ */
+export const CRAWLER_UA =
+  /bot|crawler|spider|crawling|facebookexternalhit|WhatsApp|Slackbot|Discordbot|Twitterbot|LinkedInBot|TelegramBot|Applebot|Chrome-Lighthouse|PageSpeed|GPTBot|ClaudeBot|PerplexityBot/i;
+
+/** Benar bila User-Agent ini milik perayap atau pengambil pratayang. */
+export function adalahPerayap(ua: string | null | undefined): boolean {
+  return !!ua && CRAWLER_UA.test(ua);
+}
+
 export type PetaRute = {
   /** Awalan rute publik. */
   publik: string;
