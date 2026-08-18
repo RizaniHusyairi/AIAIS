@@ -59,3 +59,41 @@ scratch/
 # selamanya di riwayat meski berkasnya dihapus belakangan.
 docs/Daftar Pegawai.xlsx
 docs/*.xlsx
+
+# Perkakas Claude Code. Isinya konfigurasi per-mesin: .claude/launch.json memuat
+# lintasan absolut mesin pengembang, dan .claude/settings.local.json selama ini
+# hanya terlindung oleh ignore global di mesin ini — kolaborator lain tidak
+# punya perlindungan itu. Skill dan agent disalin manual antar mesin.
+.claude/
+.agents/
+skills-lock.json
+
+# Aset sumber dan referensi desain. Yang benar-benar dilayani ke pengunjung ada
+# di frontend/public/; berkas mentah di bawah ini hanya membesarkan kloning
+# tanpa pernah dibaca kode.
+logo aplikasi/
+docs/UI/
+frontend/logo/
+
+# Dump dan ekspor basis data. Portal berjalan di atas basis data produksi v1;
+# satu dump yang tak sengaja ter-commit berarti seluruh isi portal — termasuk
+# identitas pemohon informasi dan pelapor kehilangan — ada selamanya di riwayat
+# git, meski berkasnya dihapus belakangan.
+*.sql
+*.sql.gz
+*.dump
+*.sqlite
+*.sqlite3
+
+# Arsip dan berkas tabel di docs/. Rekap kepegawaian sudah disebut di atas,
+# tetapi ekspor laporan berikutnya belum tentu bernama sama.
+docs/*.xls
+docs/*.csv
+*.zip
+*.rar
+*.7z
+
+# Kunci dan sertifikat
+*.pem
+*.key
+*.p12

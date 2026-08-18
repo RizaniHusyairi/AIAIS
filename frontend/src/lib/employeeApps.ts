@@ -14,7 +14,10 @@
  *       2026 — alamat hostnya tidak ikut berubah.
  *     - Lambang SIKEREN & Guma → berkas dari pengelola portal, 10 Agustus
  *       2026 (`logo aplikasi/minilogo-sikeren.png`, `apple-touch-icon.png`),
- *       diperkecil ke 256×256 dan disimpan di `public/apps/`.
+ *       diperkecil ke 256×256 dan disimpan di `public/apps/`. BERKAS
+ *       SUMBERNYA TIDAK IKUT REPOSITORI — aslinya beberapa megabyte dan
+ *       tidak pernah dibaca kode; ia terdaftar di `.gitignore` dan disimpan
+ *       pengelola portal. Yang dipakai runtime hanya hasil perkecilannya.
  *     - FIDS               → alamat subdomain dari pengelola portal. LIHAT
  *       catatan pada entrinya; kode memakai alamat IP, bukan subdomain ini.
  *     - Portal APT Pranoto → rute nyata `app/admin/login` di repo ini.

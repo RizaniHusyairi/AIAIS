@@ -93,6 +93,8 @@ Gaya visual publik: Tailwind v4, framer-motion, ikon lucide, hero gradien langit
 
 **Agent terpasang:** `sensor-data-pribadi` — menyisir data pribadi yang wajib disensor menurut UU 27/2022. Jalankan saat menambah data pejabat/pegawai, membuat modul yang menyimpan identitas orang, menyiapkan seeder atau ekspor, dan sebelum rilis. Ia **melaporkan, tidak menyunting**; nama dan jabatan pejabat sengaja dikecualikan karena UU 14/2008 justru mewajibkan keduanya diumumkan.
 
+Berkas skill dan agent itu sendiri ada di `.claude/` dan **tidak ikut repositori** — isinya bercampur konfigurasi per-mesin (`launch.json` memuat lintasan absolut, `settings.local.json` memuat izin lokal). Salin direktori itu manual saat berpindah mesin. Berkas ini, `CLAUDE.md`, tetap ikut repositori karena ia dokumentasi proyek, bukan konfigurasi mesin.
+
 ---
 
 ## Yang jangan dilakukan
