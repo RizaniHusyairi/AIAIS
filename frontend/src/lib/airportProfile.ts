@@ -116,7 +116,9 @@ export const OFFICIALS: Official[] = [
     name: 'Mochamad Ikhsan Fadilah, SE, M.M.Tr',
     title: 'Kepala Seksi Keamanan Penerbangan dan Pelayanan Darurat',
     shortTitle: 'Kasi Keamanan Penerbangan & Pelayanan Darurat',
-    photo: '/pejabat/ikhsan.jpg',
+    // Aslinya JPEG berlatar putih; latarnya dibuat transparan agar sama dengan
+    // foto pejabat lain yang tampil di atas kartu gradien biru.
+    photo: '/pejabat/ikhsan.png',
     riwayatJabatan: [
       'Kepala Urusan Tata Usaha (2019–2020)',
       'Kepala UPBU Kelas III Yuvai Semaring (2020–2024)',
