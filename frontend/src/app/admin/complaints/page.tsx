@@ -105,7 +105,13 @@ export default function AdminHelpdeskPage() {
     setReplyText('');
 
     const res = await adminFetch<ChatThread>(`/chat/${t.id}`);
-    if (res.ok && res.data) setActiveThread(res.data);
+    if (!res.ok || !res.data) return;
+
+    setActiveThread(res.data);
+
+    // Membuka percakapan menandai pesan pengunjung terbaca di server; lencana
+    // pada daftar dinolkan sekarang juga agar tidak menunggu denyut berikutnya.
+    setThreads((prev) => prev.map((x) => (x.id === t.id ? { ...x, unread_count: 0 } : x)));
   };
 
   const muatSemua = () => {

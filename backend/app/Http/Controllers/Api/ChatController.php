@@ -200,9 +200,17 @@ class ChatController extends Controller
     /** Isi lengkap satu percakapan, termasuk kontak pengunjung untuk petugas. */
     public function adminShow($id)
     {
-        $thread = ChatThread::with('messages')->findOrFail($id);
+        $thread = ChatThread::findOrFail($id);
 
-        return ApiResponse::success($thread, 'Detail percakapan chat');
+        // Cermin dari show(): pesan pengunjung terbaca begitu petugas membuka
+        // percakapannya. Sebelumnya hanya adminReply() yang menandainya, jadi
+        // lencana 'belum dibaca' bertahan sampai petugas benar-benar membalas.
+        ChatMessage::where('chat_thread_id', $thread->id)
+            ->where('sender_type', 'visitor')
+            ->where('is_read', false)
+            ->update(['is_read' => true]);
+
+        return ApiResponse::success($thread->load('messages'), 'Detail percakapan chat');
     }
 
     public function adminReply(Request $request, $id)
