@@ -1,11 +1,28 @@
 'use client';
 
+/**
+ * Pertanyaan yang Sering Diajukan.
+ *
+ * Tampilannya mengikuti tema baku portal — `PpidHero`, lebar 1400px, kartu
+ * putih ber-`ring`, gerak `rise`/`container` — sama seperti Pusat Bantuan,
+ * Tautan Terkait, dan halaman-halaman PPID. Sebelumnya halaman ini berdiri
+ * sendiri dengan hero gelap, lebar 4xl, dan sepasang kelas `dark:` yang tidak
+ * pernah aktif (portal publik hanya bertema terang); akibatnya ia terlihat
+ * seperti berasal dari situs lain begitu pengunjung berpindah dari Pusat
+ * Bantuan — padahal keduanya menyajikan jawaban yang sama.
+ *
+ * Kategori ditempatkan pada rel kiri yang menempel saat digulir, bukan deretan
+ * tab mendatar. Daftar pertanyaan bisa panjang, dan tab mendatar menghilang
+ * dari layar begitu pengunjung menggulir — persis ketika ia butuh berpindah
+ * kategori.
+ */
+
 import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import SkyParticles from '@/components/effects/SkyParticles';
+import PpidHero from '@/components/ppid/PpidHero';
 import {
-  Search, HelpCircle, ChevronDown, ArrowRight, Sparkles, MessageCircle, Phone, X,
+  Search, HelpCircle, ChevronDown, ArrowRight, MessageCircle, X, ListFilter, Info,
 } from 'lucide-react';
 // Isi FAQ datang dari API; `lib/faqData` tinggal menyediakan ikon per
 // kategori dan penurunan teks pencarian. Jangan mengembalikan daftar
@@ -14,6 +31,13 @@ import { gabungFaq, kategoriDari, SEMUA_KATEGORI, type FaqTampil } from '@/lib/f
 import { fetchApi } from '@/lib/api';
 import SafeHtml from '@/components/SafeHtml';
 import type { FaqItem } from '@/types';
+
+/* Gerak baku portal — sama persis dengan halaman PPID dan Pusat Bantuan. */
+const rise = {
+  hidden: { opacity: 0, y: 24 },
+  show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 28 } },
+};
+const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
 
 export default function FaqView({ awal }: { awal: FaqItem[] }) {
   /*
@@ -50,6 +74,13 @@ export default function FaqView({ awal }: { awal: FaqItem[] }) {
 
   const CATEGORIES = useMemo(() => kategoriDari(items), [items]);
 
+  /** Jumlah per kategori, ditampilkan di rel penyaring. */
+  const jumlahKategori = useMemo(() => {
+    const out: Record<string, number> = { [SEMUA_KATEGORI]: items.length };
+    for (const f of items) out[f.category] = (out[f.category] ?? 0) + 1;
+    return out;
+  }, [items]);
+
   const filteredFAQs = useMemo(() => {
     const qLower = searchQuery.toLowerCase().trim();
 
@@ -68,221 +99,292 @@ export default function FaqView({ awal }: { awal: FaqItem[] }) {
     );
   };
 
-  const expandAll = () => {
-    setOpenItems(filteredFAQs.map((f) => f.id));
-  };
-
-  const collapseAll = () => {
-    setOpenItems([]);
-  };
+  const expandAll = () => setOpenItems(filteredFAQs.map((f) => f.id));
+  const collapseAll = () => setOpenItems([]);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans selection:bg-blue-500 selection:text-white pb-20">
-      {/* Hero Header Section */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-slate-900 via-slate-900 to-blue-950 text-white pt-24 pb-20 px-4 sm:px-6">
-        <SkyParticles />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(59,130,246,0.25),rgba(255,255,255,0))] pointer-events-none" />
+    <div className="bg-slate-50 min-h-screen">
+      <PpidHero
+        title="Pertanyaan yang"
+        accent="Sering Diajukan"
+        subtitle="Bandar Udara APT Pranoto Samarinda"
+        lead="Jawaban atas hal-hal yang paling sering ditanyakan pengunjung — rute penerbangan, jam operasional, tarif parkir, taksi, kargo, hingga cara menyampaikan pengaduan. Semuanya disusun dan diperbarui petugas layanan informasi."
+        showBack={false}
+      >
+        <div className="mt-6 inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm ring-1 ring-white/25 px-3.5 py-2 rounded-full">
+          <HelpCircle className="w-3.5 h-3.5 text-sky-200" />
+          <span className="text-[11.5px] font-bold text-white/95 tabular-nums">
+            {items.length} pertanyaan · {Math.max(CATEGORIES.length - 1, 0)} kategori
+          </span>
+        </div>
+      </PpidHero>
 
-        <div className="max-w-4xl mx-auto relative z-10 text-center space-y-6">
-          <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/10 border border-blue-400/20 text-blue-300 text-xs font-semibold uppercase tracking-wider backdrop-blur-md"
-          >
-            <HelpCircle className="w-4 h-4 text-blue-400" />
-            <span>Pusat Bantuan & Informasi FAQ</span>
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-12 space-y-12">
+
+        {/* ============ PENCARIAN ============ */}
+        <motion.section variants={container} initial="hidden" animate="show">
+          <motion.div variants={rise} className="text-center max-w-2xl mx-auto">
+            <span className="inline-flex items-center gap-2 text-blue-600 text-[11px] font-bold uppercase tracking-[0.16em] bg-blue-50 px-3 py-1.5 rounded-full">
+              <Search className="w-3.5 h-3.5" /> Cari Jawaban
+            </span>
+            <h2 className="mt-4 text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              Ketik kata kuncinya
+            </h2>
+            <p className="mt-2 text-slate-500 text-[13.5px] leading-relaxed">
+              Pencarian menelusuri isi jawaban, bukan judul pertanyaannya saja — jadi
+              kata yang hanya muncul di tengah penjelasan pun tetap ketemu.
+            </p>
           </motion.div>
 
-          <motion.h1
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-3xl sm:text-5xl font-black tracking-tight leading-tight"
-          >
-            Pertanyaan yang Sering Diajukan
-          </motion.h1>
-
-          <motion.p
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.15 }}
-            className="text-slate-300 text-base sm:text-lg max-w-2xl mx-auto"
-          >
-            Temukan jawaban lengkap seputar rute penerbangan, jam operasional, tarif parkir, taksi, kargo, serta layanan di Bandara A.P.T. Pranoto Samarinda.
-          </motion.p>
-
-          {/* Search Box */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="max-w-2xl mx-auto pt-2"
-          >
-            <div className="relative flex items-center">
-              <Search className="w-5 h-5 text-slate-400 absolute left-4 pointer-events-none" />
+          <motion.div variants={rise} className="mt-6 max-w-2xl mx-auto">
+            <div className="relative">
+              <Search className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Cari kata kunci (misal: rute, parkir inap, taksi, disabilitas, perintis)..."
-                className="w-full bg-white/10 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-slate-700/80 text-white placeholder-slate-400 text-sm sm:text-base rounded-2xl pl-12 pr-10 py-4 shadow-xl focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
+                aria-label="Cari pertanyaan"
+                placeholder="Contoh: rute, parkir inap, taksi, disabilitas, perintis..."
+                className="w-full bg-white rounded-2xl ring-1 ring-slate-200 shadow-lg shadow-slate-200/50 pl-12 pr-11 py-4 text-[14px] text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
               />
               {searchQuery && (
                 <button
+                  type="button"
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-4 p-1 text-slate-400 hover:text-white rounded-full transition-colors"
+                  aria-label="Bersihkan pencarian"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
               )}
             </div>
           </motion.div>
-        </div>
-      </section>
+        </motion.section>
 
-      {/* Main Content Area */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 -mt-8 relative z-20 space-y-6">
+        {/* ============ PENYARING + DAFTAR ============ */}
+        <section className="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
-        {/* Category Tabs */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl p-2 shadow-lg shadow-slate-200/50 dark:shadow-none border border-slate-200/80 dark:border-slate-800 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-          {CATEGORIES.map((cat) => {
-            const isActive = activeCategory === cat;
-            return (
-              <button
-                key={cat}
-                onClick={() => setActiveCategory(cat)}
-                className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all duration-200 ${
-                  isActive
-                    ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                }`}
-              >
-                {cat}
-              </button>
-            );
-          })}
-        </div>
+          {/* Rel kategori — menempel saat digulir pada layar lebar. */}
+          <aside className="lg:col-span-3">
+            <div className="lg:sticky lg:top-24">
+              <p className="text-[10.5px] font-bold uppercase tracking-[0.16em] text-blue-600 mb-3 flex items-center gap-1.5">
+                <ListFilter className="w-3.5 h-3.5" /> Kategori
+              </p>
 
-        {/* Actions bar (Count & Expand/Collapse) */}
-        <div className="flex items-center justify-between px-1 text-xs text-slate-500">
-          <span>Menampilkan <strong>{filteredFAQs.length}</strong> pertanyaan</span>
-          <div className="flex items-center gap-3 font-semibold">
-            <button onClick={expandAll} className="hover:text-blue-600 transition-colors">Buka Semua</button>
-            <span>•</span>
-            <button onClick={collapseAll} className="hover:text-blue-600 transition-colors">Tutup Semua</button>
-          </div>
-        </div>
-
-        {/* FAQ Accordion List */}
-        {loading ? (
-          <div className="space-y-4" aria-busy="true" aria-label="Memuat pertanyaan">
-            {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="h-20 rounded-2xl bg-white dark:bg-slate-900 ring-1 ring-slate-100 dark:ring-slate-800/60 animate-pulse" />
-            ))}
-          </div>
-        ) : filteredFAQs.length > 0 ? (
-          <div className="space-y-4">
-            {filteredFAQs.map((item, idx) => {
-              const isOpen = openItems.includes(item.id);
-              const ItemIcon = item.icon;
-
-              return (
-                <motion.div
-                  key={item.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: idx * 0.04 }}
-                  className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden transition-all hover:border-slate-300 dark:hover:border-slate-700"
-                >
-                  <button
-                    onClick={() => toggleItem(item.id)}
-                    className="w-full text-left p-4 sm:p-5 flex items-start gap-3 sm:gap-4 hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors"
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center flex-shrink-0 mt-0.5 border border-blue-100 dark:border-blue-900/50">
-                      <ItemIcon className="w-5 h-5" />
-                    </div>
-
-                    <div className="flex-1 min-w-0 pr-2">
-                      <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider block mb-1">
-                        {item.category}
-                      </span>
-                      <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-slate-100 leading-snug">
-                        {item.question}
-                      </h3>
-                    </div>
-
-                    <div className={`p-1.5 rounded-full text-slate-400 transition-transform duration-300 ${isOpen ? 'rotate-180 text-blue-600 bg-blue-50 dark:bg-blue-950' : ''}`}>
-                      <ChevronDown className="w-5 h-5" />
-                    </div>
-                  </button>
-
-                  <AnimatePresence initial={false}>
-                    {isOpen && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.25, ease: 'easeInOut' }}
+              <div className="flex lg:flex-col gap-2 overflow-x-auto no-scrollbar pb-1 lg:pb-0">
+                {CATEGORIES.map((cat) => {
+                  const isActive = activeCategory === cat;
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setActiveCategory(cat)}
+                      aria-pressed={isActive}
+                      className={`flex items-center justify-between gap-3 whitespace-nowrap lg:whitespace-normal text-left px-4 py-2.5 rounded-xl text-[12.5px] font-bold transition-all cursor-pointer flex-shrink-0 lg:flex-shrink ${
+                        isActive
+                          ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+                          : 'bg-white text-slate-600 ring-1 ring-slate-200/70 hover:ring-blue-300 hover:text-blue-700'
+                      }`}
+                    >
+                      <span className="leading-snug">{cat}</span>
+                      <span
+                        className={`text-[11px] font-black tabular-nums px-1.5 py-0.5 rounded-md ${
+                          isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+                        }`}
                       >
-                        {/* Jawaban berupa HTML dari panel admin; disaring
-                            lebih dulu — lihat components/SafeHtml.tsx. */}
-                        <SafeHtml
-                          className="px-4 sm:px-5 pb-5 pt-1 border-t border-slate-100 dark:border-slate-800/60 ml-13 sm:ml-14 faq-answer"
-                          html={item.answerHtml}
-                        />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </motion.div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-12 text-center border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-3">
-            <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto text-slate-400">
-              <Search className="w-6 h-6" />
+                        {jumlahKategori[cat] ?? 0}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="hidden lg:flex items-start gap-3 mt-6 bg-blue-50/60 ring-1 ring-blue-100 rounded-2xl px-4 py-3.5">
+                <span className="w-8 h-8 rounded-xl bg-white ring-1 ring-blue-100 flex items-center justify-center flex-shrink-0">
+                  <Info className="w-3.5 h-3.5 text-blue-600" />
+                </span>
+                <p className="text-[11.5px] text-slate-600 leading-relaxed">
+                  Belum menemukan jawabannya? Kirim pertanyaan lewat{' '}
+                  <Link href="/complaints" className="font-bold text-blue-700 hover:underline">
+                    Pusat Bantuan
+                  </Link>{' '}
+                  — dijawab petugas dan dapat dilacak dengan nomor tiket.
+                </p>
+              </div>
             </div>
-            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">Tidak ada pertanyaan yang cocok</h3>
-            <p className="text-slate-500 text-sm max-w-sm mx-auto">
-              Coba kata kunci lain atau pilih kategori &quot;Semua&quot; untuk menemukan informasi yang Anda cari.
-            </p>
-            <button
-              onClick={() => { setSearchQuery(''); setActiveCategory('Semua'); }}
-              className="mt-2 text-sm text-blue-600 font-semibold hover:underline"
-            >
-              Reset Pencarian
-            </button>
-          </div>
-        )}
+          </aside>
 
-        {/* Support & Contact Card */}
-        <div className="bg-gradient-to-r from-blue-900 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="space-y-2 text-center md:text-left z-10 max-w-lg">
-            <h3 className="text-xl sm:text-2xl font-bold">Masih Punya Pertanyaan Lain?</h3>
-            <p className="text-slate-300 text-sm">
-              Tim Customer Service & Layanan Informasi Bandara A.P.T. Pranoto siap membantu memberikan informasi lebih lengkap.
-            </p>
-          </div>
+          {/* Daftar pertanyaan */}
+          <div className="lg:col-span-9 space-y-4">
 
-          <div className="flex flex-col sm:flex-row gap-3 z-10 w-full md:w-auto">
-            <Link
-              href="/complaints"
-              className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl text-sm transition-colors shadow-lg shadow-blue-600/30"
-            >
-              <MessageCircle className="w-4 h-4" />
-              <span>Kirim Pengaduan / Saran</span>
-            </Link>
-            <Link
-              href="/ppid"
-              className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-white/10 hover:bg-white/20 text-white font-bold rounded-2xl text-sm transition-colors backdrop-blur-md border border-white/20"
-            >
-              <span>Layanan PPID</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-        </div>
+            <div className="flex items-center justify-between gap-4 text-[12px] text-slate-500">
+              <span>
+                Menampilkan <strong className="text-slate-800 font-black tabular-nums">{filteredFAQs.length}</strong> pertanyaan
+              </span>
+              <div className="flex items-center gap-3 font-bold">
+                <button type="button" onClick={expandAll} className="hover:text-blue-600 transition-colors cursor-pointer">
+                  Buka Semua
+                </button>
+                <span className="text-slate-300">·</span>
+                <button type="button" onClick={collapseAll} className="hover:text-blue-600 transition-colors cursor-pointer">
+                  Tutup Semua
+                </button>
+              </div>
+            </div>
 
+            {loading ? (
+              <div className="space-y-4" aria-busy="true" aria-label="Memuat pertanyaan">
+                {[0, 1, 2, 3].map((i) => (
+                  <div key={i} className="h-[86px] rounded-2xl bg-white ring-1 ring-slate-200/70 animate-pulse" />
+                ))}
+              </div>
+            ) : filteredFAQs.length > 0 ? (
+              <motion.div variants={container} initial="hidden" animate="show" className="space-y-4">
+                {filteredFAQs.map((item, idx) => {
+                  const isOpen = openItems.includes(item.id);
+                  const ItemIcon = item.icon;
+
+                  return (
+                    <motion.div
+                      key={item.id}
+                      variants={rise}
+                      className={`bg-white rounded-2xl overflow-hidden transition-all ${
+                        isOpen
+                          ? 'ring-1 ring-blue-200 shadow-lg shadow-blue-900/5'
+                          : 'ring-1 ring-slate-200/70 hover:ring-blue-300 hover:shadow-lg hover:shadow-blue-900/5'
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => toggleItem(item.id)}
+                        aria-expanded={isOpen}
+                        className="w-full text-left px-4 sm:px-5 py-4 sm:py-5 flex items-start gap-4 cursor-pointer"
+                      >
+                        <span className="w-11 h-11 rounded-xl bg-blue-50 ring-1 ring-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0">
+                          <ItemIcon className="w-5 h-5" />
+                        </span>
+
+                        <span className="flex-1 min-w-0">
+                          {/* Nomor bergaya boarding pass, seperti kartu prosedur SOP. */}
+                          <span className="flex items-center gap-2 mb-1.5">
+                            <span className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded tabular-nums">
+                              {String(idx + 1).padStart(2, '0')}
+                            </span>
+                            <span className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-400 truncate">
+                              {item.category}
+                            </span>
+                          </span>
+                          <span className="block text-[14.5px] sm:text-[15.5px] font-black text-slate-900 leading-snug">
+                            {item.question}
+                          </span>
+                        </span>
+
+                        <motion.span
+                          animate={{ rotate: isOpen ? 180 : 0 }}
+                          className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${
+                            isOpen ? 'bg-blue-50 text-blue-600' : 'text-slate-400'
+                          }`}
+                        >
+                          <ChevronDown className="w-4 h-4" />
+                        </motion.span>
+                      </button>
+
+                      <AnimatePresence initial={false}>
+                        {isOpen && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.25, ease: 'easeInOut' }}
+                            className="overflow-hidden"
+                          >
+                            {/* Jawaban berupa HTML dari panel admin; disaring
+                                lebih dulu — lihat components/SafeHtml.tsx. */}
+                            <SafeHtml
+                              className="mx-4 sm:mx-5 mb-5 pt-4 border-t border-dashed border-slate-200 sm:ml-[76px] faq-answer"
+                              html={item.answerHtml}
+                            />
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+                  );
+                })}
+              </motion.div>
+            ) : (
+              <div className="bg-white rounded-2xl ring-1 ring-slate-200/70 px-6 py-14 text-center space-y-3">
+                <span className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
+                  <Search className="w-5 h-5" />
+                </span>
+                <h3 className="text-[15px] font-black text-slate-800">Tidak ada pertanyaan yang cocok</h3>
+                <p className="text-slate-500 text-[13px] max-w-sm mx-auto leading-relaxed">
+                  Coba kata kunci lain atau pilih kategori &ldquo;Semua&rdquo; untuk menelusuri
+                  seluruh jawaban yang tersedia.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => { setSearchQuery(''); setActiveCategory(SEMUA_KATEGORI); }}
+                  className="mt-1 text-[12.5px] font-bold text-blue-600 hover:underline cursor-pointer"
+                >
+                  Bersihkan penyaring
+                </button>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* ============ MASIH ADA PERTANYAAN ============ */}
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.45 }}
+          className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0b1e5b] to-[#123a8f] text-white"
+        >
+          <div className="absolute -top-16 -right-10 w-64 h-64 rounded-full bg-sky-400/10 blur-3xl pointer-events-none" />
+
+          <div className="relative flex flex-col md:flex-row md:items-center gap-6 px-6 sm:px-8 py-7">
+            <div className="w-14 h-14 rounded-2xl bg-white/12 ring-1 ring-white/25 flex items-center justify-center flex-shrink-0">
+              <MessageCircle className="w-6 h-6 text-sky-200" />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <span className="inline-block text-[10px] font-black uppercase tracking-[0.18em] text-sky-200 bg-white/10 px-2 py-0.5 rounded">
+                Layanan Informasi
+              </span>
+              <h2 className="mt-2 text-xl sm:text-2xl font-black leading-tight">
+                Masih ada yang ingin ditanyakan?
+              </h2>
+              <p className="mt-1.5 text-[13px] text-blue-100/80 leading-relaxed max-w-2xl">
+                Petugas layanan informasi bertugas 07.00–20.00 WITA. Pertanyaan dan pengaduan
+                yang masuk diberi nomor tiket sehingga dapat dilacak sendiri.
+              </p>
+            </div>
+
+            {/* takik perforasi, motif boarding pass */}
+            <div className="hidden md:block self-stretch border-l-2 border-dashed border-white/25 relative">
+              <span className="absolute -top-[30px] -left-[7px] w-3 h-3 rounded-full bg-slate-50" />
+              <span className="absolute -bottom-[30px] -left-[7px] w-3 h-3 rounded-full bg-slate-50" />
+            </div>
+
+            <div className="flex flex-col sm:flex-row md:flex-col gap-2.5 flex-shrink-0">
+              <Link
+                href="/complaints"
+                className="inline-flex items-center justify-center gap-2 bg-white text-[#0b1e5b] hover:bg-sky-100 font-bold text-[12.5px] px-5 py-3 rounded-full transition-colors"
+              >
+                <MessageCircle className="w-4 h-4" />
+                Pusat Bantuan
+              </Link>
+              <Link
+                href="/ppid"
+                className="inline-flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 ring-1 ring-white/25 text-white font-bold text-[12.5px] px-5 py-3 rounded-full transition-colors"
+              >
+                Layanan PPID
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          </div>
+        </motion.section>
       </div>
     </div>
   );

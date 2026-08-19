@@ -101,6 +101,51 @@
 }
 .article-content img { border-radius: 1rem; width: 100%; }
 
+/* ---- Jawaban FAQ (halaman /faq, Pusat Bantuan, pratinjau panel admin) ----
+
+   Kelas ini sudah lama dipasang di ketiga tempat itu tetapi tidak pernah
+   punya aturan, sehingga jawaban dari editor panel admin tampil tanpa butir
+   daftar, tanpa jarak antarparagraf, dan dengan tautan sewarna teks biasa.
+   Aturannya sengaja lebih ringkas daripada `.article-content`: jawaban
+   dibaca di dalam akordeon, bukan sebagai artikel utuh. */
+.faq-answer {
+  color: #475569;
+  font-size: 13.5px;
+  line-height: 1.85;
+}
+.faq-answer > * + * { margin-top: 0.85rem; }
+.faq-answer strong, .faq-answer b { color: #0f172a; font-weight: 700; }
+.faq-answer a {
+  color: #2563eb;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.faq-answer a:hover { color: #1d4ed8; }
+.faq-answer ol { list-style: decimal; padding-left: 1.15rem; }
+.faq-answer ol li { padding-left: 0.25rem; }
+.faq-answer ul { list-style: none; padding-left: 0; }
+.faq-answer ul li { position: relative; padding-left: 1.35rem; }
+.faq-answer ul li::before {
+  content: '';
+  position: absolute;
+  left: 0.35rem;
+  top: 0.72em;
+  width: 5px;
+  height: 5px;
+  border-radius: 9999px;
+  background: #60a5fa;
+}
+.faq-answer li + li { margin-top: 0.35rem; }
+.faq-answer table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.faq-answer th, .faq-answer td {
+  border: 1px solid #e2e8f0;
+  padding: 0.5rem 0.65rem;
+  text-align: left;
+}
+.faq-answer th { background: #f8fafc; color: #0f172a; font-weight: 700; }
+.faq-answer img { border-radius: 0.75rem; max-width: 100%; height: auto; }
+
 @keyframes cloudDrift {
   0% { transform: translateX(-20px); }
   100% { transform: translateX(20px); }
