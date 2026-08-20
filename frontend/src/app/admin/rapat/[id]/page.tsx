@@ -37,7 +37,7 @@ import {
 import {
   CalendarCheck, ArrowLeft, RefreshCw, Users, DoorOpen, DoorClosed, Printer,
   Pencil, Trash2, Download, Copy, RotateCcw, PenLine, CalendarDays, Clock,
-  MapPin, UserCog, TriangleAlert,
+  MapPin, UserCog, TriangleAlert, FileText,
 } from 'lucide-react';
 
 /* ================================================================
@@ -230,6 +230,8 @@ export default function AdminRapatDetailPage() {
   const [hapusRapat, setHapusRapat] = useState(false);
   const [hapusPeserta, setHapusPeserta] = useState<Attendance | null>(null);
   const [pratinjau, setPratinjau] = useState<Attendance | null>(null);
+  /** Cetakan Word butuh waktu merakit gambar tanda tangannya. */
+  const [menyiapkanWord, setMenyiapkanWord] = useState(false);
 
   const muat = async () => {
     const res = await adminFetch<Meeting>(`/meetings/${id}`);
@@ -292,6 +294,24 @@ export default function AdminRapatDetailPage() {
     if (!rapat) return;
 
     const res = await adminDownload(`/meetings/${id}/pdf`, `daftar-hadir-${rapat.slug}.pdf`);
+    if (!res.ok) setToast({ text: res.message, kind: 'error' });
+  };
+
+  /**
+   * Cetakan Word.
+   *
+   * Berkasnya lebih berat daripada PDF — tanda tangan disematkan sebagai
+   * gambar PNG, satu per peserta — jadi keadaan "sedang menyiapkan" ditandai
+   * terang. Tanpa itu petugas menekan tombolnya berkali-kali dan server
+   * merakit dokumen yang sama berulang.
+   */
+  const cetakWord = async () => {
+    if (!rapat || menyiapkanWord) return;
+
+    setMenyiapkanWord(true);
+    const res = await adminDownload(`/meetings/${id}/docx`, `daftar-hadir-${rapat.slug}.docx`);
+    setMenyiapkanWord(false);
+
     if (!res.ok) setToast({ text: res.message, kind: 'error' });
   };
 
@@ -461,8 +481,14 @@ export default function AdminRapatDetailPage() {
                   ? <><DoorClosed className="w-4 h-4" /> Tutup Absensi</>
                   : <><DoorOpen className="w-4 h-4" /> Buka Kembali Absensi</>}
               </Btn>
+              {/* Dua cetakan, dua kegunaan: PDF sebagai lembar final yang tata
+                  letaknya terkunci, Word sebagai bahan yang masih disunting
+                  petugas sebelum masuk notulen. */}
               <Btn variant="ghost" onClick={cetak}>
-                <Printer className="w-4 h-4" /> Cetak Daftar Hadir
+                <Printer className="w-4 h-4" /> Cetak PDF
+              </Btn>
+              <Btn variant="ghost" onClick={cetakWord} disabled={menyiapkanWord}>
+                <FileText className="w-4 h-4" /> {menyiapkanWord ? 'Menyiapkan…' : 'Unduh Word'}
               </Btn>
               <Btn
                 variant="ghost"

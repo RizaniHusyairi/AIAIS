@@ -597,6 +597,9 @@ Route::prefix(config('api.version'))->group(function () {
             Route::get('/meetings/{id}/token', [MeetingController::class, 'token'])->whereNumber('id');
             Route::post('/meetings/{id}/rotate-token', [MeetingController::class, 'rotateToken'])->whereNumber('id');
             Route::get('/meetings/{id}/pdf', [MeetingController::class, 'exportPdf'])->whereNumber('id');
+            // Cetakan Word, untuk daftar hadir yang masih perlu disunting
+            // petugas sebelum dilampirkan ke notulen.
+            Route::get('/meetings/{id}/docx', [MeetingController::class, 'exportWord'])->whereNumber('id');
             Route::put('/meetings/{id}', [MeetingController::class, 'update'])->whereNumber('id');
             Route::put('/meetings/{id}/toggle', [MeetingController::class, 'toggle'])->whereNumber('id');
             Route::delete('/meetings/{id}', [MeetingController::class, 'destroy'])->whereNumber('id');

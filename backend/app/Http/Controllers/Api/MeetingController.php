@@ -7,10 +7,12 @@ use App\Http\Controllers\Controller;
 use App\Models\Attendance;
 use App\Models\Meeting;
 use App\Support\CetakanPdf;
+use App\Support\DaftarHadirWord;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use PhpOffice\PhpWord\IOFactory;
 
 /**
  * Absensi rapat.
@@ -185,8 +187,70 @@ class MeetingController extends Controller
     public function exportPdf(Request $request, $id)
     {
         $rapat = Meeting::with('attendances')->findOrFail($id);
+        $peserta = $this->pesertaCetak($rapat);
 
-        $peserta = $rapat->attendances->map(function (Attendance $a) {
+        $pdf = Pdf::loadView('pdf.attendance', [
+            'judul' => 'Daftar Hadir Rapat',
+            'periode' => $rapat->title,
+            'dicetakPada' => CetakanPdf::dicetakPada(),
+            'dicetakOleh' => $request->user()?->name,
+            'rapat' => $rapat,
+            'peserta' => $peserta,
+        ])->setPaper('a4', 'portrait');
+
+        return $pdf->download('daftar-hadir-'.$rapat->slug.'.pdf');
+    }
+
+    /**
+     * Daftar hadir sebagai dokumen Word yang dapat disunting petugas.
+     *
+     * Melengkapi `exportPdf`, bukan menggantikannya: PDF adalah cetakan final
+     * yang tata letaknya terkunci, Word adalah bahannya. Alasan lengkapnya ada
+     * di `App\Support\DaftarHadirWord`.
+     *
+     * Isinya dirakit dari koleksi peserta YANG SAMA dengan cetakan PDF —
+     * lewat `pesertaCetak()` — supaya kedua berkas mustahil berselisih. Satu
+     * bedanya disebut eksplisit di sana: Word menerima bita PNG mentah,
+     * sedangkan DomPDF menerima data URI.
+     *
+     * Dokumennya ditulis ke berkas sementara lebih dulu, bukan langsung ke
+     * keluaran. `PhpWord` menyusun .docx sebagai arsip ZIP, dan ZipArchive
+     * hanya dapat menulis ke berkas nyata — mengalirkannya langsung
+     * menghasilkan arsip yang rusak.
+     */
+    public function exportWord($id)
+    {
+        $rapat = Meeting::with('attendances')->findOrFail($id);
+        $peserta = $this->pesertaCetak($rapat, mentah: true);
+
+        $word = DaftarHadirWord::rakit($rapat, $peserta->all());
+
+        $sementara = tempnam(sys_get_temp_dir(), 'absensi_').'.docx';
+        IOFactory::createWriter($word, 'Word2007')->save($sementara);
+
+        $nama = 'daftar-hadir-'.$rapat->slug.'.docx';
+
+        return response()
+            ->download($sementara, $nama, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            ])
+            // Berkas sementara dihapus SETELAH terkirim. Tanpa ini direktori
+            // temp server terisi satu salinan daftar hadir tiap kali petugas
+            // mengunduh — berisi nama dan nomor telepon peserta.
+            ->deleteFileAfterSend(true);
+    }
+
+    /**
+     * Peserta dalam bentuk siap cetak, dipakai bersama oleh PDF dan Word.
+     *
+     * `$mentah` menentukan bentuk tanda tangannya: DomPDF membutuhkan data URI
+     * di dalam atribut `src`, PHPWord membutuhkan bita PNG apa adanya. Itu
+     * satu-satunya perbedaan antara kedua cetakan, dan menyatukannya di sini
+     * memastikan tidak ada perbedaan kedua yang menyelinap masuk.
+     */
+    private function pesertaCetak(Meeting $rapat, bool $mentah = false)
+    {
+        return $rapat->attendances->map(function (Attendance $a) use ($mentah) {
             return [
                 'name' => $a->name,
                 'department' => $a->department,
@@ -200,20 +264,23 @@ class MeetingController extends Controller
                  * tercetak dalam UTC sementara kaki halaman menulis WITA.
                  */
                 'waktu' => CetakanPdf::waktu($a->created_at),
-                'signature' => $this->tandaTanganDataUri($a),
+                'signature' => $mentah
+                    ? $this->tandaTanganBiner($a)
+                    : $this->tandaTanganDataUri($a),
             ];
         });
+    }
 
-        $pdf = Pdf::loadView('pdf.attendance', [
-            'judul' => 'Daftar Hadir Rapat',
-            'periode' => $rapat->title,
-            'dicetakPada' => CetakanPdf::dicetakPada(),
-            'dicetakOleh' => $request->user()?->name,
-            'rapat' => $rapat,
-            'peserta' => $peserta,
-        ])->setPaper('a4', 'portrait');
+    /** Bita PNG tanda tangan apa adanya, untuk pustaka yang membacanya sendiri. */
+    private function tandaTanganBiner(Attendance $peserta): ?string
+    {
+        $lintasan = $peserta->getAttributes()['signature'] ?? null;
 
-        return $pdf->download('daftar-hadir-'.$rapat->slug.'.pdf');
+        if (! $lintasan || ! Storage::disk(Attendance::DISK)->exists($lintasan)) {
+            return null;
+        }
+
+        return Storage::disk(Attendance::DISK)->get($lintasan);
     }
 
     /* ------------------------- sisi peserta ------------------------- */
