@@ -1,9 +1,17 @@
 'use client';
 
 /**
- * Absensi rapat — sisi petugas.
+ * Absensi rapat — daftar rapat, sisi petugas.
  *
- * TIGA KEPUTUSAN BENTUK:
+ * HALAMAN INI MENGELOLA DAFTARNYA; SATU RAPAT DIURUS DI HALAMAN RINCIANNYA
+ * (`./[id]`). Menutup absensi, membaca daftar peserta, dan mencetak daftar
+ * hadir dulu menempel di sini sebagai ikon-ikon kecil pada tiap baris — enam
+ * ikon berjajar yang menuntut petugas mengingat arti masing-masing, dan
+ * pesertanya dibuka di dalam modal yang tidak muat menampung puluhan nama.
+ * Ketiganya pindah ke halaman rincian; barisnya kini menawarkan satu tombol
+ * "Detail" berlabel.
+ *
+ * DUA KEPUTUSAN BENTUK YANG BERTAHAN:
  *
  *  1. **Tautan absensi tidak pernah tampil pada tabel.** Ia diambil lewat
  *     permintaan tersendiri di balik satu tindakan sadar, persis seperti token
@@ -11,27 +19,25 @@
  *     hadir. Memutar tautan diberi peringatan tegas — peserta yang sedang
  *     mengantre di pintu akan tertahan dengan tautan yang mendadak mati.
  *
- *  2. **Menutup absensi ditonjolkan, bukan disembunyikan di menu.** Itu
- *     tindakan yang paling sering dilakukan petugas, dan daftar hadir yang
- *     lupa ditutup masih dapat bertambah berjam-jam sesudah rapat bubar.
- *
- *  3. **Daftar peserta dibuka pada panel tersendiri**, bukan diperluas dalam
- *     baris: satu rapat bisa berisi puluhan nama, dan mencetaknya adalah
- *     pekerjaan yang berbeda dari mengelola rapatnya.
+ *  2. **Ubah dan hapus tinggal di sini**, karena keduanya tindakan atas
+ *     *entri daftar*, bukan atas absensinya. Keduanya tersedia juga di halaman
+ *     rincian, tempat petugas berada saat memutuskan rapatnya perlu dikoreksi.
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { adminFetch, adminDownload } from '@/lib/adminApi';
-import type { Meeting, Attendance } from '@/types';
+import Link from 'next/link';
+import { adminFetch } from '@/lib/adminApi';
+import type { Meeting } from '@/types';
 import {
   PageHeader, Panel, Btn, Badge, Field, Modal, ConfirmDialog, Toast, ToastMsg,
   Loading, EmptyState, Table, Row, Cell, SearchBox, StatCard, InfoNote, stagger,
 } from '@/components/admin/ui';
 import {
-  CalendarCheck, Plus, Pencil, Trash2, RefreshCw, Printer, Link2, Users,
-  DoorOpen, DoorClosed, Copy, RotateCcw, Download,
+  CalendarCheck, Plus, Pencil, Trash2, RefreshCw, Link2, Users,
+  DoorOpen, DoorClosed, Copy, RotateCcw, ScanEye,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import QrTautan from '@/components/admin/QrTautan';
 
 const KOSONG = { title: '', date: '', start_time: '', location: '', organizer: '', organizer_nip: '' };
 
@@ -53,10 +59,6 @@ export default function AdminRapatPage() {
   // Tautan absensi — hanya diambil saat diminta.
   const [tautan, setTautan] = useState<{ rapat: Meeting; url: string } | null>(null);
   const [putarUntuk, setPutarUntuk] = useState<Meeting | null>(null);
-
-  // Panel peserta.
-  const [peserta, setPeserta] = useState<Meeting | null>(null);
-  const [hapusPeserta, setHapusPeserta] = useState<Attendance | null>(null);
 
   const muat = async () => {
     const res = await adminFetch<Meeting[]>('/meetings');
@@ -134,41 +136,6 @@ export default function AdminRapatPage() {
     } else setToast({ text: res.message, kind: 'error' });
   };
 
-  const toggle = async (it: Meeting) => {
-    const res = await adminFetch(`/meetings/${it.id}/toggle`, { method: 'PUT' });
-    setToast({ text: res.message, kind: res.ok ? 'success' : 'error' });
-    if (res.ok) muat();
-  };
-
-  const bukaPeserta = async (it: Meeting) => {
-    const res = await adminFetch<Meeting>(`/meetings/${it.id}`);
-    if (res.ok && res.data) setPeserta(res.data);
-    else setToast({ text: res.message, kind: 'error' });
-  };
-
-  const cetak = async (it: Meeting) => {
-    const res = await adminDownload(`/meetings/${it.id}/pdf`, `daftar-hadir-${it.slug}.pdf`);
-    if (!res.ok) setToast({ text: res.message, kind: 'error' });
-  };
-
-  const unduhTtd = async (a: Attendance) => {
-    const res = await adminDownload(`/attendances/${a.id}/signature`, `ttd-${a.name}.png`);
-    if (!res.ok) setToast({ text: res.message, kind: 'error' });
-  };
-
-  const buangPeserta = async () => {
-    if (!hapusPeserta) return;
-    const res = await adminFetch(`/attendances/${hapusPeserta.id}`, { method: 'DELETE' });
-    const rapatId = peserta?.id;
-    setHapusPeserta(null);
-    setToast({ text: res.message, kind: res.ok ? 'success' : 'error' });
-
-    if (res.ok) {
-      muat();
-      if (rapatId) bukaPeserta({ id: rapatId } as Meeting);
-    }
-  };
-
   const remove = async () => {
     if (!delItem) return;
     const res = await adminFetch(`/meetings/${delItem.id}`, { method: 'DELETE' });
@@ -204,7 +171,8 @@ export default function AdminRapatPage() {
         <InfoNote>
           Tautan absensi <strong>tidak ditampilkan pada tabel</strong> — siapa pun yang membacanya
           dapat mengisi daftar hadir. Ambil lewat tombol tautan, lalu bagikan kepada peserta.
-          Tutup absensinya begitu rapat selesai agar tidak ada tanda tangan yang masuk belakangan.
+          Buka <strong>Detail</strong> untuk melihat daftar peserta, mencetak daftar hadir, dan
+          menutup absensinya begitu rapat selesai agar tidak ada tanda tangan yang masuk belakangan.
         </InfoNote>
       </div>
 
@@ -247,34 +215,26 @@ export default function AdminRapatPage() {
                 </Cell>
 
                 <Cell>
-                  <span className="flex gap-1">
+                  <span className="flex items-center gap-1">
+                    {/* Satu pintu menuju seluruh perkakas per-rapat: menutup
+                        absensi, daftar peserta, dan cetakannya kini tinggal di
+                        halaman rinciannya. Ditulis berlabel, bukan ikon —
+                        inilah tindakan yang paling sering dituju petugas dari
+                        tabel ini, dan ikon ketujuh dalam sebaris ikon tidak
+                        pernah ditemukan orang. */}
+                    <Link
+                      href={`/admin/rapat/${it.id}`}
+                      className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg bg-[var(--adm-accent-soft)] border border-[var(--adm-accent-line)] text-[var(--adm-accent)] hover:brightness-110 text-[11px] font-bold transition-all cursor-pointer"
+                      title="Rincian absensi"
+                    >
+                      <ScanEye className="w-3 h-3" /> Detail
+                    </Link>
                     <button
                       onClick={() => bukaTautan(it)}
                       className="w-7 h-7 rounded-lg bg-[var(--adm-hover)] hover:bg-cyan-500/20 text-[var(--adm-body)] hover:text-cyan-300 flex items-center justify-center transition-colors cursor-pointer"
                       title="Tautan absensi"
                     >
                       <Link2 className="w-3 h-3" />
-                    </button>
-                    <button
-                      onClick={() => toggle(it)}
-                      className="w-7 h-7 rounded-lg bg-[var(--adm-hover)] hover:bg-amber-500/20 text-[var(--adm-body)] hover:text-amber-300 flex items-center justify-center transition-colors cursor-pointer"
-                      title={it.is_active ? 'Tutup absensi' : 'Buka kembali absensi'}
-                    >
-                      {it.is_active ? <DoorClosed className="w-3 h-3" /> : <DoorOpen className="w-3 h-3" />}
-                    </button>
-                    <button
-                      onClick={() => bukaPeserta(it)}
-                      className="w-7 h-7 rounded-lg bg-[var(--adm-hover)] hover:bg-violet-500/20 text-[var(--adm-body)] hover:text-violet-300 flex items-center justify-center transition-colors cursor-pointer"
-                      title="Daftar peserta"
-                    >
-                      <Users className="w-3 h-3" />
-                    </button>
-                    <button
-                      onClick={() => cetak(it)}
-                      className="w-7 h-7 rounded-lg bg-[var(--adm-hover)] hover:bg-emerald-500/20 text-[var(--adm-body)] hover:text-emerald-300 flex items-center justify-center transition-colors cursor-pointer"
-                      title="Cetak daftar hadir"
-                    >
-                      <Printer className="w-3 h-3" />
                     </button>
                     <button
                       onClick={() => {
@@ -343,6 +303,20 @@ export default function AdminRapatPage() {
               Bagikan tautan ini kepada peserta rapat <strong>{tautan.rapat.title}</strong>.
             </p>
 
+            {/* Kode QR-nya, karena itulah cara tautan ini benar-benar dibagikan:
+                ditempel di pintu ruang rapat, bukan diketik ulang dari layar. */}
+            <QrTautan
+              url={tautan.url}
+              judul={tautan.rapat.title}
+              detail={[
+                { label: 'Tanggal', value: tgl(tautan.rapat.date) },
+                { label: 'Waktu', value: `${tautan.rapat.start_time?.slice(0, 5) ?? '—'} WITA` },
+                { label: 'Tempat', value: tautan.rapat.location },
+                { label: 'Penyelenggara', value: tautan.rapat.organizer },
+              ]}
+              namaBerkas={`qr-absensi-${tautan.rapat.id}`}
+            />
+
             <div className="flex gap-2">
               <input
                 readOnly
@@ -372,55 +346,6 @@ export default function AdminRapatPage() {
         )}
       </Modal>
 
-      {/* ---- Daftar peserta ---- */}
-      <Modal
-        open={peserta !== null}
-        onClose={() => setPeserta(null)}
-        title="Daftar Peserta"
-        footer={<Btn variant="ghost" onClick={() => setPeserta(null)}>Tutup</Btn>}
-      >
-        {peserta && (
-          <div className="space-y-3">
-            <p className="text-[12.5px] font-bold text-[var(--adm-fg)]">{peserta.title}</p>
-
-            {(peserta.attendances?.length ?? 0) === 0 ? (
-              <p className="text-[12px] text-[var(--adm-dim)]">Belum ada peserta yang mengisi daftar hadir.</p>
-            ) : (
-              <ul className="space-y-2">
-                {peserta.attendances!.map((a, i) => (
-                  <li key={a.id} className="flex items-center gap-3 rounded-xl bg-[var(--adm-inset)] ring-1 ring-[var(--adm-line)] px-4 py-2.5">
-                    <span className="w-6 text-[11px] text-[var(--adm-dim)] tabular-nums">{i + 1}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[12.5px] font-semibold text-[var(--adm-fg)] truncate">{a.name}</p>
-                      <p className="text-[11px] text-[var(--adm-dim)]">
-                        {a.department}{a.phone && ` · ${a.phone}`}
-                      </p>
-                    </div>
-                    {a.has_signature ? (
-                      <button
-                        onClick={() => unduhTtd(a)}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-[var(--adm-hover)] hover:bg-cyan-500/20 text-[var(--adm-body)] hover:text-cyan-300 text-[11px] font-bold transition-colors cursor-pointer"
-                        title="Unduh tanda tangan"
-                      >
-                        <Download className="w-3 h-3" /> TTD
-                      </button>
-                    ) : (
-                      <span className="text-[10.5px] text-amber-300" title="Tanda tangan tidak tersimpan">tanpa TTD</span>
-                    )}
-                    <button
-                      onClick={() => setHapusPeserta(a)}
-                      className="w-7 h-7 rounded-lg bg-[var(--adm-hover)] hover:bg-rose-500/20 text-[var(--adm-body)] hover:text-rose-300 flex items-center justify-center transition-colors cursor-pointer"
-                      title="Hapus kehadiran"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
-      </Modal>
 
       <ConfirmDialog
         open={putarUntuk !== null}
@@ -429,17 +354,6 @@ export default function AdminRapatPage() {
         message={
           putarUntuk
             ? `Tautan absensi "${putarUntuk.title}" akan diganti dan tautan lama LANGSUNG MATI. Peserta yang sedang mengantre di pintu akan tertahan sampai menerima tautan baru. Lanjutkan?`
-            : ''
-        }
-      />
-
-      <ConfirmDialog
-        open={hapusPeserta !== null}
-        onCancel={() => setHapusPeserta(null)}
-        onConfirm={buangPeserta}
-        message={
-          hapusPeserta
-            ? `Kehadiran "${hapusPeserta.name}" akan dihapus permanen beserta tanda tangannya. Lanjutkan?`
             : ''
         }
       />

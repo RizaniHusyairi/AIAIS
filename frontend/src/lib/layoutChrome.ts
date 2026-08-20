@@ -13,8 +13,13 @@
  * - `/aplikasi`     → Portal Aplikasi, layar penuh tanpa chrome apa pun.
  * - `/posko-nataru` → papan pantau satu layar untuk monitor terminal; navbar
  *                     dan footer akan memakan tinggi yang justru harus utuh.
+ * - `/absensi`      → daftar hadir rapat, dibuka dari QR di pintu ruang rapat.
+ *                     Layar sekali-pakai: peserta datang lewat tautan bertoken,
+ *                     mengisi, lalu menyerahkan ponsel kepada orang berikutnya.
+ *                     Navbar seluruh portal (beserta pintu masuk akun di
+ *                     dalamnya) hanya mengundangnya tersesat dari antrean.
  */
-export const OWN_CHROME_ROUTES = ['/app', '/admin', '/aplikasi', '/posko-nataru'] as const;
+export const OWN_CHROME_ROUTES = ['/app', '/admin', '/aplikasi', '/posko-nataru', '/absensi'] as const;
 
 /**
  * Benar bila rute ini menyediakan chrome-nya sendiri.

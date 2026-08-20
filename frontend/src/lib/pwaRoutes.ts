@@ -120,16 +120,26 @@ const TERURUT = [...TABEL].sort((a, b) => b.publik.length - a.publik.length);
  * daftar ini pembacanya terlempar ke beranda aplikasi dan halaman yang
  * dicarinya lenyap tanpa jejak.
  *
- * Ketiganya sudah responsif dan justru lebih baik dibaca apa adanya:
- * statistik dan kinerja keuangan penuh grafik, dan papan Posko Nataru memang
- * dirancang untuk layar lebar tetapi harus tetap dapat diperiksa petugas dari
- * ponsel. `/peta-rute` sebuah peta interaktif yang sudah menyesuaikan diri.
+ * Keempat yang pertama sudah responsif dan justru lebih baik dibaca apa
+ * adanya: statistik dan kinerja keuangan penuh grafik, dan papan Posko Nataru
+ * memang dirancang untuk layar lebar tetapi harus tetap dapat diperiksa
+ * petugas dari ponsel. `/peta-rute` sebuah peta interaktif yang sudah
+ * menyesuaikan diri.
+ *
+ * `/absensi` masuk dengan alasan yang berbeda dan lebih keras: TOKENNYA ADA
+ * DI DALAM URL. Tanpa baris ini `toAppRoute` mengembalikan `/app` — persis
+ * yang terjadi sebelumnya: peserta yang memindai QR di pintu ruang rapat
+ * mendarat di beranda aplikasi, tokennya hilang bersama pengalihan, dan tidak
+ * ada satu pun jalan dari beranda menuju daftar hadir rapatnya. Layarnya
+ * sendiri sudah dibangun untuk ponsel (lihat `app/absensi/[token]`), jadi
+ * tidak ada yang perlu dialihkan ke mana pun.
  */
 export const KEEP_RESPONSIVE = [
   '/statistik',
   '/keuangan',
   '/posko-nataru',
   '/peta-rute',
+  '/absensi',
 ] as const;
 
 /** Benar bila rute ini harus disajikan apa adanya, tanpa pengalihan ke PWA. */

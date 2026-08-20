@@ -73,4 +73,9 @@
             Jumlah peserta yang tercatat hadir: <strong>{{ $peserta->count() }}</strong> orang.
         </p>
     @endif
+
+    {{-- Blok "Mengetahui". Tercetak juga ketika daftarnya masih kosong:
+         lembar yang dibawa ke ruang rapat untuk diisi manual tetap butuh
+         tempat pengesahannya. --}}
+    @include('pdf._ttd')
 @endsection
