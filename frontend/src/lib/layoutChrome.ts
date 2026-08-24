@@ -18,8 +18,13 @@
  *                     mengisi, lalu menyerahkan ponsel kepada orang berikutnya.
  *                     Navbar seluruh portal (beserta pintu masuk akun di
  *                     dalamnya) hanya mengundangnya tersesat dari antrean.
+ * - `/tourism`     → panggung destinasi, disusun sebagai tayangan layar penuh
+ *                     bergaya film. Babak judulnya setinggi satu layar dan
+ *                     latarnya `fixed`; navbar terang serta footer portal
+ *                     memotong keduanya dan mematahkan ilusi itu. Halaman ini
+ *                     memasang bilah kembalinya sendiri.
  */
-export const OWN_CHROME_ROUTES = ['/app', '/admin', '/aplikasi', '/posko-nataru', '/absensi'] as const;
+export const OWN_CHROME_ROUTES = ['/app', '/admin', '/aplikasi', '/posko-nataru', '/absensi', '/tourism'] as const;
 
 /**
  * Benar bila rute ini menyediakan chrome-nya sendiri.

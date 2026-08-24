@@ -157,16 +157,140 @@ export const TOURISM_SPOTS: TourismSpot[] = [
   },
 ];
 
-/** Warna & label per kategori, selaras dengan palet halaman fasilitas. */
-export const TOURISM_CAT_META: Record<TourismCategory, { color: string; bg: string }> = {
-  Budaya: { color: '#7c3aed', bg: '#f5f3ff' },
-  Alam: { color: '#059669', bg: '#ecfdf5' },
-  Religi: { color: '#0891b2', bg: '#ecfeff' },
-  Belanja: { color: '#d97706', bg: '#fffbeb' },
-  Rekreasi: { color: '#e11d48', bg: '#fff1f2' },
+/**
+ * Warna & atmosfer per kategori.
+ *
+ * `color`/`bg` adalah palet terang yang dipakai kartu ringkas di beranda dan
+ * PWA. `glow`/`wash`/`plate` hanya dipakai panggung sinematik `/tourism`:
+ *
+ * - `glow`  — warna sorot: berkas cahaya, bokeh, dan aksen antarmuka.
+ * - `wash`  — gradasi silang di belakang sorot, sengaja jauh lebih pekat
+ *             supaya sorot tetap menonjol di atas latar hitam.
+ * - `plate` — plat atmosfer sinematik opsional (lintasan di `public/`).
+ *             Selama `null`, seluruh lapisan atmosfer dibangkitkan lewat
+ *             gradasi CSS. Plat hanya boleh berisi tekstur dan cahaya abstrak,
+ *             bukan gambaran destinasinya: destinasi di halaman ini tempat
+ *             nyata, dan fotonya harus datang dari admin lewat API.
+ */
+export const TOURISM_CAT_META: Record<
+  TourismCategory,
+  { color: string; bg: string; glow: string; wash: string; plate: string | null }
+> = {
+  Budaya: { color: '#7c3aed', bg: '#f5f3ff', glow: '#a78bfa', wash: '#2e1065', plate: '/bg/wisata/budaya.webp' },
+  Alam: { color: '#059669', bg: '#ecfdf5', glow: '#34d399', wash: '#022c22', plate: '/bg/wisata/alam.webp' },
+  Religi: { color: '#0891b2', bg: '#ecfeff', glow: '#22d3ee', wash: '#083344', plate: '/bg/wisata/religi.webp' },
+  Belanja: { color: '#d97706', bg: '#fffbeb', glow: '#fbbf24', wash: '#451a03', plate: '/bg/wisata/belanja.webp' },
+  Rekreasi: { color: '#e11d48', bg: '#fff1f2', glow: '#fb7185', wash: '#4c0519', plate: '/bg/wisata/rekreasi.webp' },
 };
 
 export const TOURISM_CATEGORIES = Object.keys(TOURISM_CAT_META) as TourismCategory[];
+
+/* ================================================================
+   Ilustrasi & partikel panggung sinematik
+   ================================================================ */
+
+/**
+ * Ilustrasi latar per destinasi.
+ *
+ * PROVENANS. Berkas di sini adalah **ilustrasi sintetis buatan AI**
+ * (Higgsfield, model `gpt_image_2`), BUKAN foto. Ia menggambarkan gaya dan
+ * suasana destinasi, bukan wujud aslinya — bangunan, ukiran, dan lanskap di
+ * dalamnya tidak sesuai kenyataan.
+ *
+ * Karena itu setiap tempat gambar ini tampil WAJIB memberi label bahwa ia
+ * ilustrasi, dan ilustrasi tidak boleh dipakai bila admin sudah mengunggah
+ * foto asli (`cover_url`). Urutannya: foto admin → ilustrasi → plat kategori.
+ * Lihat `TourismView.tsx`, konstanta `LENCANA_ILUSTRASI`.
+ *
+ * Kunci memakai `slug` destinasi. Destinasi yang ditambahkan admin lewat API
+ * tidak punya entri di sini dan jatuh ke plat kategorinya — itu memang
+ * disengaja: mengarang ilustrasi untuk tempat yang belum kita kenal justru
+ * memperbesar risiko yang sudah ada.
+ *
+ * Jangan mengisi kunci dengan lintasan berkas yang belum ada — hasilnya 404
+ * dan lapisan latar yang rusak diam-diam.
+ *
+ * Dibangkitkan 21 Agustus 2026, `gpt_image_2`, rasio 21:9, resolusi 2k,
+ * kualitas medium; dikecilkan ke lebar 1600 px dan disimpan sebagai WebP
+ * kualitas 72. Prompt disusun dari `description` dan `highlights` tiap
+ * destinasi di berkas ini, bergaya gelap agar teks di atasnya tetap terbaca.
+ *
+ * CATATAN PENTING. Hasilnya condong FOTOREALISTIS, bukan lukisan, meski
+ * prompt-nya meminta gaya painterly. Beberapa di antaranya — terutama
+ * `islamic-center-samarinda` dan `citra-niaga` — dapat disangka foto pada
+ * pandangan sekilas. Itu justru membuat lencana penanda di `TourismView.tsx`
+ * bukan sekadar formalitas melainkan syarat: tanpanya pengunjung akan mengira
+ * ia melihat wujud asli tempat itu.
+ */
+export const TOURISM_ILUSTRASI: Record<string, string> = {
+  'desa-budaya-pampang': '/bg/wisata/desa-budaya-pampang.webp',
+  'air-terjun-tanah-merah': '/bg/wisata/air-terjun-tanah-merah.webp',
+  'kebun-raya-unmul': '/bg/wisata/kebun-raya-unmul.webp',
+  'islamic-center-samarinda': '/bg/wisata/islamic-center-samarinda.webp',
+  'tepian-mahakam': '/bg/wisata/tepian-mahakam.webp',
+  'citra-niaga': '/bg/wisata/citra-niaga.webp',
+  'kampung-tenun-samarinda-seberang': '/bg/wisata/kampung-tenun-samarinda-seberang.webp',
+  'masjid-shiratal-mustaqiem': '/bg/wisata/masjid-shiratal-mustaqiem.webp',
+  'pulau-kumala': '/bg/wisata/pulau-kumala.webp',
+  'museum-mulawarman': '/bg/wisata/museum-mulawarman.webp',
+};
+
+/** Watak gerak partikel yang menyertai sebuah destinasi. */
+export type JenisPartikel = 'percik' | 'bara' | 'serbuk' | 'debu-emas' | 'kunang';
+
+/**
+ * Sprite partikel per watak.
+ *
+ * PROVENANS. Sama seperti ilustrasi: dibangkitkan Higgsfield, dan sengaja
+ * dibuat di atas latar hitam pekat — bukan transparan — supaya dapat ditumpuk
+ * dengan `mix-blend-mode: screen`, yang melarutkan hitamnya tanpa bergantung
+ * pada dukungan alfa.
+ *
+ * Selama `null`, `Partikel` menggambar butirnya sendiri dari gradasi radial
+ * dalam warna sorot kategori. Geraknya sudah berjalan penuh tanpa sprite;
+ * sprite hanya menggantikan rupa butirnya.
+ */
+export const PARTIKEL_SPRITE: Record<JenisPartikel, string | null> = {
+  percik: '/bg/wisata/partikel/percik.webp',
+  bara: '/bg/wisata/partikel/bara.webp',
+  serbuk: '/bg/wisata/partikel/serbuk.webp',
+  'debu-emas': '/bg/wisata/partikel/debu-emas.webp',
+  kunang: '/bg/wisata/partikel/kunang.webp',
+};
+
+/** Watak gerak bawaan per kategori, untuk destinasi yang tidak terdaftar. */
+export const PARTIKEL_KATEGORI: Record<TourismCategory, JenisPartikel> = {
+  Budaya: 'debu-emas',
+  Alam: 'serbuk',
+  Religi: 'kunang',
+  Belanja: 'bara',
+  Rekreasi: 'percik',
+};
+
+/**
+ * Watak gerak per destinasi.
+ *
+ * Hanya destinasi yang wataknya berbeda dari bawaan kategorinya yang perlu
+ * ditulis di sini. Tepian Mahakam dan Pulau Kumala sama-sama Rekreasi dan
+ * sama-sama berair, jadi keduanya cukup memakai bawaan; Kebun Raya Unmul
+ * berkategori Alam tetapi danaunya membuat percik lebih cocok daripada serbuk.
+ */
+export const TOURISM_PARTIKEL: Record<string, JenisPartikel> = {
+  'kebun-raya-unmul': 'percik',
+  'air-terjun-tanah-merah': 'percik',
+  'kampung-tenun-samarinda-seberang': 'debu-emas',
+  'museum-mulawarman': 'debu-emas',
+};
+
+/** Ilustrasi untuk sebuah destinasi, bila ada. */
+export function ilustrasiUntuk(slug: string): string | null {
+  return TOURISM_ILUSTRASI[slug] ?? null;
+}
+
+/** Watak gerak partikel untuk sebuah destinasi. */
+export function partikelUntuk(slug: string, kategori: TourismCategory): JenisPartikel {
+  return TOURISM_PARTIKEL[slug] ?? PARTIKEL_KATEGORI[kategori];
+}
 
 /** Tautan pencarian Google Maps untuk sebuah destinasi. */
 export function mapsUrl(spot: TourismSpot) {

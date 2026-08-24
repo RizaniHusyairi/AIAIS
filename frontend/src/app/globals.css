@@ -53,6 +53,23 @@
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
+/* ---- Silang gambar panggung wisata (/tourism) ----
+   Lapisan atas memudar masuk di atas gambar sebelumnya. Dipasang ulang lewat
+   `key` sehingga terputar dari awal setiap destinasi berganti.
+
+   Sengaja animasi CSS, bukan animasi JS per-frame: `both` mengunci keadaan
+   akhir pada style engine, jadi bingkai tetap benar walau tab sempat
+   disembunyikan atau frame-nya terlewat di tengah peralihan. Opacity tujuan
+   dan durasinya diatur pemakainya lewat dua variabel di bawah. */
+@keyframes aiais-silang-masuk {
+  from { opacity: 0; }
+  to { opacity: var(--silang-op, 1); }
+}
+.silang-masuk { animation: aiais-silang-masuk var(--silang-dur, 1100ms) ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .silang-masuk { animation-duration: 1ms; }
+}
+
 /* ---- Article typography (light theme, aviation nuance) ---- */
 .article-content {
   color: #334155;

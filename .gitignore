@@ -97,3 +97,7 @@ docs/*.csv
 *.pem
 *.key
 *.p12
+
+# Konfigurasi konektor MCP per-mesin (lihat CLAUDE.md: berkas .claude/ dan
+# konfigurasi mesin tidak ikut repositori)
+.mcp.json
