@@ -1,357 +1,558 @@
 'use client';
 
-import SafeHtml from '@/components/SafeHtml';
-import React, { useEffect, useRef, useState } from 'react';
+/**
+ * Layar baca satu berita di aplikasi — inilah yang dilihat pengunjung ponsel.
+ *
+ * Proksi mobile melempar `/news/{slug}` ke sini, jadi layar ini yang menanggung
+ * sebagian besar pembaca. Perhitungannya dibagi dengan layar desktop lewat
+ * `lib/berita.ts`, dan bahasa visualnya sengaja sama: hero sinematik dengan
+ * papan informasi bergaya FIDS, lembar artikel yang menaikinya, sub judul
+ * bernomor titik lintasan, dan penutup bergaya papan keberangkatan.
+ *
+ * Yang berbeda hanyalah hal-hal yang memang harus berbeda di ponsel: daftar isi
+ * jadi lembar bawah yang terjangkau satu ibu jari, dan bilah bagikan menempel
+ * di kaki layar alih-alih tinggal di margin kiri.
+ *
+ * Kemajuan baca terikat pada wadah yang benar-benar bergulir. Cangkang aplikasi
+ * menggulir di dalam sebuah `div`, bukan di jendela — mengikatnya ke `window`
+ * membuat pesawatnya diam di tempat.
+ */
+
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { motion, useMotionValue, useTransform } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import SafeHtml from '@/components/SafeHtml';
 import { fetchApi } from '@/lib/api';
+import { urlAbsolut } from '@/lib/seo';
 import { NewsItem } from '@/types';
 import { StatusBar, listContainer, listItem } from '@/components/pwa/ui';
 import {
-  ChevronLeft, Share2, Plane, Calendar, Clock, Eye, User, Check, Link2, MessageCircle, ArrowRight,
+  bacaDaftarIsi, gambarBerita, judulKe, tanggalPendek, terkait, tetangga, waktuBaca,
+  type Bagian,
+} from '@/lib/berita';
+import {
+  ChevronLeft, Plane, Clock, Eye, Check, Link2, MessageCircle,
+  ArrowRight, ArrowLeft, ListTree, ArrowUp, Compass, Newspaper, Sparkles, ChevronRight, PenLine,
 } from 'lucide-react';
-
-const CATEGORY_COLORS: Record<string, string> = {
-  Berita: '#2563eb',
-  Pengumuman: '#ea580c',
-  Event: '#7c3aed',
-};
-
-const REACTIONS = [
-  { key: 'helpful', emoji: '👍', label: 'Membantu', active: 'bg-blue-600 border-blue-600' },
-  { key: 'informative', emoji: '💡', label: 'Informatif', active: 'bg-amber-500 border-amber-500' },
-  { key: 'appreciate', emoji: '❤️', label: 'Apresiasi', active: 'bg-rose-500 border-rose-500' },
-  { key: 'important', emoji: '🚀', label: 'Penting', active: 'bg-emerald-600 border-emerald-600' },
-] as const;
 
 export default function BeritaDetailScreen() {
   const params = useParams();
   const slug = String(params?.slug ?? '');
+  const kurangiGerak = useReducedMotion();
 
-  const [article, setArticle] = useState<NewsItem | null>(null);
-  const [related, setRelated] = useState<NewsItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [copied, setCopied] = useState(false);
-  const [counts, setCounts] = useState({ helpful: 142, informative: 98, appreciate: 76, important: 54 });
-  const [reacted, setReacted] = useState<string | null>(null);
+  const [artikel, setArtikel] = useState<NewsItem | null>(null);
+  const [daftar, setDaftar] = useState<NewsItem[]>([]);
+  const [memuat, setMemuat] = useState(true);
+  const [tersalin, setTersalin] = useState(false);
+  const [bukaRute, setBukaRute] = useState(false);
 
-  /* --- reading progress bound to the PWA scroll container --- */
-  const rootRef = useRef<HTMLDivElement>(null);
-  const progress = useMotionValue(0);
-  const planeLeft = useTransform(progress, [0, 1], ['0%', '100%']);
+  const akarRef = useRef<HTMLDivElement>(null);
+  const badanRef = useRef<HTMLDivElement>(null);
+  const [bagian, setBagian] = useState<Bagian[]>([]);
 
-  useEffect(() => {
-    const el = rootRef.current;
-    if (!el) return;
+  /* ---------- kemajuan baca ---------- */
 
-    // The app shell scrolls in a div, not the window — find that ancestor.
-    let node: HTMLElement | null = el.parentElement;
-    while (node) {
-      const oy = getComputedStyle(node).overflowY;
-      if (oy === 'auto' || oy === 'scroll') break;
-      node = node.parentElement;
+  // Ditulis langsung ke DOM lewat `ref`, sama seperti halaman desktop —
+  // alasannya di `lib/gulirBaca.ts`.
+  const isiBilahRef = useRef<HTMLSpanElement>(null);
+  const pesawatRef = useRef<HTMLSpanElement>(null);
+
+  /** Wadah yang benar-benar menggulir; cangkang aplikasi menggulir di dalam div. */
+  const cariPenggulir = useCallback((): HTMLElement | null => {
+    let simpul: HTMLElement | null = akarRef.current?.parentElement ?? null;
+
+    while (simpul) {
+      const oy = getComputedStyle(simpul).overflowY;
+      if (oy === 'auto' || oy === 'scroll') return simpul;
+      simpul = simpul.parentElement;
     }
 
-    const onScroll = () => {
-      if (node) {
-        const max = node.scrollHeight - node.clientHeight;
-        progress.set(max > 0 ? node.scrollTop / max : 0);
-      } else {
-        const max = document.body.scrollHeight - window.innerHeight;
-        progress.set(max > 0 ? window.scrollY / max : 0);
-      }
-    };
-
-    const target: HTMLElement | Window = node ?? window;
-    onScroll();
-    target.addEventListener('scroll', onScroll, { passive: true });
-    return () => target.removeEventListener('scroll', onScroll);
-  }, [progress, article]);
+    return null;
+  }, []);
 
   useEffect(() => {
-    async function load() {
-      setLoading(true);
-      const [detail, list] = await Promise.all([
+    if (!akarRef.current) return;
+
+    const simpul = cariPenggulir();
+
+    const hitung = () => {
+      const maks = simpul
+        ? simpul.scrollHeight - simpul.clientHeight
+        : document.body.scrollHeight - window.innerHeight;
+      const posisi = simpul ? simpul.scrollTop : window.scrollY;
+      const v = maks > 0 ? Math.min(1, Math.max(0, posisi / maks)) : 0;
+
+      if (isiBilahRef.current) isiBilahRef.current.style.transform = `scaleX(${v})`;
+      if (pesawatRef.current) pesawatRef.current.style.left = `${v * 100}%`;
+    };
+
+    const sasaran: HTMLElement | Window = simpul ?? window;
+    hitung();
+    sasaran.addEventListener('scroll', hitung, { passive: true });
+    window.addEventListener('resize', hitung);
+
+    return () => {
+      sasaran.removeEventListener('scroll', hitung);
+      window.removeEventListener('resize', hitung);
+    };
+  }, [artikel, cariPenggulir]);
+
+  /* ---------- data ---------- */
+
+  useEffect(() => {
+    let batal = false;
+
+    (async () => {
+      setMemuat(true);
+
+      const [detail, senarai] = await Promise.all([
         fetchApi<NewsItem>(`/news/${slug}`),
         fetchApi<NewsItem[]>('/news'),
       ]);
-      if (detail.success && detail.data) setArticle(detail.data);
-      if (list.success && Array.isArray(list.data)) {
-        setRelated(list.data.filter((n) => n.slug !== slug).slice(0, 4));
-      }
-      setLoading(false);
-    }
-    load();
+
+      if (batal) return;
+
+      setArtikel(detail.success && detail.data?.title ? detail.data : null);
+      setDaftar(senarai.success && Array.isArray(senarai.data) ? senarai.data : []);
+      setMemuat(false);
+    })();
+
+    return () => { batal = true; };
   }, [slug]);
 
-  const copyLink = async () => {
+  useEffect(() => {
+    if (!artikel) return;
+
+    setBagian(bacaDaftarIsi(badanRef.current));
+  }, [artikel]);
+
+  const salinTaut = useCallback(async (taut: string) => {
     try {
-      await navigator.clipboard.writeText(window.location.href);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {}
+      await navigator.clipboard.writeText(taut);
+      setTersalin(true);
+      setTimeout(() => setTersalin(false), 2000);
+    } catch {
+      /* peramban tanpa izin papan klip: tombol sekadar tidak berubah */
+    }
+  }, []);
+
+  const lain = useMemo(() => (artikel ? terkait(daftar, artikel, 6) : []), [daftar, artikel]);
+  const { sebelumnya, selanjutnya } = useMemo(() => tetangga(daftar, slug), [daftar, slug]);
+
+  // Judul dialamatkan lewat posisi, bukan `id` — lihat `bacaDaftarIsi`.
+  const lompat = (indeks: number) => {
+    setBukaRute(false);
+    judulKe(badanRef.current, indeks)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  const react = (key: string) => {
-    if (reacted === key) return;
-    setCounts((p) => ({ ...p, [key]: (p as any)[key] + 1 }));
-    setReacted(key);
-  };
+  const keAwal = () => (cariPenggulir() ?? window).scrollTo({ top: 0, behavior: 'smooth' });
 
-  if (loading || !article) {
-    return (
-      <div className="min-h-full bg-slate-50 flex flex-col items-center justify-center gap-4 py-32">
-        <motion.div
-          animate={{ x: [-14, 14, -14], y: [3, -3, 3] }}
-          transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
-          className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/30"
-        >
-          <Plane className="w-7 h-7 text-white rotate-45" />
-        </motion.div>
-        <p className="text-slate-500 text-[13px] font-medium">Memuat artikel...</p>
-      </div>
-    );
-  }
+  if (memuat) return <SedangMemuat />;
+  if (!artikel) return <TidakDitemukan />;
 
-  const dateStr = new Date(article.published_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-  const words = article.content.replace(/<[^>]+>/g, ' ').trim().split(/\s+/).length;
-  const readMin = Math.max(1, Math.round(words / 200));
-  const catColor = CATEGORY_COLORS[article.category] || '#2563eb';
+  const sampul = gambarBerita(artikel);
+  const menitBaca = waktuBaca(artikel.content);
+
+  // Yang dibagikan adalah URL kanonis portal, bukan lintasan aplikasi: tautan
+  // `/app/berita/...` yang beredar di WhatsApp membawa penerimanya ke cangkang
+  // aplikasi, bukan ke halaman berita yang bisa dibuka siapa pun.
+  const taut = urlAbsolut(`/news/${artikel.slug}`);
 
   return (
-    <div ref={rootRef} className="min-h-full bg-slate-50 pb-8">
-      {/* Reading progress — flight path */}
-      <div className="sticky top-0 z-40 h-1 bg-slate-200/70">
-        <motion.div style={{ scaleX: progress }} className="h-full origin-left bg-gradient-to-r from-blue-600 via-cyan-400 to-teal-400" />
-        <motion.div style={{ left: planeLeft }} className="absolute -top-[6px] -ml-2">
+    <div ref={akarRef} className="min-h-full bg-[#f6f8fc]">
+      {/* Kemajuan baca — lintasan penerbangan */}
+      <div className="sticky top-0 z-40 h-[3px] bg-slate-200/70">
+        <span
+          ref={isiBilahRef}
+          className="block h-full origin-left scale-x-0 bg-gradient-to-r from-blue-600 via-cyan-400 to-teal-400"
+        />
+        <span ref={pesawatRef} className="absolute -top-[7px] -ml-2 left-0">
           <Plane className="w-3.5 h-3.5 text-blue-600 fill-blue-600 rotate-45" />
-        </motion.div>
+        </span>
       </div>
 
       {/* ===== HERO ===== */}
-      <div className="relative h-[300px] overflow-hidden -mt-1">
-        <motion.img
-          initial={{ scale: 1.15 }}
-          animate={{ scale: 1 }}
-          transition={{ duration: 1.3, ease: [0.22, 1, 0.36, 1] }}
-          src={article.thumbnail}
-          alt={article.title}
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#091124] via-[#091124]/70 to-[#091124]/25" />
+      <header className="relative min-h-[430px] h-[62vh] max-h-[560px] overflow-hidden bg-[#050d1f] flex flex-col -mt-[3px]">
+        {sampul ? (
+          <motion.img
+            initial={{ scale: 1.16 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
+            src={sampul}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_20%,#123a6b_0%,#050d1f_65%)]" />
+        )}
 
-        {/* drifting cloud */}
-        <div className="absolute top-14 left-[10%] w-32 h-12 bg-white/10 blur-2xl rounded-full" style={{ animation: 'cloudDrift 10s ease-in-out infinite alternate' }} />
+        <div className="absolute inset-0 bg-[#050d1f]/40" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#050d1f] via-[#050d1f]/72 to-transparent" />
 
-        {/* flight arc */}
-        <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 400 300" preserveAspectRatio="none">
+        <div className="absolute top-16 left-[8%] w-36 h-14 bg-white/10 blur-2xl rounded-full pointer-events-none" style={{ animation: 'cloudDrift 11s ease-in-out infinite alternate' }} />
+
+        <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 400 400" preserveAspectRatio="none" aria-hidden>
           <motion.path
-            d="M-10 200 Q 160 110 410 175"
+            d="M-10 300 Q 150 170 410 250"
             fill="none"
-            stroke="rgba(255,255,255,0.3)"
+            stroke="rgba(125,211,252,0.32)"
             strokeWidth="1.5"
-            strokeDasharray="5 7"
+            strokeDasharray="5 8"
             initial={{ pathLength: 0 }}
             animate={{ pathLength: 1 }}
-            transition={{ duration: 1.5, ease: 'easeInOut' }}
+            transition={{ duration: 1.6, ease: 'easeInOut' }}
           />
         </svg>
+
         <motion.div
-          initial={{ x: -40, opacity: 0 }}
+          initial={{ x: -50, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
-          transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
-          className="absolute right-8 top-[38%]"
+          transition={{ duration: 1.3, ease: [0.22, 1, 0.36, 1] }}
+          className="absolute right-7 top-[30%] pointer-events-none"
         >
-          <motion.div animate={{ y: [0, -6, 0] }} transition={{ repeat: Infinity, duration: 3.5, ease: 'easeInOut' }}>
-            <Plane className="w-7 h-7 text-cyan-300 rotate-[18deg] drop-shadow" />
+          <motion.div
+            animate={kurangiGerak ? {} : { y: [0, -8, 0] }}
+            transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut' }}
+          >
+            <Plane className="w-8 h-8 text-cyan-300/90 rotate-[18deg] drop-shadow-[0_6px_18px_rgba(34,211,238,0.45)]" />
           </motion.div>
         </motion.div>
 
-        {/* top bar */}
+        {/* Bilah atas */}
         <div className="relative z-10">
           <StatusBar />
           <div className="flex items-center justify-between px-4 pt-1">
-            <Link href="/app/berita">
+            <Link href="/app/berita" aria-label="Kembali ke daftar berita">
               <motion.span
                 whileTap={{ scale: 0.88 }}
-                className="w-10 h-10 rounded-full bg-black/35 backdrop-blur border border-white/20 flex items-center justify-center text-white"
+                className="w-10 h-10 rounded-full bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center text-white"
               >
                 <ChevronLeft className="w-6 h-6" />
               </motion.span>
             </Link>
-            <motion.button
-              whileTap={{ scale: 0.88 }}
-              onClick={copyLink}
-              className="w-10 h-10 rounded-full bg-black/35 backdrop-blur border border-white/20 flex items-center justify-center text-white"
-              aria-label="Bagikan"
-            >
-              {copied ? <Check className="w-5 h-5 text-emerald-300" /> : <Share2 className="w-5 h-5" />}
-            </motion.button>
+
+            {bagian.length > 1 && (
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={() => setBukaRute(true)}
+                className="h-10 px-3.5 rounded-full bg-white/10 backdrop-blur border border-white/20 flex items-center gap-2 text-white text-[11px] font-bold uppercase tracking-[0.12em]"
+              >
+                <ListTree className="w-4 h-4 text-cyan-300" /> Rute
+              </motion.button>
+            )}
           </div>
         </div>
 
-        {/* title */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 pb-6 z-10">
-          <motion.span
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-            className="inline-flex items-center gap-1.5 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full shadow"
-            style={{ backgroundColor: catColor }}
-          >
-            <Plane className="w-3 h-3" /> {article.category}
-          </motion.span>
+        {/* Judul & papan informasi */}
+        <div className="relative z-10 mt-auto px-4 pb-9">
+          <PapanFids artikel={artikel} menitBaca={menitBaca} />
+
           <motion.h1
-            initial={{ opacity: 0, y: 14 }}
+            initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.22, duration: 0.45 }}
-            className="mt-2 text-[21px] font-black text-white leading-snug"
+            transition={{ delay: 0.2, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            className="mt-3.5 text-[25px] font-black text-white leading-[1.13] tracking-[-0.02em] text-balance drop-shadow-[0_2px_14px_rgba(0,0,0,0.45)]"
           >
-            {article.title}
+            {artikel.title}
           </motion.h1>
         </div>
-      </div>
+      </header>
 
-      {/* ===== META STRIP (boarding-pass style) ===== */}
-      <div className="px-4 relative z-20">
-        <motion.div
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, type: 'spring', stiffness: 280, damping: 24 }}
-          className="-mt-5 bg-white rounded-2xl shadow-lg shadow-slate-300/30 border border-slate-100 grid grid-cols-3 divide-x divide-dashed divide-slate-200"
-        >
-          <MetaCell icon={Calendar} label="Terbit" value={dateStr.replace(/ \d{4}$/, '')} />
-          <MetaCell icon={Clock} label="Baca" value={`${readMin} menit`} />
-          <MetaCell icon={Eye} label="Pembaca" value={article.views_count.toLocaleString('id-ID')} />
-        </motion.div>
-      </div>
+      {/* ===== LEMBAR ARTIKEL ===== */}
+      <motion.div
+        initial={{ opacity: 0, y: 28 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25, type: 'spring', stiffness: 250, damping: 28 }}
+        className="relative z-20 -mt-6 bg-white rounded-t-[1.75rem] shadow-[0_-18px_44px_-24px_rgba(9,17,36,0.5)] pb-8"
+      >
+        <div className="flex justify-center pt-3.5">
+          <span className="w-12 h-1.5 rounded-full bg-slate-200" aria-hidden />
+        </div>
 
-      {/* ===== BODY ===== */}
-      <motion.div variants={listContainer} initial="hidden" animate="show" className="px-4 pt-5 space-y-5">
-        {/* author */}
-        <motion.div variants={listItem} className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
-            <User className="w-4 h-4 text-blue-600" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-[10px] text-slate-400">Dipublikasikan oleh</p>
-            <p className="text-[13px] font-bold text-slate-900 truncate">{article.author}</p>
-          </div>
-        </motion.div>
+        <motion.div variants={listContainer} initial="hidden" animate="show" className="px-4 pt-5 space-y-6">
+          <motion.div variants={listItem} className="relative pl-4 border-l-[3px] border-blue-600">
+            <p className="text-[9.5px] font-bold uppercase tracking-[0.2em] text-blue-700 font-mono mb-1.5">Ringkasan</p>
+            <p className="text-slate-700 text-[14.5px] leading-[1.7] font-medium">{artikel.excerpt}</p>
+          </motion.div>
 
-        {/* excerpt */}
-        <motion.div variants={listItem} className="bg-blue-50/70 border-l-4 border-blue-600 rounded-r-2xl p-4">
-          <p className="text-[10px] font-bold text-blue-700 uppercase tracking-wider mb-1">Ringkasan</p>
-          <p className="text-slate-700 text-[13px] leading-relaxed font-medium">{article.excerpt}</p>
-        </motion.div>
+          {/* Isi artikel disaring lebih dulu — lihat components/SafeHtml.tsx. */}
+          <motion.div variants={listItem} ref={badanRef}>
+            <SafeHtml
+              className="article-content article-content--majalah text-[15px] leading-[1.85]"
+              html={artikel.content}
+            />
+          </motion.div>
 
-        {/* content */}
-        {/* Isi artikel disaring lebih dulu — lihat components/SafeHtml.tsx. */}
-        <motion.div variants={listItem}>
-          <SafeHtml
-            className="article-content text-[14px] bg-white rounded-2xl p-4 shadow-sm shadow-slate-200/60 border border-slate-100"
-            html={article.content}
-          />
-        </motion.div>
+          {/* Sobekan tiket — penanda tulisannya sudah habis */}
+          <motion.div variants={listItem} className="relative rounded-2xl bg-[#f6f8fc] border border-slate-200 px-4 py-4 space-y-2">
+            <span className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white border-r border-slate-200" aria-hidden />
+            <span className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white border-l border-slate-200" aria-hidden />
 
-        {/* reactions */}
-        <motion.div variants={listItem} className="bg-white rounded-2xl p-4 shadow-sm shadow-slate-200/60 border border-slate-100 space-y-3">
-          <p className="text-[12px] font-bold text-slate-900">Bagaimana menurut Anda?</p>
-          <div className="grid grid-cols-2 gap-2">
-            {REACTIONS.map((r) => {
-              const on = reacted === r.key;
-              return (
-                <motion.button
-                  key={r.key}
-                  whileTap={{ scale: 0.94 }}
-                  onClick={() => react(r.key)}
-                  className={`flex items-center justify-between px-3 py-2.5 rounded-xl border text-[12px] font-bold transition-colors ${
-                    on ? `${r.active} text-white` : 'bg-slate-50 border-slate-200 text-slate-700'
-                  }`}
-                >
-                  <span>{r.emoji} {r.label}</span>
-                  <span className={`text-[11px] ${on ? 'text-white/80' : 'text-slate-400'}`}>{(counts as any)[r.key]}</span>
-                </motion.button>
-              );
-            })}
-          </div>
-        </motion.div>
+            <p className="text-[9.5px] font-bold uppercase tracking-[0.2em] text-slate-400 font-mono">Selesai dibaca</p>
+            <p className="flex flex-wrap items-center gap-x-3.5 gap-y-1 text-[11px] text-slate-500 font-mono">
+              <span className="flex items-center gap-1.5"><PenLine className="w-3.5 h-3.5 text-blue-600" /> {artikel.author}</span>
+              <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-blue-600" /> {menitBaca} menit</span>
+              <span className="flex items-center gap-1.5"><Eye className="w-3.5 h-3.5 text-blue-600" /> {(artikel.views_count ?? 0).toLocaleString('id-ID')}</span>
+            </p>
+          </motion.div>
 
-        {/* share */}
-        <motion.div variants={listItem} className="flex gap-2">
-          <a
-            href={`https://wa.me/?text=${encodeURIComponent(article.title)}`}
-            target="_blank"
-            rel="noreferrer"
-            className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 text-white text-[13px] font-semibold py-3 rounded-2xl active:scale-95 transition-transform"
+          {/* Bagikan */}
+          <motion.div variants={listItem} className="flex gap-2">
+            <a
+              href={`https://wa.me/?text=${encodeURIComponent(`${artikel.title} — ${taut}`)}`}
+              target="_blank"
+              rel="noreferrer"
+              className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 text-white text-[13px] font-bold py-3 rounded-2xl active:scale-95 transition-transform"
+            >
+              <MessageCircle className="w-4 h-4" /> WhatsApp
+            </a>
+            <button
+              onClick={() => salinTaut(taut)}
+              className={`flex-1 flex items-center justify-center gap-2 text-[13px] font-bold py-3 rounded-2xl border transition-colors active:scale-95 ${
+                tersalin ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-700 border-slate-200'
+              }`}
+            >
+              {tersalin ? <Check className="w-4 h-4" /> : <Link2 className="w-4 h-4" />}
+              {tersalin ? 'Tersalin' : 'Salin Link'}
+            </button>
+          </motion.div>
+
+          {(sebelumnya || selanjutnya) && (
+            <motion.div variants={listItem} className="grid grid-cols-1 gap-2">
+              {selanjutnya && <KartuTetangga berita={selanjutnya} arah="selanjutnya" />}
+              {sebelumnya && <KartuTetangga berita={sebelumnya} arah="sebelumnya" />}
+            </motion.div>
+          )}
+
+          <motion.button
+            variants={listItem}
+            onClick={keAwal}
+            className="w-full py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400 flex items-center justify-center gap-1.5 active:scale-95 transition-transform"
           >
-            <MessageCircle className="w-4 h-4" /> WhatsApp
-          </a>
-          <button
-            onClick={copyLink}
-            className={`flex-1 flex items-center justify-center gap-2 text-[13px] font-semibold py-3 rounded-2xl border transition-colors active:scale-95 ${
-              copied ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-700 border-slate-200'
-            }`}
-          >
-            {copied ? <Check className="w-4 h-4" /> : <Link2 className="w-4 h-4" />}
-            {copied ? 'Tersalin' : 'Salin Link'}
-          </button>
+            <ArrowUp className="w-3.5 h-3.5" /> Ke awal artikel
+          </motion.button>
         </motion.div>
       </motion.div>
 
-      {/* ===== RELATED (horizontal cards) ===== */}
-      {related.length > 0 && (
-        <div className="pt-7">
-          <div className="flex items-center justify-between px-4 mb-3">
-            <h2 className="text-[15px] font-bold text-slate-900">Berita Lainnya</h2>
-            <Link href="/app/berita" className="text-[12px] font-semibold text-blue-600 flex items-center gap-0.5">
-              Semua <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
+      {/* ===== PAPAN KEBERANGKATAN ===== */}
+      {lain.length > 0 && <PapanKeberangkatan daftar={lain} />}
 
-          <div className="flex gap-3 overflow-x-auto no-scrollbar px-4 pb-2">
-            {related.map((r, i) => (
-              <motion.div
-                key={r.id}
-                initial={{ opacity: 0, x: 24 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.1 + i * 0.07, type: 'spring', stiffness: 300, damping: 26 }}
-                className="flex-shrink-0 w-[210px]"
-              >
-                <Link href={`/app/berita/${r.slug}`} className="block bg-white rounded-2xl overflow-hidden shadow-sm shadow-slate-200/60 border border-slate-100 active:scale-[0.97] transition-transform">
-                  <div className="relative h-24">
-                    <img src={r.thumbnail} alt={r.title} className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                    <span
-                      className="absolute top-2 left-2 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase"
-                      style={{ backgroundColor: CATEGORY_COLORS[r.category] || '#2563eb' }}
-                    >
-                      {r.category}
-                    </span>
-                  </div>
-                  <div className="p-3">
-                    <p className="text-[10px] text-slate-400 mb-0.5">
-                      {new Date(r.published_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                    </p>
-                    <h3 className="font-bold text-slate-900 text-[12.5px] leading-snug line-clamp-2">{r.title}</h3>
-                  </div>
-                </Link>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {bukaRute && <LembarRuteBaca bagian={bagian} onTutup={() => setBukaRute(false)} onLompat={lompat} />}
+      </AnimatePresence>
     </div>
   );
 }
 
-function MetaCell({ icon: Icon, label, value }: { icon: any; label: string; value: string }) {
+/* ------------------------------------------------------------------ */
+
+/** Metadata bergaya papan informasi penerbangan. */
+function PapanFids({ artikel, menitBaca }: { artikel: NewsItem; menitBaca: number }) {
+  const kolom = [
+    { label: 'Kategori', nilai: artikel.category, sorot: true },
+    { label: 'Terbit', nilai: tanggalPendek(artikel.published_at) },
+    { label: 'Baca', nilai: `${menitBaca} Mnt` },
+  ];
+
   return (
-    <div className="px-2 py-3 flex flex-col items-center gap-1 text-center">
-      <Icon className="w-4 h-4 text-blue-600" />
-      <p className="text-[9px] text-slate-400 uppercase tracking-wide">{label}</p>
-      <p className="text-[11.5px] font-bold text-slate-900 leading-tight">{value}</p>
+    <motion.div
+      initial="sembunyi"
+      animate="tampil"
+      variants={{ tampil: { transition: { staggerChildren: 0.07, delayChildren: 0.08 } } }}
+      className="flex flex-wrap items-center gap-x-5 gap-y-2 border-l-2 border-cyan-400/70 pl-3"
+    >
+      {artikel.is_featured && (
+        <motion.span
+          variants={{ sembunyi: { opacity: 0, y: 8 }, tampil: { opacity: 1, y: 0 } }}
+          className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-[0.14em] text-amber-300 bg-amber-400/15 border border-amber-300/30 px-2 py-0.5 rounded-full"
+        >
+          <Sparkles className="w-2.5 h-2.5" /> Utama
+        </motion.span>
+      )}
+
+      {kolom.map((k) => (
+        <motion.div key={k.label} variants={{ sembunyi: { opacity: 0, y: 8 }, tampil: { opacity: 1, y: 0 } }}>
+          <p className="text-[8.5px] font-bold uppercase tracking-[0.18em] text-white/40 font-mono">{k.label}</p>
+          <p className={`text-[11.5px] font-bold tracking-wide font-mono ${k.sorot ? 'text-cyan-300' : 'text-white/90'}`}>
+            {k.nilai}
+          </p>
+        </motion.div>
+      ))}
+    </motion.div>
+  );
+}
+
+function KartuTetangga({ berita, arah }: { berita: NewsItem; arah: 'sebelumnya' | 'selanjutnya' }) {
+  const maju = arah === 'selanjutnya';
+
+  return (
+    <Link
+      href={`/app/berita/${berita.slug}`}
+      className="flex items-center gap-3 bg-white rounded-2xl p-3 border border-slate-200 active:scale-[0.98] transition-transform"
+    >
+      {!maju && <ArrowLeft className="w-4 h-4 text-blue-600 flex-shrink-0" />}
+      <div className="min-w-0 flex-1">
+        <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-400 font-mono">
+          {maju ? 'Berita selanjutnya' : 'Berita sebelumnya'}
+        </p>
+        <p className="text-[12.5px] font-bold text-slate-900 line-clamp-2 leading-snug mt-0.5">{berita.title}</p>
+      </div>
+      {maju && <ArrowRight className="w-4 h-4 text-blue-600 flex-shrink-0" />}
+    </Link>
+  );
+}
+
+/**
+ * Berita lainnya sebagai papan keberangkatan.
+ *
+ * Bentuk daftar, bukan kartu bergulir mendatar: judulnya terbaca utuh, dan
+ * enam berita muat dalam ruang yang dulu hanya memuat dua setengah kartu.
+ */
+function PapanKeberangkatan({ daftar }: { daftar: NewsItem[] }) {
+  return (
+    <section className="bg-[#0b1428] px-4 py-9">
+      <div className="flex items-end justify-between gap-3 pb-4 border-b border-white/10">
+        <div>
+          <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-cyan-400 font-mono">
+            Papan Keberangkatan
+          </p>
+          <h2 className="text-white text-[18px] font-black tracking-tight mt-0.5">Berita Berikutnya</h2>
+        </div>
+
+        <Link href="/app/berita" className="text-[11px] text-cyan-300 font-bold flex items-center gap-0.5 flex-shrink-0">
+          Semua <ChevronRight className="w-3.5 h-3.5" />
+        </Link>
+      </div>
+
+      <ul>
+        {daftar.map((n, i) => (
+          <motion.li
+            key={n.id}
+            initial={{ opacity: 0, y: 14 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.4 }}
+            transition={{ delay: i * 0.05, duration: 0.35 }}
+          >
+            <Link
+              href={`/app/berita/${n.slug}`}
+              className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-3.5 border-b border-white/[0.07] active:bg-white/[0.05] px-1 -mx-1 rounded-lg transition-colors"
+            >
+              <span className="min-w-0">
+                <span className="flex items-center gap-2 text-[9px] font-mono uppercase tracking-[0.14em] mb-1">
+                  <span className="text-white/35 tabular-nums">{tanggalPendek(n.published_at)}</span>
+                  <span className="text-cyan-300/70 truncate">{n.category}</span>
+                </span>
+                <span className="block text-white font-bold text-[13.5px] leading-snug line-clamp-2">
+                  {n.title}
+                </span>
+              </span>
+
+              <span className="w-7 h-7 rounded-full border border-white/15 flex items-center justify-center text-white/40 flex-shrink-0">
+                <ArrowRight className="w-3.5 h-3.5" />
+              </span>
+            </Link>
+          </motion.li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/**
+ * Daftar isi sebagai lembar yang muncul dari bawah.
+ *
+ * Di ponsel tidak ada ruang untuk kolom samping, sedangkan artikel panjang
+ * tetap butuh cara melompat antarbagian — pola lembar bawah menjangkaunya
+ * dengan satu ibu jari.
+ */
+function LembarRuteBaca({
+  bagian, onTutup, onLompat,
+}: { bagian: Bagian[]; onTutup: () => void; onLompat: (indeks: number) => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end" role="dialog" aria-modal="true" aria-label="Rute baca">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onTutup}
+        className="absolute inset-0 bg-[#050d1f]/55 backdrop-blur-[3px]"
+      />
+
+      <motion.div
+        initial={{ y: '100%' }}
+        animate={{ y: 0 }}
+        exit={{ y: '100%' }}
+        transition={{ type: 'spring', stiffness: 330, damping: 33 }}
+        className="relative w-full bg-white rounded-t-[1.75rem] max-h-[72vh] flex flex-col"
+      >
+        <div className="pt-3 pb-2 flex justify-center flex-shrink-0">
+          <span className="w-12 h-1.5 rounded-full bg-slate-200" />
+        </div>
+
+        <div className="px-5 pb-3 flex items-center gap-2 border-b border-slate-100 flex-shrink-0">
+          <ListTree className="w-4 h-4 text-blue-600" />
+          <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 font-mono">Rute Baca</h3>
+          <span className="ml-auto text-[10px] text-slate-400 font-mono">{bagian.length} bagian</span>
+        </div>
+
+        <ul className="overflow-y-auto px-3 py-2 pb-9">
+          {bagian.map((b, i) => (
+            <li key={`${i}-${b.teks}`}>
+              <button
+                onClick={() => onLompat(i)}
+                className={`w-full text-left flex items-start gap-3 rounded-2xl px-3 py-3 active:bg-slate-50 transition-colors ${
+                  b.level === 3 ? 'pl-8' : ''
+                }`}
+              >
+                <span className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-600 to-cyan-500 text-white text-[9.5px] font-black font-mono flex items-center justify-center flex-shrink-0 mt-0.5">
+                  {String(i + 1).padStart(2, '0')}
+                </span>
+                <span className="text-[13.5px] font-semibold text-slate-800 leading-snug pt-0.5">{b.teks}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </motion.div>
+    </div>
+  );
+}
+
+function SedangMemuat() {
+  return (
+    <div className="min-h-full bg-[#f6f8fc] flex flex-col items-center justify-center gap-5 py-32">
+      <motion.div
+        animate={{ x: [-14, 14, -14], y: [3, -3, 3] }}
+        transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
+        className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/30"
+      >
+        <Plane className="w-7 h-7 text-white rotate-45" />
+      </motion.div>
+      <p className="text-slate-400 text-[10.5px] font-bold uppercase tracking-[0.2em] font-mono">Memuat artikel</p>
+    </div>
+  );
+}
+
+function TidakDitemukan() {
+  return (
+    <div className="min-h-full bg-[#f6f8fc] flex flex-col items-center justify-center gap-5 px-6 py-28 text-center">
+      <span className="w-16 h-16 rounded-3xl bg-white border border-slate-200 shadow-sm flex items-center justify-center">
+        <Compass className="w-8 h-8 text-slate-300" />
+      </span>
+
+      <div className="space-y-1.5">
+        <h1 className="text-[17px] font-black text-slate-900">Berita tidak ditemukan</h1>
+        <p className="text-[13px] text-slate-500 leading-relaxed">
+          Artikel yang Anda cari mungkin sudah dipindahkan atau tautannya keliru.
+        </p>
+      </div>
+
+      <Link
+        href="/app/berita"
+        className="bg-blue-600 text-white font-bold text-[13px] px-5 py-3 rounded-2xl flex items-center gap-2 active:scale-95 transition-transform"
+      >
+        <Newspaper className="w-4 h-4" /> Lihat Semua Berita
+      </Link>
     </div>
   );
 }

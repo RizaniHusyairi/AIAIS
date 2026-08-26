@@ -15,6 +15,7 @@ import {
 import { TOURISM_SPOTS, TOURISM_CAT_META } from '@/lib/tourismData';
 import { facilityCatMeta, facilityIcon } from '@/lib/facilityMeta';
 import { CATEGORY_STYLES } from '@/lib/newsData';
+import GambarBerita from '@/components/GambarBerita';
 import { CONTACT, MAPS_URL, OFFICIALS, ORG_NAME, ROUTES } from '@/lib/airportProfile';
 import { angka } from '@/lib/airTraffic';
 import {
@@ -801,13 +802,11 @@ export default function BerandaScreen() {
                     href={`/app/berita/${n.slug}`}
                     className="flex items-center gap-3 bg-white rounded-2xl p-3 shadow-sm shadow-slate-200/60 active:scale-[0.98] transition-transform"
                   >
-                    {n.thumbnail && (
-                      <img
-                        src={n.thumbnail}
-                        alt={n.title}
-                        className="w-[78px] h-[78px] rounded-xl object-cover flex-shrink-0"
-                      />
-                    )}
+                    <GambarBerita
+                      berita={n}
+                      ukuranIkon="w-5 h-5"
+                      className="w-[78px] h-[78px] rounded-xl object-cover flex-shrink-0"
+                    />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span

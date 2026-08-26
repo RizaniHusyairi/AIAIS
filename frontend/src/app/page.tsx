@@ -14,6 +14,7 @@ import NamaBandaraHero from '@/components/home/NamaBandaraHero';
 import HeroBoardingPass from '@/components/home/HeroBoardingPass';
 import { LampuLandasan, JudulBagian } from '@/components/home/AviasiDekor';
 import { NewsItem, InstagramPost } from '@/types';
+import GambarBerita from '@/components/GambarBerita';
 import {
   Plane, ArrowRight, Building2, ChevronRight, ChevronLeft, Users, MapPin, Star, Car,
   ParkingSquare, Headphones, Play, Wifi, Sofa, UtensilsCrossed, MoonStar, Baby, Accessibility,
@@ -305,7 +306,7 @@ export default function HomePage() {
               <motion.article key={n.id} variants={rise} whileHover={{ y: -5 }} className="group">
                 <Link href={`/news/${n.slug}`} className="block">
                   <div className="relative h-28 rounded-xl overflow-hidden">
-                    <img src={n.thumbnail} alt={n.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    <GambarBerita berita={n} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent" />
                     <span className="absolute top-2 left-2 bg-blue-600 text-white text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wide">
                       {n.category}
@@ -399,6 +400,19 @@ export default function HomePage() {
 
                 {/* foto */}
                 <div className="relative hidden sm:flex items-end justify-center">
+                  {/* `top-8` menurunkan foto ~32px sehingga tepi bawahnya lewat di
+                      bawah batas kartu dan tertutup `overflow-hidden`. Foto pejabat
+                      ini potret cutout yang habis di pinggang; tanpa itu garis
+                      potongnya melayang tepat di atas dasar kartu dan terbaca
+                      seperti tersayat. Dipakai `top`, bukan `translate-y`, karena
+                      framer-motion sudah memakai `transform` untuk animasi masuk —
+                      kelas translate apa pun akan ditimpa.
+
+                      `object-bottom` wajib menyertai `object-contain`: rasio keenam
+                      foto berbeda-beda (0,667 sampai 0,899), jadi pada kolom yang
+                      sempit foto terlebar menyusut di dalam kotaknya. Tanpa
+                      `object-bottom` sisa ruangnya dibagi rata atas-bawah dan garis
+                      potong itu terangkat kembali ke dalam kartu. */}
                   <motion.img
                     key={current.photo}
                     initial={{ opacity: 0, y: 18 }}
@@ -406,7 +420,7 @@ export default function HomePage() {
                     transition={{ duration: 0.5 }}
                     src={current.photo}
                     alt={current.name}
-                    className="relative z-10 h-[290px] w-auto object-contain drop-shadow-2xl"
+                    className="relative top-8 z-10 h-[360px] w-auto object-contain object-bottom drop-shadow-2xl"
                   />
                 </div>
               </div>

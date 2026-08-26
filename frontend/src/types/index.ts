@@ -502,7 +502,10 @@ export interface NewsItem {
   category: string;
   excerpt: string;
   content: string;
+  /** Nilai mentah kolom: lintasan berkas v2 ATAU URL penuh peninggalan v1. */
   thumbnail?: string;
+  /** Turunan `$appends`; URL siap pakai untuk keduanya — pakai ini saat merender. */
+  thumbnail_url?: string | null;
   author: string;
   views_count: number;
   is_featured: boolean;

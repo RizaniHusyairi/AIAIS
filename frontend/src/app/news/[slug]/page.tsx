@@ -100,7 +100,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     title: `${berita.title} | ${SITE_NAME}`,
     description: ringkasan || `Berita ${berita.category} dari ${SITE_NAME}.`,
     path: `/news/${slug}`,
-    image: berita.thumbnail || null,
+    image: berita.thumbnail_url || berita.thumbnail || null,
     type: 'article',
     publishedTime: berita.published_at || null,
   });
@@ -136,7 +136,7 @@ export default async function NewsDetailPage({ params }: { params: Promise<{ slu
             '@type': 'NewsArticle',
             headline: berita.title,
             description: berita.excerpt || undefined,
-            image: berita.thumbnail ? [urlAbsolut(berita.thumbnail)] : undefined,
+            image: (berita.thumbnail_url || berita.thumbnail) ? [urlAbsolut((berita.thumbnail_url || berita.thumbnail)!)] : undefined,
             datePublished: berita.published_at || undefined,
             articleSection: berita.category || undefined,
             inLanguage: 'id-ID',

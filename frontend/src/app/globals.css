@@ -118,6 +118,82 @@
 }
 .article-content img { border-radius: 1rem; width: 100%; }
 
+/* ---- Gaya majalah (halaman baca berita) ----------------------------
+
+   Dipakai bersama `.article-content`. Dua hal yang tidak bisa dicapai lewat
+   kelas utilitas karena keduanya menyasar isi HTML dari editor panel admin,
+   yang tidak bisa diberi kelas dari luar:
+
+   1. Huruf inisial besar pada paragraf pertama — penanda "artikel dimulai di
+      sini" yang lazim di majalah cetak, dan satu-satunya hiasan yang tidak
+      menambah beban baca.
+   2. Penomoran sub judul sebagai titik lintasan. Nomornya dihitung CSS, bukan
+      ditulis penulis beritanya, sehingga menyisipkan bagian baru di tengah
+      tidak membuat petugas harus menomori ulang seluruh tulisan. */
+.article-content--majalah { counter-reset: waypoint; }
+
+.article-content--majalah > p:first-of-type::first-letter {
+  float: left;
+  font-size: 3.5rem;
+  line-height: 0.82;
+  font-weight: 900;
+  color: #1d4ed8;
+  padding: 0.28rem 0.7rem 0 0;
+}
+
+.article-content--majalah h2 {
+  counter-increment: waypoint;
+  padding-left: 3.1rem;
+  min-height: 2.2rem;
+  display: flex;
+  align-items: center;
+}
+
+/* Titik lintasan menggantikan batang gradien bawaan `.article-content h2`. */
+.article-content--majalah h2::before {
+  content: counter(waypoint, decimal-leading-zero);
+  position: absolute;
+  left: 0; top: 50%;
+  transform: translateY(-50%);
+  width: 2.2rem; height: 2.2rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #2563eb, #0891b2);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  letter-spacing: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 16px -6px rgba(37, 99, 235, 0.7);
+}
+
+/* Garis putus-putus yang menyambung antartitik lintasan. */
+.article-content--majalah h2::after {
+  content: '';
+  position: absolute;
+  left: 1.1rem;
+  top: calc(50% + 1.4rem);
+  bottom: -2.5rem;
+  border-left: 2px dashed #dbeafe;
+}
+
+.article-content--majalah h2:last-of-type::after { display: none; }
+
+/* ---- Ukuran baca lapang (halaman detail berita desktop/tablet) ----
+
+   Halaman berita punya satu tugas: dibaca sampai habis. Di layar lebar,
+   ukuran dasar `.article-content` terasa rapat untuk tulisan sepanjang siaran
+   pers, jadi varian ini melonggarkan ukuran huruf, tinggi baris, dan jarak
+   antarparagraf. `scroll-margin-top` menjaga judul bagian tidak tertutup bilah
+   kemajuan baca saat "Rute Baca" melompat ke sana. */
+.article-content--lega { font-size: 1.0625rem; line-height: 1.9; }
+.article-content--lega > * + * { margin-top: 1.35rem; }
+.article-content--lega h2 { font-size: 1.65rem; margin-top: 2.5rem; scroll-margin-top: 6rem; }
+.article-content--lega h3 { font-size: 1.3rem; margin-top: 1.85rem; scroll-margin-top: 6rem; }
+.article-content--lega blockquote { padding: 1.15rem 1.4rem; font-size: 1.05rem; }
+
 /* ---- Jawaban FAQ (halaman /faq, Pusat Bantuan, pratinjau panel admin) ----
 
    Kelas ini sudah lama dipasang di ketiga tempat itu tetapi tidak pernah

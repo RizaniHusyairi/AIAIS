@@ -49,8 +49,15 @@ class News extends Model
         'views_count' => 'integer',
     ];
 
-    /** URL gambar siap pakai; menangani berkas v1 maupun unggahan v2. */
-    protected $appends = ['thumbnail_url'];
+    /**
+     * `thumbnail` — nilai mentah kolomnya, dibutuhkan panel admin supaya form
+     * ubah tahu sampul apa yang sedang terpasang. Tanpa ini hanya `image` yang
+     * terkirim, dan panel v2 yang menyebutnya `thumbnail` akan mengira berita
+     * itu belum bergambar lalu mengosongkannya saat disimpan.
+     *
+     * `thumbnail_url` — URL siap pakai; menangani berkas v1 maupun unggahan v2.
+     */
+    protected $appends = ['thumbnail', 'thumbnail_url'];
 
     /** Nama v2 untuk kolom `image` warisan v1. */
     protected function thumbnail(): Attribute

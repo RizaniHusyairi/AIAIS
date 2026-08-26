@@ -347,8 +347,13 @@ Route::prefix(config('api.version'))->group(function () {
             Route::delete('/flights/{id}', [FlightController::class, 'destroy']);
 
             // News Management
+            //
+            // `POST /news/{id}` mendampingi `PUT` karena form berita mengirim
+            // gambar sampul lewat multipart, dan multipart tidak dapat dikirim
+            // lewat PUT dari browser.
             Route::get('/news', [NewsController::class, 'adminIndex']);
             Route::post('/news', [NewsController::class, 'store']);
+            Route::post('/news/{id}', [NewsController::class, 'update']);
             Route::put('/news/{id}', [NewsController::class, 'update']);
             Route::delete('/news/{id}', [NewsController::class, 'destroy']);
 

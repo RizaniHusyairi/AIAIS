@@ -346,7 +346,25 @@ export default function Navbar() {
 
   /* shrink on scroll */
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 12);
+    // Strip info (36px) dan penyusutan bilah utama (82→66px) sama-sama berada
+    // di dalam header `sticky`, jadi keduanya ikut arus dokumen: begitu
+    // mengecil, seluruh isi halaman naik 52px dan peramban mengoreksi scrollY
+    // sebesar itu juga (scroll anchoring).
+    //
+    // Karena itu jarak kedua ambang WAJIB lebih lebar dari 52px. Kalau tidak,
+    // koreksi tadi melempar scrollY balik ke seberang ambang, keadaan berbalik,
+    // tata letak bergeser lagi — navbar berkedip naik-turun tanpa henti tepat
+    // ketika pengguna menggeser sedikit dari puncak halaman.
+    const AMBANG_CIUT = 160; // turun melewati ini → strip disembunyikan
+    const AMBANG_MEKAR = 60; // naik melewati ini → strip tampil kembali
+
+    const onScroll = () =>
+      setScrolled((prev) => {
+        const y = window.scrollY;
+        if (y > AMBANG_CIUT) return true;
+        if (y < AMBANG_MEKAR) return false;
+        return prev; // zona mati: pertahankan keadaan sekarang
+      });
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
@@ -677,7 +695,11 @@ export default function Navbar() {
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-            className="lg:hidden overflow-hidden bg-white border-b border-slate-100 shadow-xl"
+            // Ambang `xl`, mengikuti nav desktop (`hidden xl:flex`) dan tombol
+            // hamburger (`xl:hidden`). Dengan `lg` drawer ini tersembunyi di
+            // 1024–1279px, sementara nav desktop juga belum tampil di sana —
+            // tombol menu ada tapi tidak membuka apa pun.
+            className="xl:hidden overflow-hidden bg-white border-b border-slate-100 shadow-xl"
           >
             <div className="px-4 py-4 space-y-1 max-h-[75vh] overflow-y-auto">
               {MENU.map((item, i) => {

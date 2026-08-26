@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { fetchApi } from '@/lib/api';
 import { NewsItem } from '@/types';
+import GambarBerita from '@/components/GambarBerita';
 import { CATEGORY_STYLES } from '@/lib/newsData';
 import { useSetting } from '@/lib/settings';
 import { StatusBar, listContainer, listItem } from '@/components/pwa/ui';
@@ -173,7 +174,7 @@ export default function BeritaScreen() {
                 >
                   {/* image on the right, text overlays the left */}
                   <div className="absolute inset-y-0 right-0 w-[52%]">
-                    <img src={featured.thumbnail} alt={featured.title} className="w-full h-full object-cover" />
+                    <GambarBerita berita={featured} ukuranIkon="w-8 h-8" className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-r from-white via-white/60 to-transparent" />
                   </div>
 
@@ -223,7 +224,7 @@ export default function BeritaScreen() {
                       href={`/app/berita/${n.slug}`}
                       className="flex items-center gap-3 bg-white rounded-2xl p-3 shadow-sm shadow-slate-200/60 border border-slate-100 active:scale-[0.98] transition-transform"
                     >
-                      <img src={n.thumbnail} alt={n.title} className="w-[92px] h-[92px] rounded-xl object-cover flex-shrink-0" />
+                      <GambarBerita berita={n} ukuranIkon="w-5 h-5" className="w-[92px] h-[92px] rounded-xl object-cover flex-shrink-0" />
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
