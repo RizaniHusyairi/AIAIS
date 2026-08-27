@@ -22,7 +22,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
   Newspaper, ArrowLeft, Save, Image as ImageIcon, UploadCloud, Trash2, Link2,
-  Calendar, Star, Eye, EyeOff, AlertCircle, PenLine, AlignLeft, Send,
+  Calendar, Star, Eye, EyeOff, AlertCircle, PenLine, AlignLeft, Send, ScanEye, X, ExternalLink,
 } from 'lucide-react';
 import { adminFetch, adminUpload } from '@/lib/adminApi';
 import type { NewsItem } from '@/types';
@@ -31,6 +31,8 @@ import {
   Toast, ToastMsg,
 } from '@/components/admin/ui';
 import EditorTeks from '@/components/admin/EditorTeks';
+import TampilanBerita from '@/components/berita/TampilanBerita';
+import { teksPolos } from '@/lib/berita';
 
 const CATEGORIES = ['Berita Utama', 'Pengumuman', 'Operasional', 'Layanan', 'Kegiatan', 'Fasilitas'];
 
@@ -66,6 +68,101 @@ const KOSONG: Form = {
 
 /** Pesan sukses dititipkan ke halaman daftar, yang menampilkannya sesudah pindah. */
 export const KUNCI_TOAST = 'aiais_toast_berita';
+
+/**
+ * Bentuk isian form menjadi `NewsItem` sementara untuk pratinjau.
+ *
+ * Form tidak memuat `slug`, `published_at`, maupun `views_count` — ketiganya
+ * lahir di server saat berita disimpan — padahal halaman baca membacanya.
+ * Nilainya dikarang seperlunya di sini, dan hanya hidup selama pratinjau
+ * terbuka: tidak ada yang dikirim ke mana pun.
+ *
+ * Sampul WAJIB lewat `thumbnail_url`, bukan `thumbnail`. `gambarBerita`
+ * memeriksa medan itu lebih dulu, dan sampul yang baru dipilih petugas masih
+ * berupa URL blob yang hanya sampai ke layar lewat jalur tersebut.
+ *
+ * Isian kosong diganti teks penuntun supaya pratinjau tidak pernah terbuka
+ * sebagai halaman kosong yang terbaca seperti rusak.
+ */
+function beritaContoh(form: Form, sampul: string): NewsItem {
+  return {
+    id: 0,
+    slug: 'pratinjau',
+    title: form.title.trim() || 'Judul berita akan tampil di sini',
+    category: form.category,
+    excerpt: form.excerpt.trim() || 'Ringkasan berita akan tampil di sini.',
+    content: form.content.trim() || '<p>Isi berita akan tampil di sini.</p>',
+    thumbnail: form.thumbnail,
+    thumbnail_url: sampul || undefined,
+    author: form.author.trim() || 'Humas UPBU APT Pranoto',
+    views_count: 0,
+    is_featured: form.is_featured,
+    status: form.status,
+    published_at: new Date().toISOString(),
+  };
+}
+
+/**
+ * Hamparan pratinjau — halaman baca yang sungguhan, di atas form.
+ *
+ * Memakai lapisan layar penuh, bukan `Modal` dari kit admin: modal itu mentok
+ * di 768px, sedangkan tata letak halaman baca baru menampilkan rel dan kolom
+ * sampingnya pada 1280px ke atas. Pratinjau yang dipaksa sempit justru
+ * menyesatkan.
+ *
+ * Wadahnya sengaja TIDAK memakai `overflow-x-hidden`: `overflow-x` selain
+ * `visible` mematikan `position: sticky` bagi seluruh keturunannya, dan kolom
+ * "Rute Baca" akan tergulir keluar layar.
+ */
+function HamparanPratinjau({
+  form, sampul, onTutup,
+}: { form: Form; sampul: string; onTutup: () => void }) {
+  // Gulir badan dikunci selama hamparan terbuka supaya halaman form di
+  // baliknya tidak ikut bergerak saat pratinjau digulir.
+  useEffect(() => {
+    const semula = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const padaTombol = (e: KeyboardEvent) => { if (e.key === 'Escape') onTutup(); };
+    window.addEventListener('keydown', padaTombol);
+
+    return () => {
+      document.body.style.overflow = semula;
+      window.removeEventListener('keydown', padaTombol);
+    };
+  }, [onTutup]);
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Pratinjau halaman berita"
+      // `overscroll-contain` menahan gulir agar tidak merambat ke halaman form
+      // begitu pratinjau mencapai ujungnya — mengunci `body` saja tidak cukup
+      // bila cangkang admin ternyata bergulir di dalam div, bukan di badan.
+      className="fixed inset-0 z-[120] overflow-y-auto overscroll-contain bg-[#f6f8fc]"
+    >
+      <div className="sticky top-0 z-50 flex flex-wrap items-center gap-3 px-4 sm:px-6 py-3 bg-[#0b1428] border-b border-white/10">
+        <span className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-400 font-mono">
+          <ScanEye className="w-4 h-4" /> Pratinjau · tampilan pengunjung
+        </span>
+
+        <span className="hidden sm:block text-[11px] text-white/45">
+          Belum tersimpan — tutup pratinjau lalu tekan Simpan untuk menerbitkannya.
+        </span>
+
+        <button
+          onClick={onTutup}
+          className="ml-auto flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white text-[12px] font-bold px-4 py-2 rounded-full transition-colors cursor-pointer"
+        >
+          <X className="w-4 h-4" /> Tutup Pratinjau
+        </button>
+      </div>
+
+      <TampilanBerita artikel={beritaContoh(form, sampul)} daftar={[]} pratinjau />
+    </div>
+  );
+}
 
 function Galat({ pesan }: { pesan?: string }) {
   if (!pesan) return null;
@@ -104,6 +201,7 @@ export default function FormBeritaView({ id }: { id?: number }) {
   const [tidakAda, setTidakAda] = useState(false);
   const [menyimpan, setMenyimpan] = useState(false);
   const [tanyaKeluar, setTanyaKeluar] = useState(false);
+  const [bukaPratinjau, setBukaPratinjau] = useState(false);
   const [toast, setToast] = useState<ToastMsg>(null);
 
   const inputBerkas = useRef<HTMLInputElement>(null);
@@ -220,8 +318,7 @@ export default function FormBeritaView({ id }: { id?: number }) {
 
     // Editor menyisakan markah kosong (mis. `<p><br></p>`) saat semua teks
     // dihapus, jadi yang diperiksa isi terbacanya, bukan panjang HTML-nya.
-    const teks = form.content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
-    if (!teks) g.content = 'Isi berita wajib diisi.';
+    if (!teksPolos(form.content)) g.content = 'Isi berita wajib diisi.';
 
     setGalat(g);
 
@@ -306,6 +403,9 @@ export default function FormBeritaView({ id }: { id?: number }) {
         action={
           <div className="flex gap-2">
             <Btn variant="ghost" onClick={kembali}><ArrowLeft className="w-4 h-4" /> Kembali</Btn>
+            <Btn variant="ghost" onClick={() => setBukaPratinjau(true)}>
+              <ScanEye className="w-4 h-4" /> Pratinjau
+            </Btn>
             <Btn onClick={simpan} disabled={menyimpan}>
               {menyimpan ? (
                 'Menyimpan...'
@@ -580,8 +680,15 @@ export default function FormBeritaView({ id }: { id?: number }) {
               </div>
 
               <p className="flex items-center gap-1.5 text-[10.5px] text-[var(--adm-muted)]">
-                <PenLine className="w-3.5 h-3.5" /> Berubah otomatis mengikuti isian di sebelah kiri.
+                <PenLine className="w-3.5 h-3.5" /> Inilah bentuk berita di daftar dan beranda.
               </p>
+
+              <button
+                onClick={() => setBukaPratinjau(true)}
+                className="w-full h-9 rounded-xl border border-[var(--adm-accent-line)] bg-[var(--adm-accent-soft)] text-[11.5px] font-bold text-[var(--adm-accent)] hover:brightness-110 flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                <ExternalLink className="w-3.5 h-3.5" /> Lihat halaman penuh
+              </button>
             </div>
           </Panel>
         </div>
@@ -612,6 +719,10 @@ export default function FormBeritaView({ id }: { id?: number }) {
         onConfirm={() => router.push('/admin/news')}
         message="Ada perubahan yang belum disimpan. Tinggalkan halaman ini dan buang perubahannya?"
       />
+
+      {bukaPratinjau && (
+        <HamparanPratinjau form={form} sampul={sampul} onTutup={() => setBukaPratinjau(false)} />
+      )}
 
       <Toast msg={toast} onDone={() => setToast(null)} />
     </div>

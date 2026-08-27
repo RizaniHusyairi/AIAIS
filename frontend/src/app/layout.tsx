@@ -8,6 +8,9 @@ import PemicuEvent from "@/components/events/PemicuEvent";
 import VisitorPing from "@/components/layout/VisitorPing";
 import ChatLauncher from "@/components/layout/ChatLauncher";
 import { THEME_INIT_SCRIPT } from "@/components/admin/themeShared";
+import { SITE_THEME_INIT_SCRIPT } from "@/lib/siteThemeShared";
+import PenyetelTema from "@/components/layout/PenyetelTema";
+import DekorMalam from "@/components/effects/DekorMalam";
 import { SITE_URL, SITE_NAME, ldBandara, ldSitus } from "@/lib/seo";
 import JsonLd from "@/components/JsonLd";
 import "./globals.css";
@@ -193,7 +196,19 @@ export default function RootLayout({
           membaca satu kunci localStorage dan menyetel satu atribut yang tidak
           dipakai halaman publik.
         */}
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        {/*
+          Dua penyetel tema dalam satu tag, karena keduanya harus jalan sebelum
+          gambar pertama dan alasannya sama persis: `data-adm-theme` untuk panel
+          petugas, `data-site-theme` untuk portal publik. Keduanya berdiri
+          sendiri — petugas boleh memakai panel gelap sambil membaca portal
+          dalam tema terang, dan sebaliknya.
+
+          Sesudah gambar pertama, atribut publiknya menjadi urusan
+          <PenyetelTema /> di bawah; skrip ini tidak pernah jalan lagi karena
+          Next berpindah halaman tanpa memuat ulang dokumen.
+        */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT + SITE_THEME_INIT_SCRIPT }} />
+        <PenyetelTema />
         {/*
           Data terstruktur tingkat situs.
 
@@ -219,6 +234,11 @@ export default function RootLayout({
             sama — pengunjung ponsel merayakan hari yang sama. Ia menyaring
             rutenya sendiri dan tidak merender apa pun di luar kedua beranda. */}
         <PemicuEvent />
+        {/* Langit berbintang, pesawat jauh, dan lampu pendekatan landasan.
+            Merender `null` di luar tema malam dan di rute ber-chrome sendiri,
+            jadi pengunjung siang tidak menanggung satu pun loop animasi.
+            Sebelum <Navbar /> supaya ia berada di lapisan paling belakang. */}
+        <DekorMalam />
         <Navbar />
         <main className="flex-grow">{children}</main>
         <Footer />

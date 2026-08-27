@@ -7,6 +7,7 @@ import { fetchApi } from '@/lib/api';
 import { useSetting } from '@/lib/settings';
 import { TOURISM_SPOTS, TOURISM_CAT_META } from '@/lib/tourismData';
 import { OFFICIALS, ORG_NAME } from '@/lib/airportProfile';
+import { PEJABAT_PHOTO_FIT } from '@/lib/pejabatFoto';
 import HeroParticles from '@/components/effects/HeroParticles';
 import DekorEvent, { PitaPerayaan } from '@/components/events/DekorEvent';
 import { usePerayaanAktif } from '@/lib/perayaanAktif';
@@ -408,11 +409,18 @@ export default function HomePage() {
                       framer-motion sudah memakai `transform` untuk animasi masuk —
                       kelas translate apa pun akan ditimpa.
 
-                      `object-bottom` wajib menyertai `object-contain`: rasio keenam
-                      foto berbeda-beda (0,667 sampai 0,899), jadi pada kolom yang
-                      sempit foto terlebar menyusut di dalam kotaknya. Tanpa
-                      `object-bottom` sisa ruangnya dibagi rata atas-bawah dan garis
-                      potong itu terangkat kembali ke dalam kartu. */}
+                      `object-bottom` wajib menyertai `object-contain`: rasio foto
+                      berbeda-beda, jadi pada kolom yang sempit foto terlebar
+                      menyusut di dalam kotaknya. Tanpa `object-bottom` sisa ruangnya
+                      dibagi rata atas-bawah dan garis potong itu terangkat kembali
+                      ke dalam kartu.
+
+                      Koreksi tinggi subjek (`PEJABAT_PHOTO_FIT`) aman dipasang di
+                      gambar yang sama meski framer-motion memakai `transform` untuk
+                      animasi masuk: Tailwind v4 memakai properti `scale` tersendiri,
+                      bukan `transform`, jadi keduanya menumpuk alih-alih saling
+                      menimpa. `origin-bottom` menjaga tepi bawah tetap terkunci saat
+                      diskalakan. */}
                   <motion.img
                     key={current.photo}
                     initial={{ opacity: 0, y: 18 }}
@@ -420,7 +428,7 @@ export default function HomePage() {
                     transition={{ duration: 0.5 }}
                     src={current.photo}
                     alt={current.name}
-                    className="relative top-8 z-10 h-[360px] w-auto object-contain object-bottom drop-shadow-2xl"
+                    className={`relative top-8 z-10 h-[360px] w-auto object-contain object-bottom origin-bottom drop-shadow-2xl ${PEJABAT_PHOTO_FIT[current.slug] ?? ''}`}
                   />
                 </div>
               </div>
@@ -460,7 +468,7 @@ export default function HomePage() {
                     whileHover={{ x: 4 }}
                     className="w-full flex items-center gap-3.5 p-2.5 rounded-xl hover:bg-slate-50 transition-colors text-left cursor-pointer"
                   >
-                    <img src={p.photo} alt={p.name} loading="lazy" className="w-14 h-14 rounded-xl object-contain object-bottom bg-slate-50 p-0.5 flex-shrink-0" />
+                    <img src={p.photo} alt={p.name} loading="lazy" className={`w-14 h-14 rounded-xl object-contain object-bottom origin-bottom bg-slate-50 p-0.5 flex-shrink-0 ${PEJABAT_PHOTO_FIT[p.slug] ?? ''}`} />
                     <div className="min-w-0">
                       <p className="font-bold text-slate-900 text-[13px] leading-snug truncate">{p.name}</p>
                       <p className="text-[11px] text-slate-500 leading-snug line-clamp-2">{p.shortTitle}</p>

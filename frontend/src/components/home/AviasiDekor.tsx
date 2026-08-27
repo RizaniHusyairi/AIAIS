@@ -21,7 +21,7 @@ import { motion, useReducedMotion } from 'framer-motion';
    Lampu landasan
    ================================================================ */
 
-/** Banyaknya lampu; ganjil supaya ada satu yang benar-benar di tengah. */
+/** Banyaknya lampu bawaan; ganjil supaya ada satu yang benar-benar di tengah. */
 const JUMLAH_LAMPU = 25;
 
 /**
@@ -30,31 +30,49 @@ const JUMLAH_LAMPU = 25;
  * Meniru lampu tepi landasan yang menyala berkejaran menuju ambang landas.
  * Ditaruh pada kaki hero sebagai garis pemisah ke bagian berikutnya —
  * menggantikan garis abu-abu biasa dengan sesuatu yang menjelaskan tempatnya.
+ *
+ * Bisa disetel jumlah dan warnanya karena tema malam memakainya ulang sebagai
+ * lampu pendekatan selebar layar (`effects/LampuPendekatan.tsx`). Menyalin
+ * komponennya ke sana hanya akan melahirkan dua deret lampu yang perlahan
+ * menyimpang satu sama lain — persis yang dihindari berkas ini sejak awal.
  */
-export function LampuLandasan({ className = '' }: { className?: string }) {
+export function LampuLandasan({
+  className = '',
+  jumlah = JUMLAH_LAMPU,
+  /** Kelas warna lampu, mis. `bg-cyan-400`. */
+  warnaKelas = 'bg-cyan-400',
+  /** Opasitas puncak saat menyala. */
+  puncak = 1,
+}: {
+  className?: string;
+  jumlah?: number;
+  warnaKelas?: string;
+  puncak?: number;
+}) {
   const kurangiGerak = useReducedMotion();
+  const tengah = (jumlah - 1) / 2;
 
   return (
     <div
       className={`pointer-events-none flex items-end justify-center gap-[6px] h-3 ${className}`}
       aria-hidden="true"
     >
-      {Array.from({ length: JUMLAH_LAMPU }, (_, i) => (
+      {Array.from({ length: jumlah }, (_, i) => (
         <motion.span
           key={i}
-          className="w-1 rounded-full bg-cyan-400"
+          className={`w-1 rounded-full ${warnaKelas}`}
           style={{
             // Lampu tengah paling tinggi, meredup ke kedua tepi — memberi kesan
             // deretnya menjauh.
-            height: 4 + Math.round(6 * (1 - Math.abs(i - (JUMLAH_LAMPU - 1) / 2) / ((JUMLAH_LAMPU - 1) / 2))),
+            height: 4 + Math.round(6 * (1 - (tengah ? Math.abs(i - tengah) / tengah : 0))),
           }}
           initial={{ opacity: 0.25 }}
-          animate={kurangiGerak ? { opacity: 0.35 } : { opacity: [0.2, 1, 0.2] }}
+          animate={kurangiGerak ? { opacity: 0.35 } : { opacity: [0.2, puncak, 0.2] }}
           transition={{
             duration: 2.4,
             repeat: Infinity,
             // Jeda bertingkat itulah yang membuatnya terlihat berkejaran.
-            delay: (i / JUMLAH_LAMPU) * 1.6,
+            delay: (i / jumlah) * 1.6,
             ease: 'easeInOut',
           }}
         />

@@ -7,7 +7,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { fetchApi } from '@/lib/api';
 import { Flight } from '@/types';
 import {
-  Search, ChevronDown, Phone, Menu, X, Moon, Plane, Home, Building2, Users,
+  Search, ChevronDown, Phone, Menu, X, Plane, Home, Building2, Users,
   Newspaper, MessageSquareWarning, Info, UserRound, MapPin, Clock,
   CloudSun, Globe, ArrowRight, PlaneTakeoff, ShieldCheck,
   FileText, ClipboardList, Scale, FolderOpen, TrendingUp, CircleHelp,
@@ -17,6 +17,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { RELATED_LINKS } from '@/lib/relatedLinks';
 import { usesOwnChrome } from '@/lib/layoutChrome';
+import TombolTema from './TombolTema';
 
 /* ------------------------------------------------------------------ */
 /*  Definisi menu                                                      */
@@ -592,13 +593,10 @@ export default function Navbar() {
                 <Globe className="w-4 h-4" /> ID <ChevronDown className="w-3 h-3" />
               </button>
 
-              <motion.button
-                whileTap={{ scale: 0.9 }}
-                className="w-10 h-10 rounded-xl text-slate-500 hover:text-blue-600 hover:bg-blue-50 flex items-center justify-center transition-colors cursor-pointer"
-                title="Mode gelap"
-              >
-                <Moon className="w-[18px] h-[18px]" />
-              </motion.button>
+              {/* Tema malam portal. Tombolnya berkas sendiri karena sapuan
+                  peralihannya membawa portal, state, dan pewaktu — semuanya
+                  tidak ada urusan dengan menu navigasi. */}
+              <TombolTema />
 
               {/* Entri "Akun" DIPINDAHKAN, bukan dihapus.
                   Pintu akun layanan warga kini berada di Portal Aplikasi
@@ -775,6 +773,12 @@ export default function Navbar() {
                     </span>
                   </div>
                 )}
+
+                {/* Gugus tombol kanan di atas ber-`hidden md:flex`, jadi tanpa
+                    baris ini pemakai ponsel tidak punya jalan sama sekali ke
+                    tema malam — justru kalangan yang paling sering membaca
+                    portal dalam gelap. */}
+                <TombolTema variant="laci" />
 
                 <Link
                   href="/aplikasi"

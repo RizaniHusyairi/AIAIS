@@ -632,3 +632,441 @@ html[data-plane-cursor] * {
   from { transform: translate(-50%, -50%) rotate(0deg); }
   to   { transform: translate(-50%, -50%) rotate(360deg); }
 }
+
+/* ================================================================
+   Tema malam portal publik
+   ================================================================
+   Dipilih lewat atribut `data-site-theme` pada <html>. Penulis atribut itu
+   HANYA `components/layout/PenyetelTema.tsx` (dan skrip anti-kedip di layout
+   akar untuk gambar pertama); jangan ada yang menyetelnya dari tempat lain.
+
+   KENAPA BENTUKNYA PEMETAAN-ULANG UTILITAS, BUKAN VARIAN `dark:`
+
+   Halaman publik portal ini menulis warnanya sebagai utilitas Tailwind
+   langsung — `bg-white`, `text-slate-900`, `border-slate-100` — di lebih dari
+   seratus berkas, tanpa satu pun token warna dan tanpa satu pun varian
+   `dark:`. Menempelkan `dark:` pada tiap utilitas itu berarti menyentuh
+   seluruh berkas halaman sekaligus, dan setiap halaman baru sesudahnya wajib
+   ingat melakukan hal yang sama — sesuatu yang pasti terlupakan.
+
+   Karena itu warnanya dipetakan ulang di satu tempat: aturan di bawah memilih
+   kelas utilitasnya sendiri dan mengganti nilainya. Halaman apa pun, lama
+   maupun baru, ikut bertema malam tanpa satu baris pun disunting.
+
+   Aturannya SENGAJA DI LUAR SEMUA `@layer`. CSS tak berlapis mengalahkan
+   seluruh isi `@layer utilities` milik Tailwind apa pun spesifisitasnya,
+   sehingga tidak diperlukan `!important` maupun perang spesifisitas.
+
+   YANG SENGAJA TIDAK DIPETAKAN: utilitas beropasitas rendah seperti
+   `bg-white/12`, `bg-white/20`, `text-blue-100/85`, `border-white/20`. Semua
+   itu hidup di atas hero bergradien yang memang sudah gelap; menggelapkannya
+   justru merusaknya. Yang beropasitas tinggi (`/85` ke atas) memang permukaan
+   kertas dan ikut dipetakan. Tailwind memancarkan `bg-white` dan
+   `bg-white\/12` sebagai kelas berbeda, jadi pemisahan ini terjadi sendiri.
+   ================================================================ */
+
+:root[data-site-theme='night'] {
+  --mlm-bg: #030712;
+
+  /* Permukaan sengaja tembus pandang sedikit: langit berbintang di belakang
+     halaman ikut terlihat samar menembus kartu, dan kartu yang bersarang
+     terbaca sebagai bertingkat tanpa perlu bayangan tambahan. */
+  --mlm-panel: rgba(13, 24, 44, 0.82);
+  --mlm-inset: rgba(9, 18, 34, 0.7);
+  --mlm-inset-2: rgba(20, 34, 57, 0.78);
+  --mlm-inset-3: rgba(31, 48, 76, 0.85);
+
+  --mlm-line: rgba(147, 197, 253, 0.13);
+  --mlm-line-kuat: rgba(147, 197, 253, 0.22);
+
+  --mlm-fg: #f1f7ff;
+  --mlm-body: #cdd9ec;
+  --mlm-muted: #94a9c6;
+  --mlm-dim: #7387a3;
+
+  --mlm-accent: #67e8f9;
+  --mlm-accent-kuat: #22d3ee;
+  --mlm-accent-soft: rgba(34, 211, 238, 0.12);
+  --mlm-accent-line: rgba(34, 211, 238, 0.32);
+
+  --mlm-ok-soft: rgba(16, 185, 129, 0.13);
+  --mlm-warn-soft: rgba(251, 191, 36, 0.13);
+  --mlm-danger-soft: rgba(244, 63, 94, 0.13);
+
+  --mlm-shadow-color: rgba(2, 6, 18, 0.75);
+
+  color-scheme: dark;
+}
+
+/* ---- Dasar ---- */
+
+/* Latar halaman disetel di DUA tempat, dan keduanya diperlukan.
+
+   Pertama pada <html>: latar elemen akar itulah yang mengecat kanvas seluruh
+   viewport, termasuk daerah yang tidak tertutup <body> (efek pantul gulir,
+   dan ruang di bawah halaman pendek). Tanpa ini yang tersembul putih bawaan
+   peramban.
+
+   Kedua pada <body>, dengan `[class]` yang bukan hiasan: <body> membawa kelas
+   `bg-slate-50` sendiri, dan aturan `.bg-slate-50` di bawah berspesifisitas
+   (0,3,0) — lebih tinggi daripada `:root[...] body` yang hanya (0,2,1).
+   Tanpa `[class]` penyeimbang itu, <body> justru mengambil warna permukaan
+   sisipan yang setengah tembus pandang, bukan latar malamnya. */
+:root[data-site-theme='night'] {
+  background-color: var(--mlm-bg);
+}
+
+:root[data-site-theme='night'] body[class] {
+  background-color: var(--mlm-bg);
+  color: var(--mlm-body);
+}
+
+:root[data-site-theme='night'] ::-webkit-scrollbar-track { background: #0a1120; }
+:root[data-site-theme='night'] ::-webkit-scrollbar-thumb { background: #24384f; }
+:root[data-site-theme='night'] ::-webkit-scrollbar-thumb:hover { background: var(--mlm-accent-kuat); }
+
+:root[data-site-theme='night'] ::selection {
+  background: var(--mlm-accent-kuat);
+  color: #04121f;
+}
+
+/* ---- Permukaan ---- */
+
+:root[data-site-theme='night'] .bg-white,
+:root[data-site-theme='night'] .bg-white\/95,
+:root[data-site-theme='night'] .bg-white\/92,
+:root[data-site-theme='night'] .bg-white\/90,
+:root[data-site-theme='night'] .bg-white\/85 { background-color: var(--mlm-panel); }
+
+/* Tingkat `-50` sampai `-200` selalu berarti permukaan kertas, tidak pernah
+   lapisan di atas hero gelap — itu sebabnya kelompok ini boleh disapu
+   menyeluruh dengan pemilih substring, berbeda dari `bg-white` yang harus
+   dipilah satu per satu di atas.
+   `[class*='bg-slate-50/']` menangkap SEMUA varian opasitasnya sekaligus
+   (`/60`, `/70`, `/80`, ...), termasuk yang belum ada hari ini. Ia tidak
+   pernah salah menangkap `bg-slate-500/20`: sesudah `bg-slate-50` di sana
+   yang menyusul adalah `0`, bukan garis miring. */
+:root[data-site-theme='night'] .bg-slate-50,
+:root[data-site-theme='night'] [class*='bg-slate-50/'] { background-color: var(--mlm-inset); }
+:root[data-site-theme='night'] .bg-slate-100,
+:root[data-site-theme='night'] [class*='bg-slate-100/'] { background-color: var(--mlm-inset-2); }
+:root[data-site-theme='night'] .bg-slate-200,
+:root[data-site-theme='night'] [class*='bg-slate-200/'] { background-color: var(--mlm-inset-3); }
+
+/* Semburat berwarna, tingkat `-50` dan `-100`. Keduanya sama-sama permukaan
+   kertas berwarna, jadi diperlakukan sama; `-100` cukup sedikit lebih pekat.
+   Seluruh keluarga warna Tailwind didaftarkan, bukan hanya yang kebetulan
+   terpakai hari ini — halaman berikutnya tidak boleh gagal hanya karena
+   memilih `bg-violet-50` alih-alih `bg-blue-50`. */
+:root[data-site-theme='night'] :is(.bg-blue-50, .bg-sky-50, .bg-cyan-50, .bg-indigo-50),
+:root[data-site-theme='night'] :is([class*='bg-blue-50/'], [class*='bg-sky-50/'], [class*='bg-cyan-50/'], [class*='bg-indigo-50/']) { background-color: var(--mlm-accent-soft); }
+:root[data-site-theme='night'] :is(.bg-blue-100, .bg-sky-100, .bg-cyan-100, .bg-indigo-100) { background-color: rgba(56, 189, 248, 0.18); }
+
+:root[data-site-theme='night'] :is(.bg-amber-50, .bg-yellow-50, .bg-orange-50),
+:root[data-site-theme='night'] :is([class*='bg-amber-50/'], [class*='bg-yellow-50/'], [class*='bg-orange-50/']) { background-color: var(--mlm-warn-soft); }
+:root[data-site-theme='night'] :is(.bg-amber-100, .bg-yellow-100, .bg-orange-100) { background-color: rgba(251, 191, 36, 0.19); }
+
+:root[data-site-theme='night'] :is(.bg-rose-50, .bg-red-50, .bg-pink-50, .bg-fuchsia-50),
+:root[data-site-theme='night'] :is([class*='bg-rose-50/'], [class*='bg-red-50/'], [class*='bg-pink-50/'], [class*='bg-fuchsia-50/']) { background-color: var(--mlm-danger-soft); }
+:root[data-site-theme='night'] :is(.bg-rose-100, .bg-red-100, .bg-pink-100, .bg-fuchsia-100) { background-color: rgba(244, 63, 94, 0.19); }
+
+:root[data-site-theme='night'] :is(.bg-emerald-50, .bg-green-50, .bg-teal-50, .bg-lime-50),
+:root[data-site-theme='night'] :is([class*='bg-emerald-50/'], [class*='bg-green-50/'], [class*='bg-teal-50/'], [class*='bg-lime-50/']) { background-color: var(--mlm-ok-soft); }
+:root[data-site-theme='night'] :is(.bg-emerald-100, .bg-green-100, .bg-teal-100, .bg-lime-100) { background-color: rgba(16, 185, 129, 0.19); }
+
+:root[data-site-theme='night'] :is(.bg-violet-50, .bg-purple-50),
+:root[data-site-theme='night'] :is([class*='bg-violet-50/'], [class*='bg-purple-50/']) { background-color: rgba(167, 139, 250, 0.14); }
+:root[data-site-theme='night'] :is(.bg-violet-100, .bg-purple-100) { background-color: rgba(167, 139, 250, 0.2); }
+
+:root[data-site-theme='night'] :is(.bg-gray-50, .bg-zinc-50, .bg-neutral-50, .bg-stone-50) { background-color: var(--mlm-inset); }
+:root[data-site-theme='night'] :is(.bg-gray-100, .bg-zinc-100, .bg-neutral-100, .bg-stone-100) { background-color: var(--mlm-inset-2); }
+
+/* Varian tuding. Nama kelasnya memang berbeda dari yang di atas, jadi ia
+   tidak ikut terpetakan sendiri dan harus ditulis terpisah. */
+:root[data-site-theme='night'] .hover\:bg-white:hover,
+:root[data-site-theme='night'] .focus\:bg-white:focus { background-color: var(--mlm-inset-2); }
+:root[data-site-theme='night'] .hover\:bg-slate-50:hover { background-color: var(--mlm-inset); }
+:root[data-site-theme='night'] .hover\:bg-slate-100:hover { background-color: var(--mlm-inset-2); }
+:root[data-site-theme='night'] .hover\:bg-slate-200:hover { background-color: var(--mlm-inset-3); }
+:root[data-site-theme='night'] .hover\:bg-blue-50:hover { background-color: var(--mlm-accent-soft); }
+
+/* ---- Teks ---- */
+
+:root[data-site-theme='night'] .text-slate-900,
+:root[data-site-theme='night'] .text-slate-800,
+:root[data-site-theme='night'] .hover\:text-slate-900:hover { color: var(--mlm-fg); }
+:root[data-site-theme='night'] .text-slate-700,
+:root[data-site-theme='night'] .text-slate-600,
+:root[data-site-theme='night'] .hover\:text-slate-700:hover,
+:root[data-site-theme='night'] .hover\:text-slate-600:hover { color: var(--mlm-body); }
+:root[data-site-theme='night'] .text-slate-500 { color: var(--mlm-muted); }
+:root[data-site-theme='night'] .text-slate-400 { color: var(--mlm-dim); }
+
+/* Aksen biru portal menjadi sian kokpit — biru tua nyaris tak terbaca di atas
+   panel malam, sedangkan sian justru bahasa lampu bandara. */
+:root[data-site-theme='night'] .text-blue-600,
+:root[data-site-theme='night'] .text-blue-700,
+:root[data-site-theme='night'] .text-blue-800,
+:root[data-site-theme='night'] .hover\:text-blue-600:hover,
+:root[data-site-theme='night'] .hover\:text-blue-700:hover,
+:root[data-site-theme='night'] .hover\:text-blue-800:hover,
+:root[data-site-theme='night'] .group:hover .group-hover\:text-blue-600,
+:root[data-site-theme='night'] .group:hover .group-hover\:text-blue-700 { color: var(--mlm-accent); }
+
+/* Warna makna tetap dikenali, hanya dicerahkan agar lolos kontras di atas
+   gelap. Tingkat `-600` sampai `-800` dirancang untuk kertas putih; di atas
+   panel malam ketiganya sama-sama terlalu pekat, jadi ketiganya naik ke satu
+   nada terang yang sama. */
+:root[data-site-theme='night'] :is(.text-emerald-600, .text-emerald-700, .text-emerald-800,
+  .text-green-600, .text-green-700, .text-green-800,
+  .text-teal-600, .text-teal-700, .text-lime-600) { color: #6ee7b7; }
+
+:root[data-site-theme='night'] :is(.text-rose-600, .text-rose-700, .text-rose-800,
+  .text-red-600, .text-red-700, .text-red-800,
+  .text-pink-600, .text-pink-700, .text-fuchsia-600) { color: #fda4af; }
+
+:root[data-site-theme='night'] :is(.text-amber-600, .text-amber-700, .text-amber-800,
+  .text-yellow-600, .text-yellow-700,
+  .text-orange-600, .text-orange-700) { color: #fcd34d; }
+
+:root[data-site-theme='night'] :is(.text-violet-600, .text-violet-700,
+  .text-purple-600, .text-purple-700) { color: #c4b5fd; }
+
+/* Keluarga sian/langit/indigo ikut aksen kokpit, senapas dengan `text-blue-*`. */
+:root[data-site-theme='night'] :is(.text-cyan-600, .text-cyan-700,
+  .text-sky-600, .text-sky-700,
+  .text-indigo-600, .text-indigo-700) { color: var(--mlm-accent); }
+
+/* ---- Garis, cincin, bayangan ---- */
+
+:root[data-site-theme='night'] .border-slate-100,
+:root[data-site-theme='night'] .border-slate-200,
+:root[data-site-theme='night'] .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+:root[data-site-theme='night'] .divide-slate-200 > :not([hidden]) ~ :not([hidden]) { border-color: var(--mlm-line); }
+:root[data-site-theme='night'] .border-slate-300,
+:root[data-site-theme='night'] .hover\:border-blue-300:hover,
+:root[data-site-theme='night'] .focus\:border-blue-400:focus { border-color: var(--mlm-line-kuat); }
+
+:root[data-site-theme='night'] .ring-slate-100,
+:root[data-site-theme='night'] .ring-slate-200,
+:root[data-site-theme='night'] .ring-slate-200\/50,
+:root[data-site-theme='night'] .ring-slate-200\/70,
+:root[data-site-theme='night'] .ring-slate-200\/80,
+:root[data-site-theme='night'] .ring-slate-300 { --tw-ring-color: var(--mlm-line); }
+:root[data-site-theme='night'] .ring-blue-100,
+:root[data-site-theme='night'] .ring-blue-200,
+:root[data-site-theme='night'] .hover\:ring-blue-300:hover { --tw-ring-color: var(--mlm-accent-line); }
+
+/* Bayangan abu-abu terang menjadi kabut kelabu di atas panel gelap; yang
+   dibutuhkan malam hari justru bayangan yang lebih pekat dari latarnya. */
+:root[data-site-theme='night'] [class*='shadow-slate-'] { --tw-shadow-color: var(--mlm-shadow-color); }
+
+/* ---- Permukaan bergaya sendiri (bukan utilitas) ---- */
+
+:root[data-site-theme='night'] .white-card {
+  background: var(--mlm-panel);
+  border-color: var(--mlm-line);
+  box-shadow: 0 4px 6px -1px rgba(2, 6, 18, 0.5), 0 2px 4px -1px rgba(2, 6, 18, 0.4);
+}
+:root[data-site-theme='night'] .white-card:hover {
+  box-shadow: 0 10px 15px -3px rgba(2, 6, 18, 0.6), 0 4px 6px -2px rgba(34, 211, 238, 0.12);
+}
+
+:root[data-site-theme='night'] .glass-panel {
+  background: rgba(6, 13, 26, 0.72);
+  border-color: var(--mlm-line);
+}
+
+/* Tipografi artikel. Warnanya dipatok heks di blok `.article-content` di
+   kepala berkas ini, jadi tidak ada utilitas yang bisa dipetakan. */
+:root[data-site-theme='night'] .article-content { color: var(--mlm-body); }
+:root[data-site-theme='night'] .article-content :is(h1, h2, h3, h4, strong, b) { color: var(--mlm-fg); }
+:root[data-site-theme='night'] .article-content a { color: var(--mlm-accent); }
+:root[data-site-theme='night'] .article-content :is(blockquote, pre, code, table, th, td) {
+  background-color: var(--mlm-inset);
+  border-color: var(--mlm-line);
+  color: var(--mlm-body);
+}
+:root[data-site-theme='night'] .article-content hr { border-color: var(--mlm-line); }
+:root[data-site-theme='night'] .faq-answer { color: var(--mlm-body); }
+:root[data-site-theme='night'] .faq-answer :is(strong, b) { color: var(--mlm-fg); }
+
+/* ---- Navbar: permukaan berheks harfiah ---- */
+
+/* Strip informasi paling atas. Biru dinas siang hari; malam hari ia menjadi
+   pita kokpit yang nyaris hitam agar tidak menyala sendirian di puncak layar. */
+:root[data-site-theme='night'] .bg-\[\#0b1e5b\] { background-color: #060d1c; }
+
+/* Kepala dropdown mega. Gradiennya diredupkan seperlunya. */
+:root[data-site-theme='night'] .from-\[\#0b1e5b\] { --tw-gradient-from: #071022; }
+:root[data-site-theme='night'] .to-\[\#2563eb\] { --tw-gradient-to: #0e3a86; }
+
+/* ---- Dekorasi malam ---- */
+
+/* Semburat lampu apron pada awan rendah. Diam, karena itu CSS dan bukan
+   kanvas — tidak ada gunanya menggambar ulang gambar yang tak berubah. */
+.tema-kabut-apron {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  height: min(38vh, 340px);
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 100% at 50% 130%, rgba(34, 211, 238, 0.14) 0%, rgba(34, 211, 238, 0) 62%),
+    radial-gradient(90% 90% at 12% 130%, rgba(59, 130, 246, 0.12) 0%, rgba(59, 130, 246, 0) 60%);
+}
+
+/* Kabut tipis tepat di bawah deret lampu pendekatan. */
+.tema-kabut-landasan {
+  height: 46px;
+  background: linear-gradient(to top, rgba(34, 211, 238, 0.14), rgba(34, 211, 238, 0));
+}
+
+/* Taburan bintang sekejap di dalam sapuan peralihan tema. Dibuat dari empat
+   gradien radial berukuran petak, bukan puluhan elemen: satu lapisan yang
+   hanya hidup satu detik tidak layak menambah simpul DOM. */
+.tema-sapuan-bintang {
+  background-image:
+    radial-gradient(1.4px 1.4px at 22% 28%, rgba(255, 255, 255, 0.9), transparent),
+    radial-gradient(1.2px 1.2px at 68% 14%, rgba(186, 230, 253, 0.85), transparent),
+    radial-gradient(1.6px 1.6px at 44% 72%, rgba(255, 255, 255, 0.75), transparent),
+    radial-gradient(1.1px 1.1px at 86% 58%, rgba(147, 197, 253, 0.8), transparent);
+  background-size: 180px 160px, 240px 210px, 200px 190px, 300px 260px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Kabutnya diredupkan, bukan dihapus: lapisan ini memang diam sejak awal,
+     dan menghapusnya hanya membuat kaki layar menjadi garis hitam datar. */
+  .tema-kabut-apron,
+  .tema-kabut-landasan { opacity: 0.7; }
+}
+
+/* ---- Warna yang ditulis sebagai gaya sebaris ----
+
+   Sebagian modul publik menyimpan warnanya sebagai heks di dalam data, bukan
+   sebagai kelas Tailwind — lihat `WARNA` di `app/page.tsx`, `DownloadsView`,
+   `FacilitiesView`, dan kerabatnya. Pasangannya selalu sama bentuknya: satu
+   heks pucat keluarga `-50` untuk latar ubin ikon, dan satu heks madya
+   keluarga `-600`/`-700` untuk ikon serta labelnya. Keduanya sampai ke DOM
+   sebagai `style="..."`, jadi tidak ada kelas yang bisa dipetakan ulang.
+
+   Dibiarkan apa adanya, ubin-ubin itu menjadi bercak pastel terang di atas
+   halaman gelap, dan ikon di dalamnya nyaris tidak terbaca.
+
+   `!important` DIPERLUKAN di sini dan hanya di sini: gaya sebaris mengalahkan
+   seluruh lembar gaya kecuali dilawan dengan penanda ini.
+
+   Pemilihnya dikunci pada nama properti yang lengkap. `[style*="color:#..."]`
+   saja akan ikut menangkap `background-color:#...` — ia memuat "color:" di
+   dalamnya — sehingga latar solid berubah warna teksnya tanpa diminta. Karena
+   itu latar dipilih lewat `background-color:`, sedangkan teks lewat bentuk
+   awal (`^=`) atau yang didahului titik koma. */
+
+/* Latar ubin: heks pucat menjadi semburat sewarna yang tembus pandang, supaya
+   pengodean warna tiap modul tetap terbaca di tema malam. */
+:root[data-site-theme='night'] [style*='background-color:#eff6ff'],
+:root[data-site-theme='night'] [style*='background-color:#dbeafe'],
+:root[data-site-theme='night'] [style*='background-color:#e0f2fe'],
+:root[data-site-theme='night'] [style*='background-color:#ecfeff'],
+:root[data-site-theme='night'] [style*='background-color:#cffafe'],
+:root[data-site-theme='night'] [style*='background-color:#c8d6f5'] { background-color: rgba(56, 189, 248, 0.15) !important; }
+
+:root[data-site-theme='night'] [style*='background-color:#ecfdf5'],
+:root[data-site-theme='night'] [style*='background-color:#f0fdfa'],
+:root[data-site-theme='night'] [style*='background-color:#f0fdf4'],
+:root[data-site-theme='night'] [style*='background-color:#dcfce7'] { background-color: rgba(52, 211, 153, 0.15) !important; }
+
+:root[data-site-theme='night'] [style*='background-color:#f5f3ff'],
+:root[data-site-theme='night'] [style*='background-color:#ede9fe'] { background-color: rgba(167, 139, 250, 0.16) !important; }
+
+:root[data-site-theme='night'] [style*='background-color:#fffbeb'],
+:root[data-site-theme='night'] [style*='background-color:#fff7ed'],
+:root[data-site-theme='night'] [style*='background-color:#ffedd5'],
+:root[data-site-theme='night'] [style*='background-color:#fef9c3'] { background-color: rgba(251, 191, 36, 0.15) !important; }
+
+:root[data-site-theme='night'] [style*='background-color:#fff1f2'],
+:root[data-site-theme='night'] [style*='background-color:#fef2f2'],
+:root[data-site-theme='night'] [style*='background-color:#fee2e2'],
+:root[data-site-theme='night'] [style*='background-color:#fdf2f8'] { background-color: rgba(251, 113, 133, 0.15) !important; }
+
+:root[data-site-theme='night'] [style*='background-color:#f1f5f9'],
+:root[data-site-theme='night'] [style*='background-color:#e2e8f0'],
+:root[data-site-theme='night'] [style*='background-color:#ffffff'] { background-color: var(--mlm-inset-2) !important; }
+
+/* Ikon dan label: heks madya dinaikkan ke padanan `-400`-nya. Warnanya tetap
+   warna yang sama menurut modulnya — hanya cukup terang untuk dibaca di atas
+   panel malam. */
+:root[data-site-theme='night'] [style^='color:#2563eb'], :root[data-site-theme='night'] [style*=';color:#2563eb'],
+:root[data-site-theme='night'] [style^='color:#0369a1'], :root[data-site-theme='night'] [style*=';color:#0369a1'],
+:root[data-site-theme='night'] [style^='color:#0ea5e9'], :root[data-site-theme='night'] [style*=';color:#0ea5e9'] { color: #60a5fa !important; }
+
+:root[data-site-theme='night'] [style^='color:#0891b2'], :root[data-site-theme='night'] [style*=';color:#0891b2'],
+:root[data-site-theme='night'] [style^='color:#0e7490'], :root[data-site-theme='night'] [style*=';color:#0e7490'] { color: #22d3ee !important; }
+
+:root[data-site-theme='night'] [style^='color:#059669'], :root[data-site-theme='night'] [style*=';color:#059669'],
+:root[data-site-theme='night'] [style^='color:#0d9488'], :root[data-site-theme='night'] [style*=';color:#0d9488'],
+:root[data-site-theme='night'] [style^='color:#16a34a'], :root[data-site-theme='night'] [style*=';color:#16a34a'],
+:root[data-site-theme='night'] [style^='color:#15803d'], :root[data-site-theme='night'] [style*=';color:#15803d'] { color: #34d399 !important; }
+
+:root[data-site-theme='night'] [style^='color:#7c3aed'], :root[data-site-theme='night'] [style*=';color:#7c3aed'] { color: #a78bfa !important; }
+
+:root[data-site-theme='night'] [style^='color:#d97706'], :root[data-site-theme='night'] [style*=';color:#d97706'],
+:root[data-site-theme='night'] [style^='color:#a16207'], :root[data-site-theme='night'] [style*=';color:#a16207'],
+:root[data-site-theme='night'] [style^='color:#ea580c'], :root[data-site-theme='night'] [style*=';color:#ea580c'] { color: #fbbf24 !important; }
+
+:root[data-site-theme='night'] [style^='color:#e11d48'], :root[data-site-theme='night'] [style*=';color:#e11d48'],
+:root[data-site-theme='night'] [style^='color:#dc2626'], :root[data-site-theme='night'] [style*=';color:#dc2626'],
+:root[data-site-theme='night'] [style^='color:#b91c1c'], :root[data-site-theme='night'] [style*=';color:#b91c1c'],
+:root[data-site-theme='night'] [style^='color:#db2777'], :root[data-site-theme='night'] [style*=';color:#db2777'] { color: #fb7185 !important; }
+
+:root[data-site-theme='night'] [style^='color:#0f172a'], :root[data-site-theme='night'] [style*=';color:#0f172a'],
+:root[data-site-theme='night'] [style^='color:#334155'], :root[data-site-theme='night'] [style*=';color:#334155'],
+:root[data-site-theme='night'] [style^='color:#475569'], :root[data-site-theme='night'] [style*=';color:#475569'],
+:root[data-site-theme='night'] [style^='color:#64748b'], :root[data-site-theme='night'] [style*=';color:#64748b'] { color: var(--mlm-body) !important; }
+
+/* Pelengkap: palet aksen modul layanan (`lib/serviceData.ts`).
+
+   Dua hal yang belum tertangkap aturan di atas:
+
+   1. Dua heks yang hanya dipakai di sana — indigo `#4f46e5` dan langit
+      `#0284c7`.
+   2. Bentuk `rgb(r, g, b)`. Nilai aksen yang datang dari API melewati
+      `bawaan?.accent ?? '#0891b2'`, dan warna yang disetel lewat properti
+      style ditulis ulang peramban sebagai `rgb()` — bukan heks. Pemilih yang
+      hanya mengenal heks melewatkannya begitu saja, jadi tripel desimalnya
+      didaftarkan berdampingan. */
+:root[data-site-theme='night'] :is(
+  [style^='color:#4f46e5'], [style*=';color:#4f46e5'],
+  [style*='color: rgb(79, 70, 229)']
+) { color: #a5b4fc !important; }
+
+:root[data-site-theme='night'] :is(
+  [style^='color:#0284c7'], [style*=';color:#0284c7'],
+  [style*='color: rgb(2, 132, 199)']
+) { color: #60a5fa !important; }
+
+:root[data-site-theme='night'] :is(
+  [style*='color: rgb(37, 99, 235)']
+) { color: #60a5fa !important; }
+
+:root[data-site-theme='night'] :is(
+  [style*='color: rgb(8, 145, 178)'],
+  [style*='color: rgb(13, 148, 136)']
+) { color: #22d3ee !important; }
+
+:root[data-site-theme='night'] :is(
+  [style*='color: rgb(5, 150, 105)']
+) { color: #34d399 !important; }
+
+:root[data-site-theme='night'] :is(
+  [style*='color: rgb(124, 58, 237)']
+) { color: #a78bfa !important; }
+
+:root[data-site-theme='night'] :is(
+  [style*='color: rgb(234, 88, 12)']
+) { color: #fbbf24 !important; }
+
+:root[data-site-theme='night'] :is(
+  [style*='color: rgb(219, 39, 119)']
+) { color: #fb7185 !important; }

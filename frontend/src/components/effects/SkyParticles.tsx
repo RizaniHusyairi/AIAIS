@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
+import { useSiteTheme } from '@/lib/siteTheme';
 
 /**
  * Lapisan partikel bernuansa penerbangan untuk permukaan terang.
@@ -20,7 +21,11 @@ import React, { useEffect, useRef } from 'react';
  *   - Menghormati `prefers-reduced-motion` dan berhenti saat tab tidak aktif.
  */
 
-type Tone = 'sky' | 'paper';
+/**
+ * `night` bukan nilai yang dikirim pemanggil — ia dipilih sendiri oleh
+ * komponen saat tema malam portal aktif. Lihat catatan pada `PALETTE`.
+ */
+type Tone = 'sky' | 'paper' | 'night';
 type Density = 'low' | 'normal';
 
 type Mote = {
@@ -46,7 +51,14 @@ type Contrail = {
 
 type Ring = { x: number; y: number; life: number; max: number };
 
-/** Warna per nada permukaan: [inti, aksen, kabut awan]. */
+/**
+ * Warna per nada permukaan: [inti, aksen, kabut awan].
+ *
+ * Nada `night` dipilih komponen sendiri ketika tema malam portal aktif,
+ * menimpa apa pun yang dikirim pemanggil. Itulah kenapa prop `tone` tidak
+ * perlu diubah di dua belas lebih tempat pemakaian: satu tambahan di sini
+ * membuat seluruhnya ikut bertema malam.
+ */
 const PALETTE: Record<Tone, {
   mote: [number, number, number];
   accent: [number, number, number];
@@ -68,6 +80,14 @@ const PALETTE: Record<Tone, {
     trail: [37, 99, 235],      // blue-600
     gain: 0.45,
   },
+  night: {
+    mote: [186, 230, 253],     // sky-200
+    accent: [34, 211, 238],    // cyan-400
+    // Awan malam nyaris tidak terlihat — hanya kelabu kebiruan yang samar.
+    cloud: [71, 105, 148],
+    trail: [125, 211, 252],    // sky-300
+    gain: 0.5,
+  },
 };
 
 export default function SkyParticles({
@@ -80,6 +100,7 @@ export default function SkyParticles({
   className?: string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const theme = useSiteTheme();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -87,7 +108,7 @@ export default function SkyParticles({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const pal = PALETTE[tone];
+    const pal = PALETTE[theme === 'night' ? 'night' : tone];
     const scale = density === 'low' ? 0.45 : 1;
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -408,7 +429,7 @@ export default function SkyParticles({
       window.removeEventListener('pointerleave', onLeave);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [tone, density]);
+  }, [tone, density, theme]);
 
   return (
     <canvas

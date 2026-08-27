@@ -9,6 +9,7 @@ import {
   STATUS_BLU, TUGAS, FUNGSI, ROUTES, CONTACT, MAPS_URL,
   type Official,
 } from '@/lib/airportProfile';
+import { PEJABAT_PHOTO_FIT } from '@/lib/pejabatFoto';
 import OrgChart from '@/components/profile/OrgChart';
 import {
   Plane, Compass, Target, Eye, ShieldCheck, Award, MapPin, Ruler, Building2, Users,
@@ -85,18 +86,6 @@ const NILAI = [
   { icon: Sparkles, title: 'Integritas', desc: 'Menjunjung kejujuran dan transparansi dalam setiap proses kerja.', color: '#d97706', bg: '#fffbeb' },
   { icon: Globe2, title: 'Profesional', desc: 'Bekerja sesuai standar, kompeten, dan terus mengembangkan diri.', color: '#0d9488', bg: '#f0fdfa' },
 ];
-
-/**
- * Penyesuaian bingkai foto per orang.
- *
- * Foto resmi berbeda-beda rasionya (408×612, 900×900, 495×504), sehingga
- * tinggi kepala antar kartu tidak seragam tanpa koreksi ini. Murni urusan
- * tampilan — karena itu tinggal di sini, bukan di modul data.
- */
-const PHOTO_FIT: Record<string, string> = {
-  murdoko: 'scale-[1.18]',
-  roslan: 'scale-[1.06]',
-};
 
 const rise = {
   hidden: { opacity: 0, y: 26 },
@@ -197,7 +186,7 @@ function OfficialDialog({ official, onClose }: { official: Official | null; onCl
                 <img
                   src={official.photo}
                   alt={official.name}
-                  className="w-full h-full object-contain object-bottom"
+                  className={`w-full h-full object-contain object-bottom origin-bottom ${PEJABAT_PHOTO_FIT[official.slug] ?? ''}`}
                 />
               </div>
               <div className="flex-1 min-w-0 pt-0.5">
@@ -864,7 +853,7 @@ export default function ProfileView() {
                   src={p.photo}
                   alt={p.name}
                   loading="lazy"
-                  className={`relative w-full h-full object-contain object-bottom p-3 pb-8 group-hover:scale-105 transition-transform duration-500 ${PHOTO_FIT[p.slug] ?? ''}`}
+                  className={`relative w-full h-full object-contain object-bottom origin-bottom p-3 pb-8 group-hover:scale-105 transition-transform duration-500 ${PEJABAT_PHOTO_FIT[p.slug] ?? ''}`}
                 />
                 <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#0b1e5b]/90 via-[#0b1e5b]/55 to-transparent" />
 
