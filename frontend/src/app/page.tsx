@@ -6,8 +6,9 @@ import { motion } from 'framer-motion';
 import { fetchApi } from '@/lib/api';
 import { useSetting } from '@/lib/settings';
 import { TOURISM_SPOTS, TOURISM_CAT_META } from '@/lib/tourismData';
-import { OFFICIALS, ORG_NAME } from '@/lib/airportProfile';
+import { ORG_NAME } from '@/lib/airportProfile';
 import { PEJABAT_PHOTO_FIT } from '@/lib/pejabatFoto';
+import { usePejabat } from '@/lib/pejabatLive';
 import HeroParticles from '@/components/effects/HeroParticles';
 import DekorEvent, { PitaPerayaan } from '@/components/events/DekorEvent';
 import { usePerayaanAktif } from '@/lib/perayaanAktif';
@@ -16,6 +17,8 @@ import HeroBoardingPass from '@/components/home/HeroBoardingPass';
 import { LampuLandasan, JudulBagian } from '@/components/home/AviasiDekor';
 import { NewsItem, InstagramPost } from '@/types';
 import GambarBerita from '@/components/GambarBerita';
+import PetaLokasiBandara from '@/components/map/PetaLokasiBandara';
+import { AIRPORTS, HOME_IATA } from '@/lib/airports';
 import {
   Plane, ArrowRight, Building2, ChevronRight, ChevronLeft, Users, MapPin, Star, Car,
   ParkingSquare, Headphones, Play, Wifi, Sofa, UtensilsCrossed, MoonStar, Baby, Accessibility,
@@ -25,6 +28,19 @@ import {
 /* ================================================================
    Data statis pendukung
    ================================================================ */
+
+/* Letak bandara. Diambil dari `lib/airports.ts` — berprovenans OurAirports
+   dan sudah dicocokkan silang dengan kode ICAO WALS — bukan ditulis ulang di
+   sini, supaya tidak ada salinan kedua yang perlahan menyimpang. */
+const BANDARA_LOKASI = AIRPORTS[HOME_IATA];
+
+/** Koordinat siap baca, 4 desimal (±11 m) — cukup untuk menuntun kendaraan. */
+const KOORDINAT_BANDARA = `${BANDARA_LOKASI.lat.toFixed(4)}, ${BANDARA_LOKASI.lon.toFixed(4)}`;
+
+/* Membuka aplikasi peta bawaan pengunjung. Memakai koordinat, bukan nama:
+   pencarian "APT Pranoto" masih kerap mendarat di kantor perwakilan di dalam
+   kota, sedangkan koordinat selalu menunjuk apronnya sendiri. */
+const TAUTAN_PETA = `https://www.google.com/maps/search/?api=1&query=${BANDARA_LOKASI.lat},${BANDARA_LOKASI.lon}`;
 const QUICK = [
   { title: 'Penerbangan', desc: 'Info Jadwal', icon: Plane, color: '#2563eb', bg: '#eff6ff', href: '/flights' },
   { title: 'Fasilitas', desc: 'Layanan Bandara', icon: Building2, color: '#0d9488', bg: '#f0fdfa', href: '/facilities' },
@@ -65,8 +81,10 @@ const ANGKA = [
   { icon: Star, value: '98%', label: 'Tingkat Kepuasan Penumpang' },
 ];
 
-/**
- * Pejabat bandara — data resmi, dipakai bersama halaman /profile.
+/*
+ * Pejabat bandara kini datang dari `usePejabat()` — dikelola petugas lewat
+ * `/admin/pejabat`, dengan konstanta `OFFICIALS` sebagai cadangan selama API
+ * belum menjawab. Lihat alasan hukum cadangan itu di lib/pejabatLive.ts.
  *
  * Sebelumnya berkas ini memuat lima nama rekaan dengan avatar kartun
  * DiceBear, salah satunya diberi jabatan "Sekretaris Daerah Pemerintah
@@ -74,7 +92,6 @@ const ANGKA = [
  * lengkap dengan kutipan karangan. Semuanya dihapus; lihat provenans di
  * lib/airportProfile.ts.
  */
-const EXECUTIVES = OFFICIALS;
 
 /* Tidak ada FALLBACK_DEPARTURES di sini.
  *
@@ -107,6 +124,10 @@ export default function HomePage() {
 
   const heroBg = useSetting('bg_home');
 
+  /* Pejabat bandara — dikelola lewat /admin/pejabat. Membuka dengan teks
+     otoritatif, lalu berpindah ke data API begitu jawabannya tiba. */
+  const EXECUTIVES = usePejabat();
+
   /* Perayaan yang sedang berlangsung — menghias hero bila ada, dan tidak
      melakukan apa pun bila tidak. Permintaannya dibagi dengan layar sambutan
      di tata letak akar, jadi memanggilnya di sini tidak menambah lalu lintas. */
@@ -124,13 +145,16 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    if (!auto) return;
+    if (!auto || EXECUTIVES.length === 0) return;
     const t = setInterval(() => setExec((e) => (e + 1) % EXECUTIVES.length), 6000);
     return () => clearInterval(t);
-  }, [auto]);
+  }, [auto, EXECUTIVES.length]);
 
-  const current = EXECUTIVES[exec];
-  const others = EXECUTIVES.filter((_, i) => i !== exec).slice(0, 4);
+  // Daftarnya dapat menyusut saat data API menggantikan cadangan, sementara
+  // `exec` masih menunjuk indeks lama — tanpa pembatasan ini kartunya kosong.
+  const aman = EXECUTIVES.length === 0 ? 0 : exec % EXECUTIVES.length;
+  const current = EXECUTIVES[aman];
+  const others = EXECUTIVES.filter((_, i) => i !== aman).slice(0, 4);
   const latestNews = news.slice(0, 3);
 
   const pickExec = (i: number) => { setExec(i); setAuto(false); };
@@ -436,11 +460,11 @@ export default function HomePage() {
               {/* kontrol */}
               <div className="absolute bottom-5 right-5 z-20 flex items-center gap-3">
                 <span className="text-white/90 text-[12px] font-mono tracking-wider">
-                  <b className="text-white">{String(exec + 1).padStart(2, '0')}</b> / {String(EXECUTIVES.length).padStart(2, '0')}
+                  <b className="text-white">{String(aman + 1).padStart(2, '0')}</b> / {String(EXECUTIVES.length).padStart(2, '0')}
                 </span>
                 <motion.button
                   whileTap={{ scale: 0.9 }}
-                  onClick={() => pickExec((exec - 1 + EXECUTIVES.length) % EXECUTIVES.length)}
+                  onClick={() => pickExec((aman - 1 + EXECUTIVES.length) % EXECUTIVES.length)}
                   className="w-9 h-9 rounded-full bg-white/15 border border-white/25 backdrop-blur flex items-center justify-center text-white hover:bg-white/25 transition-colors cursor-pointer"
                   aria-label="Sebelumnya"
                 >
@@ -448,7 +472,7 @@ export default function HomePage() {
                 </motion.button>
                 <motion.button
                   whileTap={{ scale: 0.9 }}
-                  onClick={() => pickExec((exec + 1) % EXECUTIVES.length)}
+                  onClick={() => pickExec((aman + 1) % EXECUTIVES.length)}
                   className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-blue-700 shadow-lg hover:bg-blue-50 transition-colors cursor-pointer"
                   aria-label="Selanjutnya"
                 >
@@ -503,43 +527,44 @@ export default function HomePage() {
         </div>
 
         {/* peta */}
-        <motion.div initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="lg:col-span-5 relative rounded-2xl overflow-hidden border border-slate-100 bg-slate-100 min-h-[240px]">
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundImage:
-                'linear-gradient(#e2e8f0 1px, transparent 1px), linear-gradient(90deg, #e2e8f0 1px, transparent 1px)',
-              backgroundSize: '38px 38px',
-            }}
-          />
-          <svg className="absolute inset-0 w-full h-full" viewBox="0 0 300 260" fill="none">
-            <path d="M-10 190 Q 90 150 150 190 T 320 160" stroke="#cbd5e1" strokeWidth="10" />
-            <path d="M60 -10 Q 100 90 70 270" stroke="#e2e8f0" strokeWidth="8" />
-          </svg>
+        {/* Peta lokasi. Isinya digambar dari koordinat asli bandara
+            (`lib/airports.ts`, berprovenans OurAirports) di atas garis pantai
+            Kalimantan — menggantikan hiasan berbentuk peta yang dulu menempati
+            tempat ini tanpa menggambarkan lokasi mana pun. */}
+        <motion.div initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="lg:col-span-5 relative rounded-2xl overflow-hidden border border-slate-100 min-h-[240px]">
+          <PetaLokasiBandara />
 
           <div className="absolute top-6 left-5 right-5">
             <div className="bg-white rounded-xl shadow-lg border border-slate-100 p-3 flex gap-2.5">
-              <motion.span
-                animate={{ y: [0, -4, 0] }}
-                transition={{ repeat: Infinity, duration: 2.2, ease: 'easeInOut' }}
-                className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0"
-              >
+              <span className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
                 <MapPin className="w-4 h-4 text-white" />
-              </motion.span>
+              </span>
               <div className="min-w-0">
                 <p className="font-bold text-slate-900 text-[12.5px]">APT Pranoto Samarinda</p>
                 {/* Alamat resmi sesuai aptpairport.id. */}
                 <p className="text-[11px] text-slate-500 leading-snug">Jl. Poros Samarinda–Bontang, Kel. Sungai Siring, Samarinda 75119</p>
+                {/* Koordinat ikut ditulis karena inilah satu-satunya keterangan
+                    letak yang tetap berguna saat petanya tidak dapat dimuat. */}
+                <p className="mt-1 text-[10.5px] text-slate-400 tabular-nums">
+                  {KOORDINAT_BANDARA} · {BANDARA_LOKASI.iata}/{BANDARA_LOKASI.icao}
+                </p>
               </div>
             </div>
           </div>
 
-          <Link
-            href="/facilities#peta"
+          {/* Membuka aplikasi peta milik pengunjung sendiri, bukan menyematkan
+              peta pihak ketiga ke dalam beranda: yang pertama hanya berjalan
+              bila diklik, yang kedua menyeret setiap pengunjung portal ke
+              server pihak ketiga hanya untuk memuat halaman depan. */}
+          <a
+            href={TAUTAN_PETA}
+            target="_blank"
+            rel="noopener noreferrer"
             className="absolute bottom-5 left-5 inline-flex items-center gap-2 bg-white text-slate-800 font-bold text-[12px] px-4 py-2.5 rounded-full shadow-lg border border-slate-100 hover:bg-blue-50 hover:text-blue-700 transition-colors"
           >
-            <Navigation className="w-3.5 h-3.5 text-blue-600" /> Lihat di Peta
-          </Link>
+            <Navigation className="w-3.5 h-3.5 text-blue-600" /> Buka di aplikasi peta
+            <span className="sr-only"> (membuka tab baru)</span>
+          </a>
         </motion.div>
 
       </section>

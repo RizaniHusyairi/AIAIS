@@ -16,7 +16,7 @@ import {
   LayoutDashboard, Plane, Newspaper, Megaphone, Building2, Store, FileText, MessageSquareWarning,
   LogOut, ExternalLink, ShieldCheck, Menu, Radar, ChevronRight, ImageIcon, ScrollText, Scale, Landmark,
   Search, SearchX, Sun, Moon,
-  CalendarClock, DoorOpen, Radio, FileBarChart, Globe, ClipboardList, Users, UserCircle, HelpCircle, MapPin, BarChart3, CalendarRange, Wallet, School, BadgeCheck, Gavel, HardHat, PartyPopper,
+  CalendarClock, DoorOpen, Radio, FileBarChart, Globe, ClipboardList, Users, UserCircle, UserRound, HelpCircle, MapPin, BarChart3, CalendarRange, Wallet, School, BadgeCheck, Gavel, HardHat, PartyPopper,
   PlaneTakeoff, Clock3, GraduationCap, Boxes, Wrench, Mail, CalendarCheck,
   PackageSearch, Bell,
 } from 'lucide-react';
@@ -52,6 +52,7 @@ const NAV: { section: string; items: NavItem[] }[] = [
       { name: 'Pengumuman', href: '/admin/announcements', icon: Megaphone },
       { name: 'Dokumen', href: '/admin/documents', icon: FileText },
       { name: 'Regulasi', href: '/admin/regulasi', icon: Scale },
+      { name: 'Pejabat Bandara', href: '/admin/pejabat', icon: UserRound },
       { name: 'Tautan Terkait', href: '/admin/external-links', icon: Globe },
       { name: 'Instagram', href: '/admin/instagram', icon: InstagramGlyph },
       { name: 'Perayaan', href: '/admin/perayaan', icon: PartyPopper },

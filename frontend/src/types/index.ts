@@ -389,6 +389,34 @@ export interface TourismItem {
   gallery_urls: string[];
 }
 
+/**
+ * Pejabat struktural bandara.
+ *
+ * Tidak ada medan pendidikan, NIP, pangkat, tanggal lahir, atau identitas
+ * pribadi lain — dan tabelnya pun tidak memilikinya. Lihat catatan PDP pada
+ * migrasi `create_officials_table` sebelum menambah medan apa pun di sini.
+ */
+export interface OfficialItem {
+  id: number;
+  /** Kunci stabil; dipakai sebagai React key dan penanda kepala kantor. */
+  slug: string;
+  name: string;
+  /** Nomenklatur jabatan lengkap. */
+  title: string;
+  /** Nomenklatur ringkas untuk kartu dan carousel yang sempit. */
+  short_title: string;
+  /** Lintasan berkas, URL penuh, atau aset statis frontend berawalan "/". */
+  photo: string | null;
+  position_history: string[] | null;
+  awards: string[] | null;
+  /** Urutan tampil; mengikuti hierarki jabatan, bukan abjad. */
+  sort_order: number;
+  is_published: boolean;
+  /** Turunan `$appends`. */
+  photo_url: string | null;
+  has_photo: boolean;
+}
+
 /** Pertanyaan yang sering diajukan. */
 export interface FaqItem {
   id: number;

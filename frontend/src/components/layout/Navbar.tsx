@@ -585,6 +585,12 @@ export default function Navbar() {
                 onClick={() => setSearchOpen((s) => !s)}
                 className="w-10 h-10 rounded-xl text-slate-500 hover:text-blue-600 hover:bg-blue-50 flex items-center justify-center transition-colors cursor-pointer"
                 title="Cari informasi"
+                /* `title` saja tidak cukup: pembaca layar tidak diwajibkan
+                   membacakannya, sehingga tombol ini sebelumnya diumumkan
+                   sebagai "tombol" tanpa nama sama sekali. */
+                aria-label="Cari informasi"
+                aria-expanded={searchOpen}
+                aria-controls="panel-cari"
               >
                 {searchOpen ? <X className="w-[18px] h-[18px]" /> : <Search className="w-[18px] h-[18px]" />}
               </motion.button>
@@ -625,7 +631,9 @@ export default function Navbar() {
             <button
               onClick={() => setMobileOpen((s) => !s)}
               className="xl:hidden w-10 h-10 rounded-xl text-slate-600 hover:bg-slate-100 flex items-center justify-center cursor-pointer"
-              aria-label="Menu"
+              aria-label={mobileOpen ? 'Tutup menu' : 'Buka menu'}
+              aria-expanded={mobileOpen}
+              aria-controls="laci-menu"
             >
               {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
@@ -650,6 +658,7 @@ export default function Navbar() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
+              id="panel-cari"
               className="absolute top-full left-0 right-0 bg-white border-b border-slate-100 shadow-xl"
             >
               <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-5">
@@ -693,6 +702,7 @@ export default function Navbar() {
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            id="laci-menu"
             // Ambang `xl`, mengikuti nav desktop (`hidden xl:flex`) dan tombol
             // hamburger (`xl:hidden`). Dengan `lg` drawer ini tersembunyi di
             // 1024–1279px, sementara nav desktop juga belum tampil di sana —

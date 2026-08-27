@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
+import { useReducedMotion } from 'framer-motion';
 
 /**
  * Lapisan partikel dekoratif untuk hero beranda.
@@ -46,6 +47,12 @@ const TONES: Record<Dot['tone'], [number, number, number]> = {
 
 export default function HeroParticles({ className = '' }: { className?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  /* Dibaca lewat hook framer-motion, BUKAN `window.matchMedia` langsung.
+     Bentuk lamanya membaca preferensi satu kali di dalam efek tanpa pendengar
+     perubahan, sehingga penyetelan "kurangi gerak" pada panel aksesibilitas
+     tidak akan pernah sampai ke sini. Hook ini menyalurkan keduanya sekaligus:
+     preferensi sistem operasi DAN pilihan pemakai lewat <PengaturGerak />. */
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -53,7 +60,6 @@ export default function HeroParticles({ className = '' }: { className?: string }
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     let w = 0, h = 0, dpr = 1;
     let dots: Dot[] = [];
@@ -343,7 +349,7 @@ export default function HeroParticles({ className = '' }: { className?: string }
       window.removeEventListener('pointerleave', onLeave);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, []);
+  }, [reduceMotion]);
 
   return (
     <canvas

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
+import { useReducedMotion } from 'framer-motion';
 
 /**
  * Kursor pesawat untuk halaman Portal Aplikasi.
@@ -44,6 +45,12 @@ function selisihSudut(target: number, kini: number): number {
 
 export default function PlaneCursor() {
   const wrapRef = useRef<HTMLDivElement>(null);
+  /* Pilihan pemakai dari panel aksesibilitas. Terpisah dari `kurangiGerak`
+     di dalam efek: yang itu mendengarkan preferensi SISTEM OPERASI dan sudah
+     bekerja, yang ini menambahkan gerbang kedua untuk penyetelan portal.
+     Nilainya masuk daftar kebergantungan efek supaya loop-nya benar-benar
+     dibongkar saat penyetelannya dinyalakan di tengah halaman terbuka. */
+  const kurangiGerakPemakai = useReducedMotion();
   const planeRef = useRef<HTMLDivElement>(null);
   const dotRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -51,7 +58,7 @@ export default function PlaneCursor() {
   useEffect(() => {
     const halus = window.matchMedia('(pointer: fine)');
     const kurangiGerak = window.matchMedia('(prefers-reduced-motion: reduce)');
-    if (!halus.matches || kurangiGerak.matches) return;
+    if (kurangiGerakPemakai || !halus.matches || kurangiGerak.matches) return;
 
     const wrap = wrapRef.current;
     const plane = planeRef.current;
@@ -255,7 +262,7 @@ export default function PlaneCursor() {
     }
 
     return bersihkan;
-  }, []);
+  }, [kurangiGerakPemakai]);
 
   return (
     <div

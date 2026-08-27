@@ -128,6 +128,10 @@ export default function FlightMapInner({
     mapRef.current = map;
     map.setView([-2.5, 118], 4);
 
+    // Dibaca sekali saat peta dipasang, sejalan dengan efek ini yang memang
+    // hanya berjalan sekali. Penyetelan "kurangi gerak" yang dinyalakan di
+    // tengah jalan tetap menghentikan animasi rotornya lewat aturan CSS di
+    // globals.css — yang berbasis kelas, bukan JavaScript.
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     // Ubin hanya bila dikonfigurasi; bawaannya mode vektor mandiri.

@@ -53,6 +53,63 @@
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
+/* ================================================================
+   Fondasi aksesibilitas — berlaku bagi semua, tanpa menyalakan apa pun
+   ================================================================
+   Berbeda dari blok "Penyetelan aksesibilitas" di ujung berkas ini yang
+   menunggu pemakai menyalakannya, dua aturan di bawah selalu aktif. Keduanya
+   memperbaiki cacat yang sebelumnya ada di SETIAP halaman.
+
+   Letaknya sengaja di awal berkas: aturan tak berlapis dinilai berdasarkan
+   urutan, dan penyetelan "fokus tebal" di ujung berkas memang harus bisa
+   menimpa cincin dasar di sini.
+   ================================================================ */
+
+/* ---- Tautan lompat isi ----
+   Dirender sebagai anak pertama <body> (lihat app/layout.tsx). Disembunyikan
+   dengan menggeser ke luar layar, BUKAN dengan `display: none` maupun
+   `visibility: hidden`: keduanya mengeluarkan elemen dari urutan Tab, dan
+   tautan yang tak pernah bisa difokuskan tidak ada gunanya. */
+.lewati-tautan {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 200; /* di atas navbar (z-50) dan lapisan sapuan tema (z-100) */
+  transform: translateY(-120%);
+  padding: 0.75rem 1.25rem;
+  border-radius: 0 0 0.75rem 0;
+  background: #1d4ed8;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 10px 24px rgba(2, 6, 18, 0.35);
+  transition: transform 160ms ease;
+}
+.lewati-tautan:focus {
+  transform: translateY(0);
+}
+
+/* ---- Cincin fokus dasar ----
+   Sebelumnya portal ini tidak punya satu pun aturan `:focus-visible` global,
+   sementara sejumlah komponen memasang `focus:outline-none` dan hanya
+   sebagian menggantinya dengan cincin sendiri — di sisanya jejak fokus benar-
+   benar hilang dari layar. Aturan ini menjadi jaring pengamannya.
+
+   `:focus-visible`, bukan `:focus`: peramban hanya menyalakannya ketika fokus
+   datang dari papan tik, sehingga klik tetikus pada tombol tidak meninggalkan
+   cincin yang mengganggu. */
+:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Biru lembaga terlalu redup di atas latar malam. */
+:root[data-site-theme='night'] :focus-visible {
+  outline-color: #67e8f9;
+}
+
 /* ---- Silang gambar panggung wisata (/tourism) ----
    Lapisan atas memudar masuk di atas gambar sebelumnya. Dipasang ulang lewat
    `key` sehingga terputar dari awal setiap destinasi berganti.
@@ -1070,3 +1127,485 @@ html[data-plane-cursor] * {
 :root[data-site-theme='night'] :is(
   [style*='color: rgb(219, 39, 119)']
 ) { color: #fb7185 !important; }
+
+
+/* ================================================================
+   Penyetelan aksesibilitas
+   ================================================================
+   Dipilih lewat atribut `data-a11y-*` pada <html>. Penulis atribut itu HANYA
+   `components/layout/PenyetelAksesibilitas.tsx` (dan skrip anti-kedip di
+   layout akar untuk gambar pertama); jangan ada yang menyetelnya dari tempat
+   lain.
+
+   Bentuknya PEMETAAN-ULANG UTILITAS, alasannya persis sama dengan tema malam
+   di atas: warna dan ukuran teks portal ini ditulis sebagai utilitas Tailwind
+   langsung di lebih dari seratus berkas. Aturan di bawah memilih kelas
+   utilitasnya sendiri lalu mengganti nilainya, sehingga halaman apa pun — lama
+   maupun baru — ikut menyesuaikan tanpa satu baris pun disunting.
+
+   SELURUH BAGIAN INI SENGAJA PALING AKHIR DI BERKAS. CSS tak berlapis dinilai
+   berdasarkan urutan pada spesifisitas yang sama, dan kontras tinggi memang
+   harus menang atas tema malam yang memetakan utilitas yang sama persis.
+   Memindahkannya ke atas blok malam akan gagal tanpa satu pun pesan galat.
+   ================================================================ */
+
+/* ================================================================
+   1. Ukuran teks
+   ================================================================
+   `html { font-size }` TIDAK BERGUNA di portal ini: 2.160 utilitas ukuran teks
+   ditulis dalam piksel mutlak dan tidak akan bergeser satu piksel pun olehnya.
+   Karena itu ukurannya yang dipetakan ulang.
+
+   Akar dokumen sengaja TIDAK disentuh: variabel `--text-*` di bawah berbasis
+   rem, dan mengubah font-size akar akan menskalakannya untuk KEDUA kalinya.
+   ================================================================ */
+
+/* ---- Ukuran bernama Tailwind ----
+   Tailwind v4 memancarkan `font-size: var(--text-lg)`, jadi cukup variabel
+   temanya yang didefinisikan ulang. Sebelas baris ini otomatis ikut menutupi
+   seluruh varian responsifnya (`sm:text-2xl`, `lg:text-5xl`, ...) — sesuatu
+   yang tidak bisa dilakukan pemetaan per-kelas. */
+:root[data-a11y-teks] {
+  --text-xs: calc(0.75rem * var(--a11y-skala));
+  --text-sm: calc(0.875rem * var(--a11y-skala));
+  --text-base: calc(1rem * var(--a11y-skala));
+  --text-lg: calc(1.125rem * var(--a11y-skala));
+  --text-xl: calc(1.25rem * var(--a11y-skala));
+  --text-2xl: calc(1.5rem * var(--a11y-skala));
+  --text-3xl: calc(1.875rem * var(--a11y-skala));
+  --text-4xl: calc(2.25rem * var(--a11y-skala));
+  --text-5xl: calc(3rem * var(--a11y-skala));
+  --text-6xl: calc(3.75rem * var(--a11y-skala));
+  --text-7xl: calc(4.5rem * var(--a11y-skala));
+}
+
+/* ---- Ukuran piksel sembarang ----
+   Daftarnya diambil dari kode, dan bisa diperiksa ulang kapan saja dengan:
+     grep -rhoE "text-\[[0-9.]+px\]" --include=*.tsx --include=*.ts src | sort -u
+
+   Pemilih KELAS yang di-escape, BUKAN `[class*='text-[11px]']`. Pemilih
+   substring akan ikut menangkap `md:text-[11px]` lalu memberlakukannya di
+   SEMUA lebar layar — tipografi responsifnya patah tanpa gejala yang jelas. */
+:root[data-a11y-teks] .text-\[7px\] { font-size: calc(7px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[8\.5px\] { font-size: calc(8.5px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[9px\] { font-size: calc(9px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[9\.5px\] { font-size: calc(9.5px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[10px\] { font-size: calc(10px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[10\.5px\] { font-size: calc(10.5px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[11px\] { font-size: calc(11px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[11\.5px\] { font-size: calc(11.5px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[12px\] { font-size: calc(12px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[12\.5px\] { font-size: calc(12.5px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[13px\] { font-size: calc(13px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[13\.5px\] { font-size: calc(13.5px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[14px\] { font-size: calc(14px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[14\.5px\] { font-size: calc(14.5px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[15px\] { font-size: calc(15px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[15\.5px\] { font-size: calc(15.5px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[16px\] { font-size: calc(16px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[16\.5px\] { font-size: calc(16.5px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[17px\] { font-size: calc(17px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[18px\] { font-size: calc(18px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[19px\] { font-size: calc(19px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[20px\] { font-size: calc(20px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[21px\] { font-size: calc(21px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[22px\] { font-size: calc(22px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[24px\] { font-size: calc(24px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[25px\] { font-size: calc(25px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[26px\] { font-size: calc(26px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[27px\] { font-size: calc(27px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[28px\] { font-size: calc(28px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[30px\] { font-size: calc(30px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[32px\] { font-size: calc(32px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[38px\] { font-size: calc(38px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[40px\] { font-size: calc(40px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[44px\] { font-size: calc(44px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[46px\] { font-size: calc(46px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[54px\] { font-size: calc(54px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[56px\] { font-size: calc(56px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[64px\] { font-size: calc(64px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[80px\] { font-size: calc(80px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[96px\] { font-size: calc(96px * var(--a11y-skala)); }
+:root[data-a11y-teks] .text-\[132px\] { font-size: calc(132px * var(--a11y-skala)); }
+
+/* ---- Varian responsif ----
+   Wajib ada. Aturan tak berlapis mengalahkan seluruh isi `@layer utilities`
+   milik Tailwind TERMASUK yang berada di dalam media query, jadi tanpa blok
+   ini aturan piksel di atas akan mengalahkan `sm:text-[15px]` bahkan pada
+   layar lebar, dan tipografi hero membeku di ukuran ponselnya. */
+@media (width >= 40rem) {
+  :root[data-a11y-teks] .sm\:text-\[12px\] { font-size: calc(12px * var(--a11y-skala)); }
+  :root[data-a11y-teks] .sm\:text-\[12\.5px\] { font-size: calc(12.5px * var(--a11y-skala)); }
+  :root[data-a11y-teks] .sm\:text-\[13\.5px\] { font-size: calc(13.5px * var(--a11y-skala)); }
+  :root[data-a11y-teks] .sm\:text-\[14px\] { font-size: calc(14px * var(--a11y-skala)); }
+  :root[data-a11y-teks] .sm\:text-\[14\.5px\] { font-size: calc(14.5px * var(--a11y-skala)); }
+  :root[data-a11y-teks] .sm\:text-\[15px\] { font-size: calc(15px * var(--a11y-skala)); }
+  :root[data-a11y-teks] .sm\:text-\[15\.5px\] { font-size: calc(15.5px * var(--a11y-skala)); }
+  :root[data-a11y-teks] .sm\:text-\[18px\] { font-size: calc(18px * var(--a11y-skala)); }
+  :root[data-a11y-teks] .sm\:text-\[21px\] { font-size: calc(21px * var(--a11y-skala)); }
+  :root[data-a11y-teks] .sm\:text-\[22px\] { font-size: calc(22px * var(--a11y-skala)); }
+  :root[data-a11y-teks] .sm\:text-\[26px\] { font-size: calc(26px * var(--a11y-skala)); }
+  :root[data-a11y-teks] .sm\:text-\[28px\] { font-size: calc(28px * var(--a11y-skala)); }
+  :root[data-a11y-teks] .sm\:text-\[32px\] { font-size: calc(32px * var(--a11y-skala)); }
+  :root[data-a11y-teks] .sm\:text-\[38px\] { font-size: calc(38px * var(--a11y-skala)); }
+  :root[data-a11y-teks] .sm\:text-\[44px\] { font-size: calc(44px * var(--a11y-skala)); }
+  :root[data-a11y-teks] .sm\:text-\[46px\] { font-size: calc(46px * var(--a11y-skala)); }
+  :root[data-a11y-teks] .sm\:text-\[54px\] { font-size: calc(54px * var(--a11y-skala)); }
+  :root[data-a11y-teks] .sm\:text-\[96px\] { font-size: calc(96px * var(--a11y-skala)); }
+}
+
+@media (width >= 48rem) {
+  :root[data-a11y-teks] .md\:text-\[38px\] { font-size: calc(38px * var(--a11y-skala)); }
+  :root[data-a11y-teks] .md\:text-\[56px\] { font-size: calc(56px * var(--a11y-skala)); }
+}
+
+@media (width >= 64rem) {
+  :root[data-a11y-teks] .lg\:text-\[24px\] { font-size: calc(24px * var(--a11y-skala)); }
+  :root[data-a11y-teks] .lg\:text-\[27px\] { font-size: calc(27px * var(--a11y-skala)); }
+  :root[data-a11y-teks] .lg\:text-\[46px\] { font-size: calc(46px * var(--a11y-skala)); }
+  :root[data-a11y-teks] .lg\:text-\[54px\] { font-size: calc(54px * var(--a11y-skala)); }
+  :root[data-a11y-teks] .lg\:text-\[56px\] { font-size: calc(56px * var(--a11y-skala)); }
+  :root[data-a11y-teks] .lg\:text-\[64px\] { font-size: calc(64px * var(--a11y-skala)); }
+  :root[data-a11y-teks] .lg\:text-\[132px\] { font-size: calc(132px * var(--a11y-skala)); }
+}
+
+/* ---- Isi artikel ----
+   `.article-content` menetapkan ukurannya sendiri di kepala berkas ini, di
+   luar jangkauan utilitas mana pun. */
+:root[data-a11y-teks] .article-content { font-size: calc(1rem * var(--a11y-skala)); }
+:root[data-a11y-teks] .article-content h2 { font-size: calc(1.5rem * var(--a11y-skala)); }
+:root[data-a11y-teks] .article-content h3 { font-size: calc(1.2rem * var(--a11y-skala)); }
+
+/* ================================================================
+   2. Kontras tinggi
+   ================================================================
+   Dua palet dalam SATU set aturan: variabelnya yang berganti mengikuti tema,
+   bukan aturannya yang digandakan. Pemilih malam berspesifisitas lebih tinggi
+   (dua atribut lawan satu), jadi urutannya tidak jadi soal di sana.
+
+   YANG SENGAJA TIDAK DISENTUH: gradien. Portal ini memakai gradien untuk dua
+   hal yang berlawanan — hero gelap berteks putih dan panel pucat berteks
+   gelap — dan tidak ada satu warna rata yang benar untuk keduanya sekaligus.
+   Meratakannya akan membuat separuhnya justru tak terbaca, yaitu kebalikan
+   dari maksud penyetelan ini. Utilitas beropasitas rendah di atas hero
+   (`bg-white/12`, `text-blue-100/85`) juga dilewati, alasannya sama dengan
+   pengecualian yang sudah berlaku pada tema malam.
+   ================================================================ */
+
+:root[data-a11y-kontras='tinggi'] {
+  --hc-bg: #ffffff;
+  --hc-fg: #000000;
+  --hc-line: #000000;
+  --hc-tautan: #0000cc;
+}
+
+:root[data-site-theme='night'][data-a11y-kontras='tinggi'] {
+  --hc-bg: #000000;
+  --hc-fg: #ffffff;
+  --hc-line: #ffffff;
+  --hc-tautan: #7fd4ff;
+}
+
+/* Latar disetel pada <html> DAN <body>, dan keduanya diperlukan — alasannya
+   sudah dijelaskan panjang lebar pada blok tema malam di atas. */
+:root[data-a11y-kontras='tinggi'] { background-color: var(--hc-bg); }
+:root[data-a11y-kontras='tinggi'] body[class] {
+  background-color: var(--hc-bg);
+  color: var(--hc-fg);
+}
+
+/* ---- Permukaan ---- */
+:root[data-a11y-kontras='tinggi'] .bg-white,
+:root[data-a11y-kontras='tinggi'] .bg-white\/95,
+:root[data-a11y-kontras='tinggi'] .bg-white\/92,
+:root[data-a11y-kontras='tinggi'] .bg-white\/90,
+:root[data-a11y-kontras='tinggi'] .bg-white\/85,
+:root[data-a11y-kontras='tinggi'] .bg-slate-50,
+:root[data-a11y-kontras='tinggi'] .bg-slate-100,
+:root[data-a11y-kontras='tinggi'] .bg-slate-200,
+:root[data-a11y-kontras='tinggi'] .bg-gray-50,
+:root[data-a11y-kontras='tinggi'] .bg-gray-100,
+:root[data-a11y-kontras='tinggi'] .bg-zinc-50,
+:root[data-a11y-kontras='tinggi'] .bg-zinc-100,
+:root[data-a11y-kontras='tinggi'] .bg-neutral-50,
+:root[data-a11y-kontras='tinggi'] .bg-neutral-100,
+:root[data-a11y-kontras='tinggi'] .bg-stone-50,
+:root[data-a11y-kontras='tinggi'] .bg-stone-100 { background-color: var(--hc-bg); }
+
+/* Semburat berwarna tingkat -50 dan -100 semuanya permukaan kertas berwarna;
+   di kontras tinggi justru warnanya yang harus hilang. */
+:root[data-a11y-kontras='tinggi'] .bg-slate-50,
+:root[data-a11y-kontras='tinggi'] .bg-slate-100,
+:root[data-a11y-kontras='tinggi'] .bg-gray-50,
+:root[data-a11y-kontras='tinggi'] .bg-gray-100,
+:root[data-a11y-kontras='tinggi'] .bg-zinc-50,
+:root[data-a11y-kontras='tinggi'] .bg-zinc-100,
+:root[data-a11y-kontras='tinggi'] .bg-neutral-50,
+:root[data-a11y-kontras='tinggi'] .bg-neutral-100,
+:root[data-a11y-kontras='tinggi'] .bg-stone-50,
+:root[data-a11y-kontras='tinggi'] .bg-stone-100,
+:root[data-a11y-kontras='tinggi'] .bg-blue-50,
+:root[data-a11y-kontras='tinggi'] .bg-blue-100,
+:root[data-a11y-kontras='tinggi'] .bg-sky-50,
+:root[data-a11y-kontras='tinggi'] .bg-sky-100,
+:root[data-a11y-kontras='tinggi'] .bg-cyan-50,
+:root[data-a11y-kontras='tinggi'] .bg-cyan-100,
+:root[data-a11y-kontras='tinggi'] .bg-teal-50,
+:root[data-a11y-kontras='tinggi'] .bg-teal-100,
+:root[data-a11y-kontras='tinggi'] .bg-emerald-50,
+:root[data-a11y-kontras='tinggi'] .bg-emerald-100,
+:root[data-a11y-kontras='tinggi'] .bg-green-50,
+:root[data-a11y-kontras='tinggi'] .bg-green-100,
+:root[data-a11y-kontras='tinggi'] .bg-lime-50,
+:root[data-a11y-kontras='tinggi'] .bg-lime-100,
+:root[data-a11y-kontras='tinggi'] .bg-yellow-50,
+:root[data-a11y-kontras='tinggi'] .bg-yellow-100,
+:root[data-a11y-kontras='tinggi'] .bg-amber-50,
+:root[data-a11y-kontras='tinggi'] .bg-amber-100,
+:root[data-a11y-kontras='tinggi'] .bg-orange-50,
+:root[data-a11y-kontras='tinggi'] .bg-orange-100,
+:root[data-a11y-kontras='tinggi'] .bg-red-50,
+:root[data-a11y-kontras='tinggi'] .bg-red-100,
+:root[data-a11y-kontras='tinggi'] .bg-rose-50,
+:root[data-a11y-kontras='tinggi'] .bg-rose-100,
+:root[data-a11y-kontras='tinggi'] .bg-pink-50,
+:root[data-a11y-kontras='tinggi'] .bg-pink-100,
+:root[data-a11y-kontras='tinggi'] .bg-fuchsia-50,
+:root[data-a11y-kontras='tinggi'] .bg-fuchsia-100,
+:root[data-a11y-kontras='tinggi'] .bg-purple-50,
+:root[data-a11y-kontras='tinggi'] .bg-purple-100,
+:root[data-a11y-kontras='tinggi'] .bg-violet-50,
+:root[data-a11y-kontras='tinggi'] .bg-violet-100,
+:root[data-a11y-kontras='tinggi'] .bg-indigo-50,
+:root[data-a11y-kontras='tinggi'] .bg-indigo-100 { background-color: var(--hc-bg); }
+
+/* ---- Teks ----
+   Termasuk `text-slate-400` dan `-500` yang di atas latar putih hanya mencapai
+   rasio sekitar 2,8:1 — jauh di bawah ambang 4,5:1 WCAG 1.4.3, dan justru
+   itulah yang paling sering dipakai portal ini untuk keterangan kecil. */
+:root[data-a11y-kontras='tinggi'] .text-slate-400,
+:root[data-a11y-kontras='tinggi'] .text-slate-500,
+:root[data-a11y-kontras='tinggi'] .text-slate-600,
+:root[data-a11y-kontras='tinggi'] .text-slate-700,
+:root[data-a11y-kontras='tinggi'] .text-slate-800,
+:root[data-a11y-kontras='tinggi'] .text-slate-900,
+:root[data-a11y-kontras='tinggi'] .text-gray-600,
+:root[data-a11y-kontras='tinggi'] .text-gray-700,
+:root[data-a11y-kontras='tinggi'] .text-gray-800,
+:root[data-a11y-kontras='tinggi'] .text-zinc-600,
+:root[data-a11y-kontras='tinggi'] .text-zinc-700,
+:root[data-a11y-kontras='tinggi'] .text-zinc-800,
+:root[data-a11y-kontras='tinggi'] .text-neutral-600,
+:root[data-a11y-kontras='tinggi'] .text-neutral-700,
+:root[data-a11y-kontras='tinggi'] .text-neutral-800,
+:root[data-a11y-kontras='tinggi'] .text-stone-600,
+:root[data-a11y-kontras='tinggi'] .text-stone-700,
+:root[data-a11y-kontras='tinggi'] .text-stone-800,
+:root[data-a11y-kontras='tinggi'] .text-blue-600,
+:root[data-a11y-kontras='tinggi'] .text-blue-700,
+:root[data-a11y-kontras='tinggi'] .text-blue-800,
+:root[data-a11y-kontras='tinggi'] .text-sky-600,
+:root[data-a11y-kontras='tinggi'] .text-sky-700,
+:root[data-a11y-kontras='tinggi'] .text-sky-800,
+:root[data-a11y-kontras='tinggi'] .text-cyan-600,
+:root[data-a11y-kontras='tinggi'] .text-cyan-700,
+:root[data-a11y-kontras='tinggi'] .text-cyan-800,
+:root[data-a11y-kontras='tinggi'] .text-teal-600,
+:root[data-a11y-kontras='tinggi'] .text-teal-700,
+:root[data-a11y-kontras='tinggi'] .text-teal-800,
+:root[data-a11y-kontras='tinggi'] .text-emerald-600,
+:root[data-a11y-kontras='tinggi'] .text-emerald-700,
+:root[data-a11y-kontras='tinggi'] .text-emerald-800,
+:root[data-a11y-kontras='tinggi'] .text-green-600,
+:root[data-a11y-kontras='tinggi'] .text-green-700,
+:root[data-a11y-kontras='tinggi'] .text-green-800,
+:root[data-a11y-kontras='tinggi'] .text-lime-600,
+:root[data-a11y-kontras='tinggi'] .text-lime-700,
+:root[data-a11y-kontras='tinggi'] .text-lime-800,
+:root[data-a11y-kontras='tinggi'] .text-yellow-600,
+:root[data-a11y-kontras='tinggi'] .text-yellow-700,
+:root[data-a11y-kontras='tinggi'] .text-yellow-800,
+:root[data-a11y-kontras='tinggi'] .text-amber-600,
+:root[data-a11y-kontras='tinggi'] .text-amber-700,
+:root[data-a11y-kontras='tinggi'] .text-amber-800,
+:root[data-a11y-kontras='tinggi'] .text-orange-600,
+:root[data-a11y-kontras='tinggi'] .text-orange-700,
+:root[data-a11y-kontras='tinggi'] .text-orange-800,
+:root[data-a11y-kontras='tinggi'] .text-red-600,
+:root[data-a11y-kontras='tinggi'] .text-red-700,
+:root[data-a11y-kontras='tinggi'] .text-red-800,
+:root[data-a11y-kontras='tinggi'] .text-rose-600,
+:root[data-a11y-kontras='tinggi'] .text-rose-700,
+:root[data-a11y-kontras='tinggi'] .text-rose-800,
+:root[data-a11y-kontras='tinggi'] .text-pink-600,
+:root[data-a11y-kontras='tinggi'] .text-pink-700,
+:root[data-a11y-kontras='tinggi'] .text-pink-800,
+:root[data-a11y-kontras='tinggi'] .text-fuchsia-600,
+:root[data-a11y-kontras='tinggi'] .text-fuchsia-700,
+:root[data-a11y-kontras='tinggi'] .text-fuchsia-800,
+:root[data-a11y-kontras='tinggi'] .text-purple-600,
+:root[data-a11y-kontras='tinggi'] .text-purple-700,
+:root[data-a11y-kontras='tinggi'] .text-purple-800,
+:root[data-a11y-kontras='tinggi'] .text-violet-600,
+:root[data-a11y-kontras='tinggi'] .text-violet-700,
+:root[data-a11y-kontras='tinggi'] .text-violet-800,
+:root[data-a11y-kontras='tinggi'] .text-indigo-600,
+:root[data-a11y-kontras='tinggi'] .text-indigo-700,
+:root[data-a11y-kontras='tinggi'] .text-indigo-800 { color: var(--hc-fg); }
+
+/* ---- Garis ---- */
+:root[data-a11y-kontras='tinggi'] .border-slate-100,
+:root[data-a11y-kontras='tinggi'] .border-slate-200,
+:root[data-a11y-kontras='tinggi'] .border-slate-300,
+:root[data-a11y-kontras='tinggi'] .border-gray-100,
+:root[data-a11y-kontras='tinggi'] .border-gray-200,
+:root[data-a11y-kontras='tinggi'] .border-gray-300,
+:root[data-a11y-kontras='tinggi'] .divide-slate-100,
+:root[data-a11y-kontras='tinggi'] .divide-slate-200,
+:root[data-a11y-kontras='tinggi'] .divide-slate-300,
+:root[data-a11y-kontras='tinggi'] .divide-gray-100,
+:root[data-a11y-kontras='tinggi'] .divide-gray-200,
+:root[data-a11y-kontras='tinggi'] .divide-gray-300 { border-color: var(--hc-line); }
+
+:root[data-a11y-kontras='tinggi'] [class*='ring-slate-'],
+:root[data-a11y-kontras='tinggi'] [class*='ring-blue-'] { --tw-ring-color: var(--hc-line); }
+
+/* ---- Kartu bergaya sendiri di kepala berkas ini ---- */
+:root[data-a11y-kontras='tinggi'] .white-card {
+  background: var(--hc-bg);
+  border-color: var(--hc-line);
+}
+:root[data-a11y-kontras='tinggi'] .glass-panel {
+  background: var(--hc-bg);
+  border-color: var(--hc-line);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* ---- Tautan di dalam isi artikel ---- */
+:root[data-a11y-kontras='tinggi'] .article-content a { color: var(--hc-tautan); }
+
+/* ================================================================
+   3. Kurangi gerak
+   ================================================================
+   Kembaran berbasis atribut untuk setiap blok
+   `@media (prefers-reduced-motion: reduce)` yang sudah ada di berkas ini.
+
+   Yang TIDAK bisa ditangani CSS — enam kanvas `requestAnimationFrame` dan 126
+   berkas framer-motion — ditangani `components/layout/PengaturGerak.tsx` lewat
+   `MotionConfig`.
+   ================================================================ */
+
+:root[data-a11y-gerak='minimal'] .silang-masuk { animation-duration: 1ms; }
+
+:root[data-a11y-gerak='minimal'] .adm-sweep::after,
+:root[data-a11y-gerak='minimal'] .adm-beacon,
+:root[data-a11y-gerak='minimal'] [class*='adm-'] { animation: none !important; }
+:root[data-a11y-gerak='minimal'] .adm-lift:hover { transform: none; }
+
+/* Untaian benderanya berhenti berayun — ia tetap tergantung dan tetap terbaca.
+   Konfetinya DISEMBUNYIKAN, bukan sekadar dihentikan: keping yang membeku di
+   tengah udara bukan hiasan, melainkan noda. */
+:root[data-a11y-gerak='minimal'] [style*='ayunUmbul'] { animation: none !important; }
+:root[data-a11y-gerak='minimal'] [style*='luruhKonfeti'] { display: none !important; }
+
+/* Kabutnya diredupkan, bukan dihapus: lapisan ini memang diam sejak awal, dan
+   menghapusnya hanya membuat kaki layar menjadi garis hitam datar. */
+:root[data-a11y-gerak='minimal'] .tema-kabut-apron,
+:root[data-a11y-gerak='minimal'] .tema-kabut-landasan { opacity: 0.7; }
+
+/* Jaring pengaman untuk animasi CSS yang tidak masuk daftar mana pun.
+   Durasinya dipangkas menjadi 1ms, BUKAN `animation: none`: animasi yang
+   dibatalkan mentah-mentah kehilangan keadaan AKHIRNYA juga, dan elemen yang
+   seharusnya memudar masuk justru tertinggal tak terlihat selamanya. */
+:root[data-a11y-gerak='minimal'] *,
+:root[data-a11y-gerak='minimal'] *::before,
+:root[data-a11y-gerak='minimal'] *::after {
+  animation-duration: 1ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 1ms !important;
+}
+:root[data-a11y-gerak='minimal'] { scroll-behavior: auto !important; }
+
+/* ================================================================
+   4. Garis bawah tautan
+   ================================================================
+   WCAG 1.4.1: informasi tidak boleh disampaikan lewat warna saja, sedangkan
+   tautan di dalam paragraf portal ini hanya dibedakan warna birunya.
+
+   Dibatasi pada tautan yang benar-benar berada di dalam teks mengalir. Menyapu
+   SEMUA <a> berarti menggarisbawahi setiap ubin menu, kartu berita, dan tombol
+   berbentuk tautan — bukan hanya jelek, tetapi juga menghapus perbedaan antara
+   tautan teks dan tombol.
+   ================================================================ */
+
+:root[data-a11y-tautan='garis'] p a,
+:root[data-a11y-tautan='garis'] li a,
+:root[data-a11y-tautan='garis'] dd a,
+:root[data-a11y-tautan='garis'] td a,
+:root[data-a11y-tautan='garis'] .article-content a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ================================================================
+   5. Fokus tebal
+   ================================================================
+   Cincin DASAR sudah dipasang tanpa syarat di kepala berkas ini; penyetelan
+   ini menebalkannya dan menambahkan lapis luar terang agar cincinnya tetap
+   terlihat di atas latar berwarna apa pun.
+   ================================================================ */
+
+:root[data-a11y-fokus='tebal'] :focus-visible {
+  outline: 4px solid #1d4ed8;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 8px rgba(255, 255, 255, 0.92);
+}
+
+:root[data-site-theme='night'][data-a11y-fokus='tebal'] :focus-visible {
+  outline-color: #67e8f9;
+  box-shadow: 0 0 0 8px rgba(3, 7, 18, 0.92);
+}
+
+/* ================================================================
+   6. Spasi teks (WCAG 1.4.12)
+   ================================================================
+   Dibatasi pada elemen teks mengalir, BUKAN `*`. Memberi jarak huruf pada
+   tombol, lencana, dan sel tabel berukuran tetap hanya membuat labelnya
+   terpotong — padahal kriteria yang sama justru mensyaratkan tidak ada isi
+   yang hilang.
+
+   `!important` pada tinggi baris diperlukan karena utilitas `leading-*`
+   Tailwind sangat banyak dipakai dan berspesifisitas sama dengan aturan ini.
+   ================================================================ */
+
+:root[data-a11y-spasi='lega'] p,
+:root[data-a11y-spasi='lega'] li,
+:root[data-a11y-spasi='lega'] dd,
+:root[data-a11y-spasi='lega'] blockquote,
+:root[data-a11y-spasi='lega'] .article-content {
+  line-height: 1.8 !important;
+  letter-spacing: 0.09em;
+  word-spacing: 0.16em;
+}
+
+/* ================================================================
+   7. Font ramah baca
+   ================================================================
+   Atkinson Hyperlegible Next, dipasang `app/layout.tsx` lewat `next/font`
+   sehingga berkasnya dilayani portal sendiri — tidak ada permintaan pengunjung
+   yang keluar ke server Google.
+
+   `body[class]` menyeimbangkan spesifisitas: <body> membawa kelas `font-sans`
+   sendiri, dan tanpa `[class]` penyeimbang itu aturan di sini kalah. Alasan
+   yang sama sudah dicatat pada blok tema malam.
+
+   Bobotnya variabel 200–800, jadi TIDAK diperlukan penormalan bobot: setiap
+   `font-semibold`/`extrabold` mendapat potongan huruf yang sungguh dirancang,
+   bukan tebal sintetis buatan peramban yang justru merusak keterbacaan.
+   ================================================================ */
+
+:root[data-a11y-font='terbaca'] body[class],
+:root[data-a11y-font='terbaca'] body[class] * {
+  font-family: var(--font-terbaca), var(--font-sans);
+}

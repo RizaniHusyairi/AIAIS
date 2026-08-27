@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
+import { useReducedMotion } from 'framer-motion';
 
 /**
  * Langit malam yang menaungi seluruh portal saat tema malam aktif.
@@ -50,6 +51,12 @@ const JEDA_PESAWAT_MAKS = 17;
 
 export default function LangitMalam() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  /* Dibaca lewat hook framer-motion, BUKAN `window.matchMedia` langsung.
+     Bentuk lamanya membaca preferensi satu kali di dalam efek tanpa pendengar
+     perubahan, sehingga penyetelan "kurangi gerak" pada panel aksesibilitas
+     tidak akan pernah sampai ke sini. Hook ini menyalurkan keduanya sekaligus:
+     preferensi sistem operasi DAN pilihan pemakai lewat <PengaturGerak />. */
+  const kurangiGerak = useReducedMotion();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -57,7 +64,6 @@ export default function LangitMalam() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const kurangiGerak = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     let w = 0, h = 0, dpr = 1;
     let bintang: Bintang[] = [];
@@ -268,7 +274,7 @@ export default function LangitMalam() {
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('resize', resize);
     };
-  }, []);
+  }, [kurangiGerak]);
 
   return (
     <>

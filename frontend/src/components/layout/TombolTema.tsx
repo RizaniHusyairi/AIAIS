@@ -204,6 +204,9 @@ export default function TombolTema({
           onClick={tukar}
           className={`w-full flex items-center justify-between gap-3 px-3 py-3 rounded-xl text-[14px] font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer ${className}`}
           aria-label={label}
+          /* Sakelar yang tidak mengumumkan keadaannya hanya terdengar sebagai
+             tombol biasa. Ditekan = tema malam sedang aktif. */
+          aria-pressed={malam}
         >
           <span className="flex items-center gap-3">
             {ikonBeranimasi}
@@ -232,6 +235,7 @@ export default function TombolTema({
           className={`w-10 h-10 rounded-xl text-slate-500 hover:text-blue-600 hover:bg-blue-50 flex items-center justify-center transition-colors cursor-pointer ${className}`}
           title={label}
           aria-label={label}
+          aria-pressed={malam}
         >
           {ikonBeranimasi}
         </motion.button>

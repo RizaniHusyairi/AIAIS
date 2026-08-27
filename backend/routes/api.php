@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\InstagramController;
 use App\Http\Controllers\Api\InventoryController;
 use App\Http\Controllers\Api\LetterController;
 use App\Http\Controllers\Api\LostReportController;
+use App\Http\Controllers\Api\OfficialController;
 use App\Http\Controllers\Api\MeetingController;
 use App\Http\Controllers\Api\NataruController;
 use App\Http\Controllers\Api\NewsController;
@@ -149,6 +150,11 @@ Route::prefix(config('api.version'))->group(function () {
     // Regulasi — Surat Keputusan & Surat Edaran (`?type=keputusan|edaran`).
     // Hanya surat yang berkasnya ada yang dikembalikan; lihat controllernya.
     Route::get('/letters', [LetterController::class, 'index']);
+
+    // Pejabat struktural. Berbeda dengan `letters`, yang disaring di sini
+    // hanyalah `is_published` — pejabat yang fotonya belum diunggah TETAP
+    // tampil, karena nama dan jabatannya wajib diumumkan (UU 14/2008).
+    Route::get('/officials', [OfficialController::class, 'index']);
 
     // Regulasi PPID — dasar hukum keterbukaan informasi publik
     // (`?category=`). Dokumennya berupa tautan luar, jadi yang disaring di
@@ -389,6 +395,15 @@ Route::prefix(config('api.version'))->group(function () {
             Route::post('/letters/{id}', [LetterController::class, 'update']);
             Route::put('/letters/{id}', [LetterController::class, 'update']);
             Route::delete('/letters/{id}', [LetterController::class, 'destroy']);
+
+            // Pejabat Bandara. `POST /{id}` didaftarkan di samping `PUT`
+            // karena foto pejabat dikirim multipart, dan peramban tidak dapat
+            // mengirim multipart lewat PUT — pola yang sama seperti `letters`.
+            Route::get('/officials', [OfficialController::class, 'adminIndex']);
+            Route::post('/officials', [OfficialController::class, 'store']);
+            Route::post('/officials/{id}', [OfficialController::class, 'update'])->whereNumber('id');
+            Route::put('/officials/{id}', [OfficialController::class, 'update'])->whereNumber('id');
+            Route::delete('/officials/{id}', [OfficialController::class, 'destroy'])->whereNumber('id');
 
             // Regulasi PPID. Tanpa unggahan berkas — dokumennya selalu tautan
             // luar — sehingga cukup PUT untuk pengubahan.

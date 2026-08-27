@@ -23,6 +23,20 @@ class DatabaseSeeder extends Seeder
          *     php artisan db:seed --class=SiteEventSeeder
          */
         $this->call(SiteEventSeeder::class);
+
+        /*
+         * Pejabat struktural. Sama seperti perayaan di atas, isinya BUKAN data
+         * karangan — seluruhnya salinan verbatim halaman "Pejabat Bandara"
+         * aptpairport.id, lengkap dengan provenansnya — sehingga aman
+         * dijalankan pada basis data sungguhan. Karena penjaga di atas
+         * menghentikan seluruh `db:seed`, di sana jalankan tersendiri:
+         *
+         *     php artisan db:seed --class=OfficialSeeder
+         *
+         * Seeder itu tidak menimpa foto yang sudah diunggah lewat panel admin,
+         * jadi menjalankannya ulang tidak menghapus pekerjaan petugas.
+         */
+        $this->call(OfficialSeeder::class);
     }
 
     /**

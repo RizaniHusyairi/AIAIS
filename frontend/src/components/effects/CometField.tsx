@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
+import { useReducedMotion } from 'framer-motion';
 
 /**
  * Komet yang sesekali melintasi halaman Portal Aplikasi, dan pecah bila
@@ -65,10 +66,16 @@ const acak = (a: number, b: number) => a + Math.random() * (b - a);
 
 export default function CometField() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  /* Pilihan pemakai dari panel aksesibilitas. Terpisah dari `kurangiGerak`
+     di dalam efek: yang itu mendengarkan preferensi SISTEM OPERASI dan sudah
+     bekerja, yang ini menambahkan gerbang kedua untuk penyetelan portal.
+     Nilainya masuk daftar kebergantungan efek supaya loop-nya benar-benar
+     dibongkar saat penyetelannya dinyalakan di tengah halaman terbuka. */
+  const kurangiGerakPemakai = useReducedMotion();
 
   useEffect(() => {
     const kurangiGerak = window.matchMedia('(prefers-reduced-motion: reduce)');
-    if (kurangiGerak.matches) return;
+    if (kurangiGerakPemakai || kurangiGerak.matches) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -318,7 +325,7 @@ export default function CometField() {
     }
 
     return bersihkan;
-  }, []);
+  }, [kurangiGerakPemakai]);
 
   return (
     <canvas

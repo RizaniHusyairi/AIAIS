@@ -5,11 +5,12 @@ import Link from 'next/link';
 import { AnimatePresence, motion, useInView } from 'framer-motion';
 import { useSetting } from '@/lib/settings';
 import {
-  OFFICIALS, HEAD_OFFICIAL, ORG_NAME, VISI, MISI, SEJARAH, TIMELINE,
+  HEAD_OFFICIAL, ORG_NAME, VISI, MISI, SEJARAH, TIMELINE,
   STATUS_BLU, TUGAS, FUNGSI, ROUTES, CONTACT, MAPS_URL,
   type Official,
 } from '@/lib/airportProfile';
 import { PEJABAT_PHOTO_FIT } from '@/lib/pejabatFoto';
+import { usePejabat } from '@/lib/pejabatLive';
 import OrgChart from '@/components/profile/OrgChart';
 import {
   Plane, Compass, Target, Eye, ShieldCheck, Award, MapPin, Ruler, Building2, Users,
@@ -267,6 +268,14 @@ export default function ProfileView() {
   const heroBg = useSetting('bg_profile');
   /** Objek, bukan indeks, supaya animasi keluar masih punya konten. */
   const [openOfficial, setOpenOfficial] = useState<Official | null>(null);
+
+  /* Pejabat bandara — dikelola lewat /admin/pejabat. Membuka dengan teks
+     otoritatif, lalu berpindah ke data API begitu jawabannya tiba. */
+  const pejabat = usePejabat();
+  /* Kepala kantor selalu entri pertama, mengikuti urutan yang ditetapkan
+     petugas — bukan konstanta, supaya penggantian kepala kantor lewat panel
+     admin ikut berlaku pada penanda di kartu. */
+  const kepalaKantor = pejabat[0] ?? HEAD_OFFICIAL;
 
   return (
     <div className="bg-slate-50 overflow-hidden">
@@ -834,7 +843,7 @@ export default function ProfileView() {
         </motion.div>
 
         <motion.div variants={container} initial="hidden" whileInView="show" viewport={{ once: true }} className="mt-10 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5">
-          {OFFICIALS.map((p) => (
+          {pejabat.map((p) => (
             <motion.button
               key={p.slug}
               type="button"
@@ -857,7 +866,7 @@ export default function ProfileView() {
                 />
                 <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#0b1e5b]/90 via-[#0b1e5b]/55 to-transparent" />
 
-                {p.slug === HEAD_OFFICIAL.slug && (
+                {p.slug === kepalaKantor.slug && (
                   <span className="absolute top-3 left-3 bg-amber-400 text-[#0b1e5b] text-[9.5px] font-black uppercase tracking-wider px-2 py-1 rounded-full">
                     Kepala Kantor
                   </span>

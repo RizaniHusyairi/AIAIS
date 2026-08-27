@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
+import { useReducedMotion } from 'framer-motion';
 import { useSiteTheme } from '@/lib/siteTheme';
 
 /**
@@ -101,6 +102,12 @@ export default function SkyParticles({
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const theme = useSiteTheme();
+  /* Dibaca lewat hook framer-motion, BUKAN `window.matchMedia` langsung.
+     Bentuk lamanya membaca preferensi satu kali di dalam efek tanpa pendengar
+     perubahan, sehingga penyetelan "kurangi gerak" pada panel aksesibilitas
+     tidak akan pernah sampai ke sini. Hook ini menyalurkan keduanya sekaligus:
+     preferensi sistem operasi DAN pilihan pemakai lewat <PengaturGerak />. */
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -110,7 +117,6 @@ export default function SkyParticles({
 
     const pal = PALETTE[theme === 'night' ? 'night' : tone];
     const scale = density === 'low' ? 0.45 : 1;
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     let w = 0, h = 0, dpr = 1;
     let motes: Mote[] = [];
@@ -429,7 +435,7 @@ export default function SkyParticles({
       window.removeEventListener('pointerleave', onLeave);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [tone, density, theme]);
+  }, [tone, density, theme, reduceMotion]);
 
   return (
     <canvas
