@@ -17,7 +17,7 @@ import HeroBoardingPass from '@/components/home/HeroBoardingPass';
 import { LampuLandasan, JudulBagian } from '@/components/home/AviasiDekor';
 import { NewsItem, InstagramPost } from '@/types';
 import GambarBerita from '@/components/GambarBerita';
-import PetaLokasiBandara from '@/components/map/PetaLokasiBandara';
+import PetaSematanGoogle from '@/components/map/PetaSematanGoogle';
 import { AIRPORTS, HOME_IATA } from '@/lib/airports';
 import {
   Plane, ArrowRight, Building2, ChevronRight, ChevronLeft, Users, MapPin, Star, Car,
@@ -527,12 +527,13 @@ export default function HomePage() {
         </div>
 
         {/* peta */}
-        {/* Peta lokasi. Isinya digambar dari koordinat asli bandara
-            (`lib/airports.ts`, berprovenans OurAirports) di atas garis pantai
-            Kalimantan — menggantikan hiasan berbentuk peta yang dulu menempati
-            tempat ini tanpa menggambarkan lokasi mana pun. */}
+{/* Peta lokasi, disematkan dari Google Maps pada koordinat asli bandara
+            (`lib/airports.ts`, berprovenans OurAirports). Peta lokator mandiri
+            tetap berada di belakangnya sebagai jaring pengaman ketika sematan
+            belum atau tidak dapat termuat — lihat catatan panjang di
+            `PetaSematanGoogle.tsx` soal harga yang ditanggung sematan ini. */}
         <motion.div initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="lg:col-span-5 relative rounded-2xl overflow-hidden border border-slate-100 min-h-[240px]">
-          <PetaLokasiBandara />
+          <PetaSematanGoogle />
 
           <div className="absolute top-6 left-5 right-5">
             <div className="bg-white rounded-xl shadow-lg border border-slate-100 p-3 flex gap-2.5">
