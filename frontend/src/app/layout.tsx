@@ -10,8 +10,12 @@ import ChatLauncher from "@/components/layout/ChatLauncher";
 import { THEME_INIT_SCRIPT } from "@/components/admin/themeShared";
 import { SITE_THEME_INIT_SCRIPT } from "@/lib/siteThemeShared";
 import { A11Y_INIT_SCRIPT } from "@/lib/aksesibilitasShared";
+import { BAHASA_INIT_SCRIPT } from "@/lib/bahasaShared";
 import PenyetelTema from "@/components/layout/PenyetelTema";
 import PenyetelAksesibilitas from "@/components/layout/PenyetelAksesibilitas";
+import PenyetelBahasa from "@/components/layout/PenyetelBahasa";
+import PembacaSentuh from "@/components/layout/PembacaSentuh";
+import LewatiTautan from "@/components/layout/LewatiTautan";
 import PengaturGerak from "@/components/layout/PengaturGerak";
 import TombolAksesibilitas from "@/components/layout/TombolAksesibilitas";
 import DekorMalam from "@/components/effects/DekorMalam";
@@ -208,7 +212,10 @@ export default function RootLayout({
   // Cakupannya hanya satu elemen ini; anak-anaknya tetap diperiksa seperti biasa.
   return (
     <html
-      lang="id"
+      // Dirender `id-ID`, sama dengan yang ditulis BAHASA_INIT_SCRIPT untuk
+      // pengunjung berbahasa Indonesia, supaya atributnya tidak berubah dua
+      // kali pada gambar pertama.
+      lang="id-ID"
       // `variable` hanya mendaftarkan --font-display; ia tidak mengubah font
       // apa pun sampai ada elemen yang benar-benar memakainya.
       className={`h-full antialiased ${serifDisplay.variable} ${fontTerbaca.variable}`}
@@ -221,13 +228,12 @@ export default function RootLayout({
           yang kalau tidak dilewati harus ditekan satu per satu di setiap
           halaman oleh pemakai papan tik dan pembaca layar.
 
-          Anchor biasa, bukan komponen klien: ia tidak menyimpan state apa pun.
+          Komponen klien semata-mata karena teksnya ikut berganti bahasa —
+          layout ini Server Component dan tidak boleh memanggil `useTeks()`.
           Tersembunyi di luar layar sampai menerima fokus (lihat
           `.lewati-tautan` di globals.css).
         */}
-        <a href="#konten-utama" className="lewati-tautan">
-          Lewati ke konten utama
-        </a>
+        <LewatiTautan />
         {/*
           Penyetel tema panel. HARUS di layout akar, bukan di `app/admin/layout.tsx`.
 
@@ -261,7 +267,8 @@ export default function RootLayout({
         */}
         <script
           dangerouslySetInnerHTML={{
-            __html: THEME_INIT_SCRIPT + SITE_THEME_INIT_SCRIPT + A11Y_INIT_SCRIPT,
+            __html:
+              THEME_INIT_SCRIPT + SITE_THEME_INIT_SCRIPT + A11Y_INIT_SCRIPT + BAHASA_INIT_SCRIPT,
           }}
         />
         <PenyetelTema />
@@ -269,6 +276,17 @@ export default function RootLayout({
             <PenyetelTema />: kontras tinggi dan teks besar berlaku di mana pun
             pengunjungnya berada, termasuk di panel petugas. */}
         <PenyetelAksesibilitas />
+        {/* Bahasa portal. Yang disetelnya atribut `lang` pada <html> — bukan
+            hiasan: pembaca layar memilih fonemnya dari sana, dan atribut yang
+            salah membuat halaman berbahasa Inggris dilafalkan dengan fonem
+            Indonesia. Teks halamannya sendiri diambil tiap komponen lewat
+            `useTeks()`. */}
+        <PenyetelBahasa />
+        {/* Pembacaan yang mengikuti kursor. Di layout akar, bukan di dalam
+            panel aksesibilitas: panelnya dilepas begitu ditutup, sedangkan
+            pembacaannya justru baru berguna sesudah itu — saat pemakai
+            kembali menyusuri halaman. */}
+        <PembacaSentuh />
         {/*
           Penyalur penyetelan "kurangi gerak" ke seluruh animasi
           framer-motion sekaligus. Membungkus di sini, bukan di tiap

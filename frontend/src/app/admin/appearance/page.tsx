@@ -4,12 +4,12 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { adminFetch } from '@/lib/adminApi';
 import { API_BASE_URL } from '@/lib/api';
-import { BACKGROUND_META, DEFAULT_SETTINGS, invalidateSettings, SKM_KEYS, BackgroundKey } from '@/lib/settings';
+import { BACKGROUND_META, DEFAULT_SETTINGS, invalidateSettings, SKM_KEYS, TENTANG_KEYS, BackgroundKey } from '@/lib/settings';
 import {
   PageHeader, Panel, Btn, Badge, Toast, ToastMsg, Loading, InfoNote, stagger, riseIn,
 } from '@/components/admin/ui';
 import {
-  ImageIcon, RefreshCw, Save, RotateCcw, ExternalLink, Check, AlertTriangle, Monitor, Smartphone, Link2, Star,
+  ImageIcon, RefreshCw, Save, RotateCcw, ExternalLink, Check, AlertTriangle, Monitor, Smartphone, Link2, Star, Info, PlayCircle,
 } from 'lucide-react';
 
 type Draft = Record<string, string>;
@@ -47,7 +47,7 @@ export default function AdminAppearancePage() {
   // keduanya — dua tombol simpan pada satu halaman selalu berakhir dengan
   // salah satunya terlupakan.
   const dirtyKeys = useMemo(
-    () => [...BACKGROUND_META.map((m) => m.key as string), ...SKM_KEYS]
+    () => [...BACKGROUND_META.map((m) => m.key as string), ...SKM_KEYS, ...TENTANG_KEYS]
       .filter((k) => (draft[k] ?? '') !== (saved[k] ?? '')),
     [draft, saved]
   );
@@ -193,6 +193,108 @@ export default function AdminAppearancePage() {
                   >
                     <ExternalLink className="w-3 h-3" /> Uji tautan ini
                   </a>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </Panel>
+
+      {/* ============ TENTANG BANDARA (BERANDA) ============ */}
+      <Panel>
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-[var(--adm-line)]">
+          <h2 className="text-[13.5px] font-bold text-[var(--adm-fg)] flex items-center gap-2">
+            <Info className="w-4 h-4 text-sky-400" /> Tentang Bandara (Beranda)
+          </h2>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <InfoNote>
+            Blok &ldquo;Tentang Bandar Udara APT Pranoto&rdquo; pada beranda.
+            <b> Isian yang dibiarkan kosong memakai teks bawaan portal</b>, bukan menjadi kosong —
+            jadi mengosongkan isian Inggris membuat halaman berbahasa Inggris kembali memakai
+            terjemahan bawaannya, bukan teks Indonesia di sebelahnya.
+            Angka-angka di bawah blok ini dikelola terpisah di menu <b>Angka Bandara</b>.
+          </InfoNote>
+
+          {[
+            { key: 'tentang_kicker_id', label: 'Kicker (Indonesia)', textarea: false },
+            { key: 'tentang_kicker_en', label: 'Kicker (Inggris)', textarea: false },
+            { key: 'tentang_judul_id', label: 'Judul (Indonesia)', textarea: false },
+            { key: 'tentang_judul_en', label: 'Judul (Inggris)', textarea: false },
+            { key: 'tentang_teks_id', label: 'Paragraf (Indonesia)', textarea: true },
+            { key: 'tentang_teks_en', label: 'Paragraf (Inggris)', textarea: true },
+            { key: 'tentang_caption_id', label: 'Tulisan di Gambar (Indonesia)', textarea: false },
+            { key: 'tentang_caption_en', label: 'Tulisan di Gambar (Inggris)', textarea: false },
+            { key: 'tentang_gambar', label: 'Gambar Sampul (URL)', textarea: false },
+            { key: 'tentang_video_url', label: 'Video Profil (URL YouTube)', textarea: false },
+          ].map((f) => {
+            const value = draft[f.key] ?? '';
+            const isDirty = value !== (saved[f.key] ?? '');
+
+            return (
+              <div key={f.key}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--adm-dim)]">{f.label}</span>
+                  <span className="flex items-center gap-2">
+                    {isDirty && <Badge text="Belum disimpan" color="#fbbf24" />}
+                    {/* Tombol "Bawaan" pada blok ini berarti MENGOSONGKAN,
+                        bukan mengembalikan sebuah teks: nilai bawaan seluruh
+                        kunci di sini memang string kosong, dan kosong itulah
+                        yang menyalakan teks cadangan dari kamus portal. */}
+                    <button
+                      onClick={() => setValue(f.key, '')}
+                      disabled={value === ''}
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--adm-body)] hover:text-[var(--adm-accent)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                    >
+                      <RotateCcw className="w-3 h-3" /> Kosongkan
+                    </button>
+                  </span>
+                </div>
+
+                {f.textarea ? (
+                  <textarea
+                    rows={3}
+                    value={value}
+                    onChange={(e) => setValue(f.key, e.target.value)}
+                    placeholder="Kosongkan untuk memakai teks bawaan portal"
+                    className="mt-1.5 w-full bg-[var(--adm-inset)] border border-[var(--adm-line)] rounded-xl px-3.5 py-2.5 text-[12.5px] text-[var(--adm-fg)] placeholder:text-[var(--adm-dim)] focus:outline-none focus:border-[var(--adm-accent)] transition-colors resize-y"
+                  />
+                ) : (
+                  <input
+                    value={value}
+                    onChange={(e) => setValue(f.key, e.target.value)}
+                    placeholder="Kosongkan untuk memakai teks bawaan portal"
+                    className="mt-1.5 w-full bg-[var(--adm-inset)] border border-[var(--adm-line)] rounded-xl px-3.5 py-2.5 text-[12.5px] text-[var(--adm-fg)] placeholder:text-[var(--adm-dim)] focus:outline-none focus:border-[var(--adm-accent)] transition-colors"
+                  />
+                )}
+
+                {/* Pratinjau sampul: satu-satunya cara petugas tahu URL-nya
+                    benar tanpa membuka beranda di tab lain. */}
+                {f.key === 'tentang_gambar' && value && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={value}
+                    alt=""
+                    className="mt-2 h-28 w-full max-w-sm object-cover rounded-xl border border-[var(--adm-line)]"
+                  />
+                )}
+
+                {f.key === 'tentang_video_url' && (
+                  <p className="mt-1.5 text-[11.5px] text-[var(--adm-muted)]">
+                    {value ? (
+                      <a
+                        href={value}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 font-semibold text-[var(--adm-accent)] hover:underline"
+                      >
+                        <PlayCircle className="w-3.5 h-3.5" /> Buka video ini
+                      </a>
+                    ) : (
+                      <>Dibiarkan kosong: tombol putar tidak ditampilkan sama sekali di beranda.</>
+                    )}
+                  </p>
                 )}
               </div>
             );

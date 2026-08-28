@@ -7,12 +7,15 @@ import { fetchApi } from '@/lib/api';
 import { Flight } from '@/types';
 import SkyParticles from '@/components/effects/SkyParticles';
 import {
-  AirlineLogo, splitPlace, shortTime, statusTheme, gateLabel, counterLabel,
+  AirlineLogo, splitPlace, shortTime, statusTheme, labelStatus, gateLabel, counterLabel,
 } from '@/components/flights/shared';
 import {
   Plane, PlaneTakeoff, PlaneLanding, Search, RefreshCw, Clock,
   MapPin, DoorOpen, SearchX, Radio, Map as MapIcon, Luggage, ClipboardList,
 } from 'lucide-react';
+import { useTeks } from '@/lib/kamus';
+import { useBahasa } from '@/lib/bahasa';
+import { KODE_LOKAL } from '@/lib/bahasaShared';
 
 type TypeFilter = 'all' | 'departure' | 'arrival';
 
@@ -20,6 +23,8 @@ const FMT_CLOCK = { timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit
 const FMT_DATE = { timeZone: 'Asia/Makassar', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' } as const;
 
 export default function FlightsView() {
+  const t = useTeks();
+  const bahasa = useBahasa();
   const [flights, setFlights] = useState<Flight[]>([]);
   const [loading, setLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
@@ -77,8 +82,8 @@ export default function FlightsView() {
     attention: flights.filter((f) => f.status === 'delayed' || f.status === 'cancelled').length,
   }), [flights]);
 
-  const clock = now ? new Intl.DateTimeFormat('id-ID', FMT_CLOCK).format(now) : '--:--:--';
-  const today = now ? new Intl.DateTimeFormat('id-ID', FMT_DATE).format(now) : ' ';
+  const clock = now ? new Intl.DateTimeFormat(KODE_LOKAL[bahasa], FMT_CLOCK).format(now) : '--:--:--';
+  const today = now ? new Intl.DateTimeFormat(KODE_LOKAL[bahasa], FMT_DATE).format(now) : ' ';
 
   return (
     <div className="bg-slate-50 pb-16">
@@ -104,14 +109,13 @@ export default function FlightsView() {
               </span>
 
               <h1 className="mt-4 text-4xl sm:text-5xl font-black text-white tracking-tight leading-[1.05]">
-                Informasi Jadwal
+                {t.penerbangan.heroJudul}
                 <br />
-                <span className="text-sky-200">Penerbangan</span>
+                <span className="text-sky-200">{t.penerbangan.heroAksen}</span>
               </h1>
 
               <p className="mt-3 text-[14px] text-blue-100/90 max-w-lg leading-relaxed">
-                Status keberangkatan dan kedatangan Bandara APT Pranoto Samarinda,
-                diperbarui otomatis setiap menit.
+                {t.penerbangan.heroLead}
               </p>
             </motion.div>
 
@@ -127,7 +131,7 @@ export default function FlightsView() {
                   <span className="absolute inline-flex w-full h-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
                   <span className="relative inline-flex w-2 h-2 rounded-full bg-emerald-400" />
                 </span>
-                Waktu Setempat · WITA
+                {t.penerbangan.waktuSetempat}
               </div>
 
               <p className="mt-2 text-4xl font-black text-white tabular-nums tracking-tight">{clock}</p>
@@ -139,7 +143,7 @@ export default function FlightsView() {
                 className="mt-4 w-full flex items-center justify-center gap-2 bg-white text-blue-700 hover:bg-blue-50 disabled:opacity-70 text-[13px] font-bold px-4 py-2.5 rounded-xl transition-colors cursor-pointer"
               >
                 <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                {loading ? 'Menyegarkan…' : 'Segarkan Data'}
+                {loading ? t.penerbangan.menyegarkan : t.penerbangan.segarkan}
               </button>
 
               <Link
@@ -147,7 +151,7 @@ export default function FlightsView() {
                 className="mt-2 w-full flex items-center justify-center gap-2 bg-white/12 border border-white/25 text-white hover:bg-white/20 text-[13px] font-bold px-4 py-2.5 rounded-xl transition-colors"
               >
                 <MapIcon className="w-4 h-4" />
-                Peta Rute
+                {t.penerbangan.petaRute}
               </Link>
             </motion.div>
           </div>
@@ -159,10 +163,10 @@ export default function FlightsView() {
             transition={{ duration: 0.5, delay: 0.18, ease: 'easeOut' }}
             className="mt-10 grid grid-cols-2 lg:grid-cols-4 gap-3"
           >
-            <HeroStat icon={Plane} label="Total Penerbangan" value={stats.total} />
-            <HeroStat icon={PlaneTakeoff} label="Keberangkatan" value={stats.departure} />
-            <HeroStat icon={PlaneLanding} label="Kedatangan" value={stats.arrival} />
-            <HeroStat icon={Clock} label="Perlu Perhatian" value={stats.attention} warn={stats.attention > 0} />
+            <HeroStat icon={Plane} label={t.penerbangan.totalPenerbangan} value={stats.total} />
+            <HeroStat icon={PlaneTakeoff} label={t.penerbangan.judulKeberangkatan} value={stats.departure} />
+            <HeroStat icon={PlaneLanding} label={t.penerbangan.judulKedatangan} value={stats.arrival} />
+            <HeroStat icon={Clock} label={t.penerbangan.perluPerhatian} value={stats.attention} warn={stats.attention > 0} />
           </motion.div>
         </div>
 
@@ -186,7 +190,7 @@ export default function FlightsView() {
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
-              placeholder="Cari nomor penerbangan, maskapai, atau kota…"
+              placeholder={t.penerbangan.cariPlaceholder}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-10 pr-4 py-3 bg-slate-50 rounded-xl ring-1 ring-slate-200 text-[13.5px] text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
@@ -196,9 +200,9 @@ export default function FlightsView() {
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
               {([
-                { key: 'all', label: 'Semua', icon: Plane },
-                { key: 'departure', label: 'Berangkat', icon: PlaneTakeoff },
-                { key: 'arrival', label: 'Datang', icon: PlaneLanding },
+                { key: 'all', label: t.penerbangan.semua, icon: Plane },
+                { key: 'departure', label: t.penerbangan.berangkat, icon: PlaneTakeoff },
+                { key: 'arrival', label: t.penerbangan.datang, icon: PlaneLanding },
               ] as const).map((opt) => {
                 const active = typeFilter === opt.key;
                 const Icon = opt.icon;
@@ -231,7 +235,7 @@ export default function FlightsView() {
               onChange={(e) => setAirlineFilter(e.target.value)}
               className="bg-slate-50 text-slate-700 text-[13px] font-semibold ring-1 ring-slate-200 px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
             >
-              <option value="all">Semua Maskapai</option>
+              <option value="all">{t.penerbangan.semuaMaskapai}</option>
               {airlines.map((a) => (
                 <option key={a} value={a}>{a}</option>
               ))}
@@ -246,24 +250,24 @@ export default function FlightsView() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 mt-6">
         <div className="flex items-center justify-between mb-3 px-1">
           <h2 className="text-[13px] font-bold text-slate-500 uppercase tracking-wider">
-            {typeFilter === 'departure' ? 'Keberangkatan'
-              : typeFilter === 'arrival' ? 'Kedatangan'
-              : 'Semua Penerbangan'}
+            {typeFilter === 'departure' ? t.penerbangan.judulKeberangkatan
+              : typeFilter === 'arrival' ? t.penerbangan.judulKedatangan
+              : t.penerbangan.judulSemua}
           </h2>
           <span className="text-[12px] text-slate-400 font-medium tabular-nums">
-            {loading ? 'memuat…' : `${filtered.length} penerbangan`}
+            {loading ? t.umum.memuat : `${filtered.length} ${t.penerbangan.hitungPenerbangan}`}
           </span>
         </div>
 
         {/* judul kolom, hanya pada layar lebar */}
         <div className="hidden lg:grid grid-cols-12 gap-4 px-5 pb-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-          <div className="col-span-3">Penerbangan</div>
-          <div className="col-span-3">Rute</div>
-          <div className="col-span-2">Jadwal WITA</div>
+          <div className="col-span-3">{t.penerbangan.kolomPenerbangan}</div>
+          <div className="col-span-3">{t.penerbangan.kolomRute}</div>
+          <div className="col-span-2">{t.penerbangan.kolomJadwal}</div>
           {/* Kolom ini berganti isi menurut arah penerbangan: keberangkatan
               menampilkan Gate + Konter, kedatangan menampilkan Conveyor. */}
-          <div className="col-span-2">Gate / Konter / Conveyor</div>
-          <div className="col-span-2 text-right">Status</div>
+          <div className="col-span-2">{t.penerbangan.kolomTitikLayan}</div>
+          <div className="col-span-2 text-right">{t.penerbangan.kolomStatus}</div>
         </div>
 
         {loading ? (
@@ -346,6 +350,7 @@ function DeskFact({
 }
 
 function FlightRow({ flight: f }: { flight: Flight }) {
+  const kamus = useTeks();
   const departing = f.flight_type === 'departure';
   const from = splitPlace(f.origin);
   const to = splitPlace(f.destination);
@@ -410,12 +415,12 @@ function FlightRow({ flight: f }: { flight: Flight }) {
             <p className="text-[18px] font-black text-slate-900 leading-none tabular-nums">
               {shortTime(f.scheduled_time)}
             </p>
-            <p className="text-[11px] text-slate-400 mt-1">Terjadwal</p>
+            <p className="text-[11px] text-slate-400 mt-1">{kamus.penerbangan.terjadwal}</p>
           </div>
           {f.estimated_time && (
             <div className="lg:mt-2">
               <p className={`text-[13px] font-bold tabular-nums ${st.text}`}>{shortTime(f.estimated_time)}</p>
-              <p className="text-[11px] text-slate-400">Estimasi</p>
+              <p className="text-[11px] text-slate-400">{kamus.penerbangan.estimasi}</p>
             </div>
           )}
         </div>
@@ -430,8 +435,8 @@ function FlightRow({ flight: f }: { flight: Flight }) {
             tampil adalah "Belum ditentukan", bukan angka tebakan. */}
         <div className="lg:col-span-2 flex flex-wrap items-center gap-x-4 gap-y-1 lg:gap-0 lg:block">
           {(() => {
-            const g = gateLabel(f);
-            const c = counterLabel(f);
+            const g = gateLabel(f, kamus);
+            const c = counterLabel(f, kamus);
             const isDeparture = f.flight_type === 'departure';
 
             return (
@@ -446,8 +451,8 @@ function FlightRow({ flight: f }: { flight: Flight }) {
                 {isDeparture && (
                   <DeskFact
                     icon={ClipboardList}
-                    label="Konter"
-                    value={c.assigned ? c.list.join(', ') : 'Belum ditentukan'}
+                    label={kamus.penerbangan.konter}
+                    value={c.assigned ? c.list.join(', ') : kamus.penerbangan.belumDitentukan}
                     assigned={c.assigned}
                     className="lg:mt-1.5"
                   />
@@ -471,7 +476,7 @@ function FlightRow({ flight: f }: { flight: Flight }) {
               )}
               <span className={`relative inline-flex w-1.5 h-1.5 rounded-full ${st.dot}`} />
             </span>
-            {st.label}
+            {labelStatus(f.status, kamus)}
           </span>
         </div>
       </div>
@@ -500,6 +505,8 @@ function RowSkeleton() {
 }
 
 function EmptyState({ hasFlights }: { hasFlights: boolean }) {
+  const t = useTeks();
+
   return (
     <div className="bg-white rounded-2xl ring-1 ring-slate-200/70 py-16 px-6 text-center">
       <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto">
@@ -508,12 +515,12 @@ function EmptyState({ hasFlights }: { hasFlights: boolean }) {
           : <Plane className="w-6 h-6 text-slate-400" />}
       </div>
       <p className="mt-4 text-[15px] font-bold text-slate-800">
-        {hasFlights ? 'Tidak ada penerbangan yang cocok' : 'Belum ada jadwal penerbangan'}
+        {hasFlights ? t.penerbangan.kosongCocok : t.penerbangan.kosongJadwal}
       </p>
       <p className="mt-1 text-[13px] text-slate-500 max-w-sm mx-auto">
         {hasFlights
-          ? 'Coba ubah kata kunci pencarian atau longgarkan filter maskapai.'
-          : 'Data FIDS belum tersedia saat ini. Silakan segarkan beberapa saat lagi.'}
+          ? t.penerbangan.kosongCocokPesan
+          : t.penerbangan.kosongJadwalPesan}
       </p>
     </div>
   );

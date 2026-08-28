@@ -7,6 +7,7 @@ import { fetchApi } from '@/lib/api';
 import { useSetting } from '@/lib/settings';
 import { Facility } from '@/types';
 import { facilityCatMeta as catMeta, facilityIcon } from '@/lib/facilityMeta';
+import { useTeks, type Kamus } from '@/lib/kamus';
 import {
   Building2, MapPin, Search, Compass, Plane, ArrowRight, Sparkles, CheckCircle2,
   Armchair, Store, Layers, Accessibility, Headphones, DoorOpen, ParkingSquare,
@@ -33,27 +34,17 @@ function FlightArc({ className = '', d = 'M-20 170 Q 380 50 1020 130' }: { class
 }
 
 /* Zona terminal untuk bagian denah */
-const ZONES = [
-  {
-    name: 'Lantai 1 — Lobby & Kedatangan',
-    items: ['Check-in Counter', 'Baggage Claim', 'Drop-Off Zone', 'Halte Bus DAMRI'],
-    icon: DoorOpen, color: '#2563eb', bg: '#eff6ff',
-  },
-  {
-    name: 'Lantai 2 — Keberangkatan',
-    items: ['Security Check', 'Gate 1 – 4', 'Food Court', 'Ruang Tunggu'],
-    icon: Plane, color: '#0891b2', bg: '#ecfeff',
-  },
-  {
-    name: 'Ruang Tunggu VIP',
-    items: ['Oasis Lounge', 'Ruang Rapat', 'Area Merokok Khusus'],
-    icon: Armchair, color: '#d97706', bg: '#fffbeb',
-  },
-  {
-    name: 'Parkir Terpadu',
-    items: ['1.000+ slot kendaraan', 'Fast Charger EV', 'Roda dua & roda empat'],
-    icon: ParkingSquare, color: '#7c3aed', bg: '#f5f3ff',
-  },
+/* Zona terminal. Nama dan isinya dari kamus; ikon, warna, dan urutannya tetap
+   di sini — ketiganya sama di kedua bahasa. Kunci React memakai `kunci`, bukan
+   namanya, supaya kartunya tidak dipasang ulang saat bahasa berganti. */
+/** Kunci zona; banyaknya dipakai kartu ringkasan, jadi tidak perlu kamus. */
+const ZONA_KUNCI = ['lantai-1', 'lantai-2', 'vip', 'parkir'] as const;
+
+const zonaTerminal = (t: Kamus) => [
+  { kunci: 'lantai-1', ...t.fasilitas.zona.lantai1, icon: DoorOpen, color: '#2563eb', bg: '#eff6ff' },
+  { kunci: 'lantai-2', ...t.fasilitas.zona.lantai2, icon: Plane, color: '#0891b2', bg: '#ecfeff' },
+  { kunci: 'vip', ...t.fasilitas.zona.vip, icon: Armchair, color: '#d97706', bg: '#fffbeb' },
+  { kunci: 'parkir', ...t.fasilitas.zona.parkir, icon: ParkingSquare, color: '#7c3aed', bg: '#f5f3ff' },
 ];
 
 const rise = {
@@ -65,6 +56,7 @@ const container = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } 
 /* ================================================================ */
 
 export default function FacilitiesView() {
+  const t = useTeks();
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [loading, setLoading] = useState(true);
   const [cat, setCat] = useState('all');
@@ -97,7 +89,9 @@ export default function FacilitiesView() {
     total: facilities.length,
     categories: new Set(facilities.map((f) => f.category)).size,
     operational: facilities.filter((f) => f.is_operational).length,
-    zones: ZONES.length,
+    /* Yang dihitung banyaknya zona, dan itu sama di kedua bahasa — jadi
+       daftarnya tidak perlu ikut kamus di sini. */
+    zones: ZONA_KUNCI.length,
   }), [facilities]);
 
   return (
@@ -133,26 +127,25 @@ export default function FacilitiesView() {
         <div className="relative z-10 max-w-[1400px] mx-auto px-4 sm:px-6 py-16 w-full">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="max-w-2xl">
             <span className="inline-flex items-center gap-2 bg-white/12 backdrop-blur border border-white/20 text-cyan-200 text-[11px] font-bold uppercase tracking-[0.16em] px-3.5 py-2 rounded-full">
-              <Building2 className="w-3.5 h-3.5" /> Direktori Fasilitas
+              <Building2 className="w-3.5 h-3.5" /> {t.fasilitas.heroKicker}
             </span>
 
             <h1 className="mt-5 text-4xl sm:text-5xl font-black text-white leading-[1.1] tracking-tight">
-              Fasilitas Terminal
+              {t.fasilitas.heroJudul}
               <br />
-              <span className="text-cyan-300">Bandara APT Pranoto</span>
+              <span className="text-cyan-300">{t.fasilitas.heroAksen}</span>
             </h1>
 
             <p className="mt-4 text-blue-100/90 text-[15px] leading-relaxed max-w-xl">
-              Panduan lengkap fasilitas umum, keagamaan, kesehatan, layanan khusus, dan area komersial
-              terminal — dirancang ramah bagi seluruh penumpang, termasuk penyandang disabilitas.
+              {t.fasilitas.heroLead}
             </p>
 
             <div className="mt-6 flex flex-wrap gap-3">
               <Link href="#denah" className="inline-flex items-center gap-2 bg-white text-blue-700 font-bold text-[13.5px] px-5 py-3 rounded-full shadow-lg hover:bg-blue-50 transition-colors">
-                <Compass className="w-4 h-4" /> Lihat Denah Terminal
+                <Compass className="w-4 h-4" /> {t.fasilitas.lihatDenah}
               </Link>
               <Link href="/tenants" className="inline-flex items-center gap-2 bg-white/12 backdrop-blur border border-white/25 text-white font-bold text-[13.5px] px-5 py-3 rounded-full hover:bg-white/20 transition-colors">
-                Tenant &amp; Transportasi <ArrowRight className="w-4 h-4" />
+                {t.fasilitas.tenantTransportasi} <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
           </motion.div>
@@ -175,14 +168,14 @@ export default function FacilitiesView() {
       <section className="max-w-[1400px] mx-auto px-4 sm:px-6 -mt-12 relative z-20">
         <motion.div variants={container} initial="hidden" whileInView="show" viewport={{ once: true }} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: 'Total Fasilitas', value: counts.total, icon: Building2, color: '#2563eb' },
-            { label: 'Kategori Layanan', value: counts.categories, icon: Layers, color: '#7c3aed' },
-            { label: 'Sedang Beroperasi', value: counts.operational, icon: CheckCircle2, color: '#059669' },
-            { label: 'Zona Terminal', value: counts.zones, icon: Compass, color: '#0891b2' },
+            { kunci: 'total', label: t.fasilitas.ringkas.total, value: counts.total, icon: Building2, color: '#2563eb' },
+            { kunci: 'kategori', label: t.fasilitas.ringkas.kategori, value: counts.categories, icon: Layers, color: '#7c3aed' },
+            { kunci: 'beroperasi', label: t.fasilitas.ringkas.beroperasi, value: counts.operational, icon: CheckCircle2, color: '#059669' },
+            { kunci: 'zona', label: t.fasilitas.ringkas.zona, value: counts.zones, icon: Compass, color: '#0891b2' },
           ].map((s) => {
             const Icon = s.icon;
             return (
-              <motion.div key={s.label} variants={rise} whileHover={{ y: -5 }} className="relative overflow-hidden bg-white rounded-2xl shadow-lg shadow-slate-300/30 border border-slate-100 p-5">
+              <motion.div key={s.kunci} variants={rise} whileHover={{ y: -5 }} className="relative overflow-hidden bg-white rounded-2xl shadow-lg shadow-slate-300/30 border border-slate-100 p-5">
                 <span className="absolute inset-x-0 top-0 h-1" style={{ background: `linear-gradient(90deg, ${s.color}, transparent)` }} />
                 <span className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${s.color}14` }}>
                   <Icon className="w-5 h-5" style={{ color: s.color }} />
@@ -199,12 +192,10 @@ export default function FacilitiesView() {
       <section className="max-w-[1400px] mx-auto px-4 sm:px-6 py-14">
         <motion.div initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center max-w-xl mx-auto">
           <span className="inline-flex items-center gap-2 text-blue-600 text-[11px] font-bold uppercase tracking-[0.16em] bg-blue-50 px-3 py-1.5 rounded-full">
-            <Building2 className="w-3.5 h-3.5" /> Direktori Fasilitas
+            <Building2 className="w-3.5 h-3.5" /> {t.fasilitas.heroKicker}
           </span>
-          <h2 className="mt-4 text-3xl font-black text-slate-900 tracking-tight">Semua Kebutuhan Anda di Terminal</h2>
-          <p className="mt-2.5 text-slate-500 text-[14px] leading-relaxed">
-            Telusuri fasilitas berdasarkan kategori atau cari langsung nama dan lokasinya.
-          </p>
+          <h2 className="mt-4 text-3xl font-black text-slate-900 tracking-tight">{t.fasilitas.direktoriJudul}</h2>
+          <p className="mt-2.5 text-slate-500 text-[14px] leading-relaxed">{t.fasilitas.direktoriRingkas}</p>
         </motion.div>
 
         {/* filter + pencarian */}
@@ -215,7 +206,7 @@ export default function FacilitiesView() {
           className="mt-8 bg-white rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-100 p-3 flex flex-col lg:flex-row gap-3 lg:items-center justify-between"
         >
           <div className="flex gap-2 overflow-x-auto no-scrollbar">
-            {[{ value: 'all', label: 'Semua', color: '#2563eb', icon: Sparkles },
+            {[{ value: 'all', label: t.fasilitas.semua, color: '#2563eb', icon: Sparkles },
               ...categories.map((c) => ({ value: c, label: c, color: catMeta(c).color, icon: catMeta(c).icon })),
             ].map((c) => {
               const Icon = c.icon;
@@ -248,7 +239,7 @@ export default function FacilitiesView() {
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Cari fasilitas..."
+              placeholder={t.fasilitas.cariPlaceholder}
               className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-3 py-2.5 text-[12.5px] text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-blue-400 focus:bg-white transition-colors"
             />
           </div>
@@ -264,15 +255,15 @@ export default function FacilitiesView() {
             >
               <Plane className="w-7 h-7 text-white rotate-45" />
             </motion.div>
-            <p className="text-slate-500 text-[13px]">Memuat direktori fasilitas...</p>
+            <p className="text-slate-500 text-[13px]">{t.fasilitas.memuat}</p>
           </div>
         ) : filtered.length === 0 ? (
           <div className="py-20 text-center space-y-2">
             <Building2 className="w-10 h-10 text-slate-300 mx-auto" />
             <p className="text-slate-500 text-[13.5px] font-medium">
               {facilities.length === 0
-                ? 'Data fasilitas belum tersedia saat ini.'
-                : 'Tidak ada fasilitas yang cocok dengan pencarian Anda.'}
+                ? t.fasilitas.kosongData
+                : t.fasilitas.kosongCari}
             </p>
           </div>
         ) : (
@@ -346,20 +337,20 @@ export default function FacilitiesView() {
         <div className="relative max-w-[1400px] mx-auto px-4 sm:px-6">
           <motion.div initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center max-w-2xl mx-auto">
             <span className="inline-flex items-center gap-2 bg-white/12 border border-white/20 text-cyan-200 text-[11px] font-bold uppercase tracking-[0.16em] px-3.5 py-2 rounded-full">
-              <Compass className="w-3.5 h-3.5" /> Denah Terminal
+              <Compass className="w-3.5 h-3.5" /> {t.fasilitas.denahKicker}
             </span>
-            <h2 className="mt-4 text-3xl sm:text-4xl font-black text-white tracking-tight">Peta Skematik Terminal</h2>
+            <h2 className="mt-4 text-3xl sm:text-4xl font-black text-white tracking-tight">{t.fasilitas.denahJudul}</h2>
             <p className="mt-3 text-blue-100/80 text-[14px] leading-relaxed">
-              Terminal APT Pranoto dirancang modern dengan akses bebas hambatan bagi penyandang disabilitas.
+              {t.fasilitas.denahRingkas}
             </p>
           </motion.div>
 
           <motion.div variants={container} initial="hidden" whileInView="show" viewport={{ once: true }} className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {ZONES.map((z) => {
+            {zonaTerminal(t).map((z) => {
               const Icon = z.icon;
               return (
                 <motion.div
-                  key={z.name}
+                  key={z.kunci}
                   variants={rise}
                   whileHover={{ y: -7 }}
                   className="group relative overflow-hidden bg-white rounded-3xl p-6 shadow-xl"
@@ -368,10 +359,10 @@ export default function FacilitiesView() {
                     <Icon className="w-7 h-7" style={{ color: z.color }} />
                   </span>
 
-                  <h3 className="mt-4 text-[16px] font-black text-slate-900 leading-snug">{z.name}</h3>
+                  <h3 className="mt-4 text-[16px] font-black text-slate-900 leading-snug">{z.nama}</h3>
 
                   <ul className="mt-3 pt-3 border-t border-dashed border-slate-200 space-y-1.5">
-                    {z.items.map((it) => (
+                    {z.item.map((it) => (
                       <li key={it} className="flex items-start gap-2 text-[12px] text-slate-600">
                         <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5" style={{ backgroundColor: z.color }} />
                         {it}
@@ -396,17 +387,16 @@ export default function FacilitiesView() {
               <Accessibility className="w-8 h-8 text-cyan-300" />
             </span>
             <div className="flex-1 text-center sm:text-left">
-              <h3 className="text-white font-black text-[19px]">Butuh Pendampingan Khusus?</h3>
+              <h3 className="text-white font-black text-[19px]">{t.fasilitas.bantuanJudul}</h3>
               <p className="mt-1.5 text-blue-100/85 text-[13px] leading-relaxed">
-                Petugas kami siap membantu penumpang lanjut usia, penyandang disabilitas, ibu hamil, dan
-                penumpang dengan kebutuhan khusus lainnya.
+                {t.fasilitas.bantuanRingkas}
               </p>
             </div>
             <Link
               href="/complaints"
               className="inline-flex items-center gap-2 bg-white text-blue-700 font-bold text-[13.5px] px-5 py-3 rounded-full shadow-lg hover:bg-blue-50 transition-colors flex-shrink-0"
             >
-              <Headphones className="w-4 h-4" /> Hubungi Petugas
+              <Headphones className="w-4 h-4" /> {t.fasilitas.hubungiPetugas}
             </Link>
           </motion.div>
         </div>
@@ -426,20 +416,19 @@ export default function FacilitiesView() {
           />
           <div className="relative">
             <span className="inline-flex items-center gap-2 text-blue-600 text-[11px] font-bold uppercase tracking-[0.16em] bg-blue-50 px-3 py-1.5 rounded-full">
-              <Store className="w-3.5 h-3.5" /> Lengkapi Perjalanan Anda
+              <Store className="w-3.5 h-3.5" /> {t.fasilitas.ctaKicker}
             </span>
             <h2 className="mt-3.5 text-2xl sm:text-3xl font-black text-slate-900 leading-tight">
-              Jelajahi Tenant &amp; Transportasi
+              {t.fasilitas.ctaJudul}
             </h2>
             <p className="mt-3 text-slate-500 text-[13.5px] leading-relaxed max-w-md">
-              Selain fasilitas terminal, tersedia pilihan kuliner, oleh-oleh khas Kalimantan Timur, lounge,
-              serta moda transportasi resmi menuju pusat Kota Samarinda.
+              {t.fasilitas.ctaRingkas}
             </p>
             <Link
               href="/tenants"
               className="mt-5 inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[13.5px] px-5 py-3 rounded-full shadow-lg shadow-blue-600/25 transition-colors"
             >
-              Lihat Direktori Tenant <ArrowRight className="w-4 h-4" />
+              {t.fasilitas.ctaTombol} <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
 

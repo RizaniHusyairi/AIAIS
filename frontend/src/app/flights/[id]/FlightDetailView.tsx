@@ -19,15 +19,19 @@ import FlightMap from '@/components/map/FlightMap';
 import SimulationNotice from '@/components/map/SimulationNotice';
 import { simulateAt, phaseLabel } from '@/lib/flightSim';
 import {
-  AirlineLogo, splitPlace, shortTime, statusTheme, gateLabel,
+  AirlineLogo, splitPlace, shortTime, statusTheme, labelStatus, gateLabel,
   fmtFlightDate, relativeUpdated,
 } from '@/components/flights/shared';
 import {
   Plane, ArrowLeft, MapPin, Clock, DoorOpen, Luggage, ClipboardList,
   TriangleAlert, Phone, Mail, RefreshCw, Map as MapIcon, SearchX, Ruler,
 } from 'lucide-react';
+import { useTeks } from '@/lib/kamus';
+import { useBahasa } from '@/lib/bahasa';
 
 export default function FlightDetailView() {
+  const kamus = useTeks();
+  const bahasa = useBahasa();
   const params = useParams();
   const id = String(params?.id ?? '');
 
@@ -108,7 +112,7 @@ export default function FlightDetailView() {
   const from = splitPlace(flight.origin);
   const to = splitPlace(flight.destination);
   const theme = statusTheme(flight.status);
-  const gate = gateLabel(flight);
+  const gate = gateLabel(flight, kamus);
   const isArrival = flight.flight_type === 'arrival';
   const disrupted = flight.status === 'delayed' || flight.status === 'cancelled';
   const counters = flight.checkin_counters ?? [];
@@ -144,7 +148,7 @@ export default function FlightDetailView() {
                   <p className="mt-1.5 text-[14px] text-blue-100/90 truncate">{flight.airline}</p>
                 </div>
                 <span className={`ml-2 text-[12px] font-bold px-3.5 py-1.5 rounded-full ${theme.badge}`}>
-                  {theme.label}
+                  {labelStatus(flight.status, kamus)}
                 </span>
               </div>
 
@@ -177,7 +181,7 @@ export default function FlightDetailView() {
             {/* kartu jadwal */}
             <div className="flex-shrink-0 bg-white/12 backdrop-blur-md rounded-2xl ring-1 ring-white/25 p-5 min-w-[16rem]">
               {flight.flight_date && (
-                <p className="text-[11px] text-blue-100/80 font-semibold">{fmtFlightDate(flight.flight_date)}</p>
+                <p className="text-[11px] text-blue-100/80 font-semibold">{fmtFlightDate(flight.flight_date, bahasa)}</p>
               )}
               <p className="mt-1.5 text-[11px] text-blue-100 font-semibold uppercase tracking-wider">
                 {isArrival ? 'Jadwal Tiba' : 'Jadwal Berangkat'}
@@ -308,7 +312,7 @@ export default function FlightDetailView() {
 
               {flight.updated_at && (
                 <p className="mt-4 pt-3.5 border-t border-dashed border-slate-200 flex items-center gap-1.5 text-[11px] text-slate-400">
-                  <RefreshCw className="w-3 h-3" /> Status diperbarui {relativeUpdated(flight.updated_at)}
+                  <RefreshCw className="w-3 h-3" /> Status diperbarui {relativeUpdated(flight.updated_at, kamus)}
                 </p>
               )}
             </div>

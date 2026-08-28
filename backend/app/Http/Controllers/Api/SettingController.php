@@ -70,6 +70,48 @@ class SettingController extends Controller
          * `skm_is_active`.
          */
         'instagram_mode' => 'manual',
+
+        /*
+         * Blok "Tentang Bandar Udara APT Pranoto" pada beranda.
+         *
+         * BAWAANNYA SENGAJA KOSONG, berbeda dari seluruh kunci di atas.
+         *
+         * Teks yang tayang hari ini tinggal di kamus dwibahasa frontend
+         * (`lib/kamus/id.ts` dan `en.ts`). Menyalinnya ke sini sebagai nilai
+         * bawaan berarti dua sumber untuk kalimat yang sama, dan yang satu
+         * pasti menyimpang dari yang lain begitu salah satunya disunting.
+         * Dengan bawaan kosong, keadaan "belum pernah disunting petugas" tetap
+         * punya satu sumber saja, dan isian di panel murni berupa penimpaan.
+         *
+         * Frontend memperlakukan nilai kosong sebagai "pakai teks kamus";
+         * lihat `lib/tentang.ts`.
+         *
+         * Sepasang kunci per teks karena portalnya dwibahasa. Yang versi
+         * Inggrisnya dibiarkan kosong jatuh ke terjemahan di kamus, bukan ke
+         * teks Indonesia yang diisi petugas — halaman berbahasa Inggris yang
+         * separuhnya Indonesia lebih membingungkan daripada terjemahan baku
+         * yang belum disesuaikan.
+         */
+        'tentang_kicker_id' => '',
+        'tentang_kicker_en' => '',
+        'tentang_judul_id' => '',
+        'tentang_judul_en' => '',
+        'tentang_teks_id' => '',
+        'tentang_teks_en' => '',
+        'tentang_caption_id' => '',
+        'tentang_caption_en' => '',
+
+        /** Gambar sampul kartu; kosong berarti memakai /bg/bg-beranda.png. */
+        'tentang_gambar' => '',
+
+        /**
+         * Tautan video profil (YouTube).
+         *
+         * Kosong berarti tombol putarnya TIDAK dirender sama sekali. Sebelum
+         * kunci ini ada, tombol itu selalu tampil dan tidak melakukan apa pun
+         * — tombol mati lebih buruk daripada tidak ada tombol.
+         */
+        'tentang_video_url' => '',
     ];
 
     /** Mode yang dikenali; dipakai pula sebagai aturan validasi. */

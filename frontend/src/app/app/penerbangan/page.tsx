@@ -8,16 +8,19 @@ import { Flight } from '@/types';
 import SkyParticles from '@/components/effects/SkyParticles';
 import { StatusBar, AppHeader, ShareButton, Segmented, listContainer, listItem } from '@/components/pwa/ui';
 import {
-  AirlineLogo, splitPlace, shortTime, statusTheme, gateLabel, fmtFlightDate,
+  AirlineLogo, splitPlace, shortTime, statusTheme, labelStatus, gateLabel, fmtFlightDate,
 } from '@/components/flights/shared';
 import {
   Plane, PlaneTakeoff, PlaneLanding, Calendar, ChevronRight, DoorOpen, SearchX,
   Luggage, ClipboardList,
 } from 'lucide-react';
+import { useTeks } from '@/lib/kamus';
+import { useBahasa } from '@/lib/bahasa';
 
 const FMT_CLOCK = { timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit', hour12: false } as const;
 
 export default function PenerbanganScreen() {
+  const bahasa = useBahasa();
   const [flights, setFlights] = useState<Flight[]>([]);
   const [tab, setTab] = useState<'departure' | 'arrival'>('departure');
   const [now, setNow] = useState<Date | null>(null);
@@ -109,7 +112,7 @@ export default function PenerbanganScreen() {
           <div className="flex items-center gap-2 text-[12px] text-slate-600">
             <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-2 rounded-xl font-semibold">
               <Calendar className="w-3.5 h-3.5 text-blue-600" />
-              {fmtFlightDate(dataDate)}
+              {fmtFlightDate(dataDate, bahasa)}
             </span>
             <span className="text-[11px] text-slate-400">Jadwal hari ini</span>
           </div>
@@ -153,6 +156,7 @@ export default function PenerbanganScreen() {
 /* ------------------------------------------------------------------ */
 
 function FlightCard({ flight: f }: { flight: Flight }) {
+  const kamus = useTeks();
   const departing = f.flight_type === 'departure';
   const from = splitPlace(f.origin);
   const to = splitPlace(f.destination);
@@ -181,7 +185,7 @@ function FlightCard({ flight: f }: { flight: Flight }) {
               )}
               <span className={`relative inline-flex w-1.5 h-1.5 rounded-full ${st.dot}`} />
             </span>
-            {st.label}
+            {labelStatus(f.status, kamus)}
           </span>
         </div>
 
@@ -221,7 +225,7 @@ function FlightCard({ flight: f }: { flight: Flight }) {
         {/* Gate (keberangkatan) atau ban bagasi (kedatangan). Bila FIDS belum
             menetapkannya, katakan apa adanya — jangan tampilkan nomor karangan. */}
         {(() => {
-          const g = gateLabel(f);
+          const g = gateLabel(f, kamus);
           return (
             <span
               className={`flex items-center gap-1 text-[11px] font-medium ${

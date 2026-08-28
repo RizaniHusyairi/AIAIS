@@ -37,6 +37,20 @@ class DatabaseSeeder extends Seeder
          * jadi menjalankannya ulang tidak menghapus pekerjaan petugas.
          */
         $this->call(OfficialSeeder::class);
+
+        /*
+         * Angka ringkas beranda. Isinya BUKAN angka baru: seluruhnya salinan
+         * konstanta yang selama ini sudah tayang di beranda, dipindahkan ke
+         * basis data agar petugas dapat menyuntingnya. Karena itu aman
+         * dijalankan pada basis data sungguhan — yang tampil tidak berubah
+         * satu angka pun. Di sana jalankan tersendiri:
+         *
+         *     php artisan db:seed --class=AirportStatSeeder
+         *
+         * Baca blok provenans di seedernya sebelum mengubah angka mana pun;
+         * angka-angka itu belum pernah diverifikasi terhadap dokumen resmi.
+         */
+        $this->call(AirportStatSeeder::class);
     }
 
     /**

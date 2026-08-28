@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Accessibility } from 'lucide-react';
 import PanelAksesibilitas from './PanelAksesibilitas';
+import { useTeks } from '@/lib/kamus';
 
 /**
  * Peluncur panel aksesibilitas yang mengambang di seluruh portal.
@@ -28,6 +29,7 @@ import PanelAksesibilitas from './PanelAksesibilitas';
 const TANPA_PELUNCUR = ['/admin', '/absensi'] as const;
 
 export default function TombolAksesibilitas() {
+  const t = useTeks();
   const pathname = usePathname();
   const [buka, setBuka] = useState(false);
   const tombolRef = useRef<HTMLButtonElement>(null);
@@ -57,9 +59,11 @@ export default function TombolAksesibilitas() {
         whileHover={{ scale: 1.06 }}
         whileTap={{ scale: 0.94 }}
         className={`group fixed ${posisi} z-40 w-12 h-12 rounded-full bg-white border border-slate-200 text-blue-700 shadow-xl shadow-slate-900/15 flex items-center justify-center transition-colors hover:bg-blue-50 hover:border-blue-200 cursor-pointer`}
-        aria-label="Buka penyetelan aksesibilitas"
+        aria-label={t.a11y.buka}
         aria-expanded={buka}
         aria-haspopup="dialog"
+        /* Alasannya sama dengan panelnya: ini pintu menuju sakelar pemadam. */
+        data-baca-lewati=""
       >
         <Accessibility className="w-[22px] h-[22px]" />
 
@@ -67,7 +71,7 @@ export default function TombolAksesibilitas() {
             agar tidak menutupi isi halaman. */}
         <span className="pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 hidden lg:block opacity-0 group-hover:opacity-100 transition-opacity">
           <span className="whitespace-nowrap bg-slate-900 text-white text-[12px] font-bold px-3 py-2 rounded-lg shadow-lg">
-            Aksesibilitas
+            {t.a11y.judul}
           </span>
         </span>
       </motion.button>

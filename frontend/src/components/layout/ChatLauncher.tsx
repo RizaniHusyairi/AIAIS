@@ -19,11 +19,13 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { MessageCircle } from 'lucide-react';
 import { getChat, savedTicket, TICKET_KEY } from '@/lib/helpdesk';
 import { usesOwnChrome } from '@/lib/layoutChrome';
+import { useTeks } from '@/lib/kamus';
 
 /** Jeda pemeriksaan balasan baru. Cukup jarang — ini hanya lencana. */
 const POLL_MS = 45_000;
 
 export default function ChatLauncher() {
+  const t = useTeks();
   const pathname = usePathname();
   const [ticket, setTicket] = useState<string | null>(null);
   const [unread, setUnread] = useState(0);
@@ -91,8 +93,8 @@ export default function ChatLauncher() {
       href="/complaints"
       aria-label={
         belumDibaca > 0
-          ? `Pusat Bantuan — ${belumDibaca} balasan baru dari petugas`
-          : 'Buka Pusat Bantuan'
+          ? `${t.umum.pusatBantuan} — ${belumDibaca} ${t.umum.balasanBaru}`
+          : t.umum.bukaPusatBantuan
       }
       className="fixed bottom-5 right-5 z-40 group"
     >
@@ -126,7 +128,7 @@ export default function ChatLauncher() {
           tidak menutupi konten. */}
       <span className="pointer-events-none absolute right-full mr-3 top-1/2 -translate-y-1/2 hidden lg:block opacity-0 group-hover:opacity-100 transition-opacity">
         <span className="whitespace-nowrap bg-slate-900 text-white text-[12px] font-bold px-3 py-2 rounded-lg shadow-lg">
-          {ticket ? 'Lanjutkan percakapan' : 'Pusat Bantuan'}
+          {ticket ? t.umum.lanjutkanPercakapan : t.umum.pusatBantuan}
         </span>
       </span>
     </Link>

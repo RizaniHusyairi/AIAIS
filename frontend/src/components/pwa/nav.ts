@@ -1,5 +1,6 @@
 import { Home, Newspaper, LifeBuoy, LayoutGrid, UserRound } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import type { Kamus } from '@/lib/kamus';
 
 /**
  * Lima tujuan utama PWA.
@@ -12,7 +13,15 @@ import type { LucideIcon } from 'lucide-react';
  */
 export type TabPwa = {
   href: string;
-  label: string;
+  /**
+   * Kunci label di dalam kamus, BUKAN teksnya.
+   *
+   * Daftar ini konstan tingkat modul sementara bahasanya berganti saat aplikasi
+   * berjalan. Menyimpan teks jadi di sini berarti label yang membeku pada
+   * bahasa yang kebetulan aktif ketika modul dimuat. Penyajinya — `BottomNav`
+   * dan `SideRail` — yang menerjemahkan saat render.
+   */
+  kunci: keyof Kamus['pwa'];
   icon: LucideIcon;
   /**
    * Tujuan yang ditonjolkan. Tepat SATU tab boleh memilikinya.
@@ -26,11 +35,11 @@ export type TabPwa = {
 };
 
 export const TABS_PWA: TabPwa[] = [
-  { href: '/app', label: 'Beranda', icon: Home },
-  { href: '/app/berita', label: 'Berita', icon: Newspaper },
-  { href: '/app/bantuan', label: 'Bantuan', icon: LifeBuoy, utama: true },
-  { href: '/app/layanan', label: 'Layanan', icon: LayoutGrid },
-  { href: '/app/akun', label: 'Akun', icon: UserRound },
+  { href: '/app', kunci: 'beranda', icon: Home },
+  { href: '/app/berita', kunci: 'berita', icon: Newspaper },
+  { href: '/app/bantuan', kunci: 'bantuan', icon: LifeBuoy, utama: true },
+  { href: '/app/layanan', kunci: 'layanan', icon: LayoutGrid },
+  { href: '/app/akun', kunci: 'akun', icon: UserRound },
 ];
 
 /**

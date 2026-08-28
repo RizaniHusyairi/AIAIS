@@ -28,6 +28,9 @@ import { CONTACT, MAPS_URL } from '@/lib/airportProfile';
 import { RELATED_LINKS } from '@/lib/relatedLinks';
 import { useVisitorStats, useFlightSummary } from '@/lib/visitors';
 import { usesOwnChrome } from '@/lib/layoutChrome';
+import { useBahasa } from '@/lib/bahasa';
+import { KODE_LOKAL } from '@/lib/bahasaShared';
+import { useTeks, formatTanggal, formatAngka, type Kamus } from '@/lib/kamus';
 import { splitPlace, shortTime } from '@/lib/place';
 import {
   MapPin, Phone, Mail, Clock, ExternalLink, PlaneTakeoff, PlaneLanding,
@@ -87,22 +90,24 @@ const SOCIALS: Brand[] = [
    ================================================================ */
 type LinkItem = { name: string; href: string; external?: boolean };
 
-const INFORMASI: LinkItem[] = [
-  { name: 'Profil Bandara', href: '/profile' },
-  { name: 'Sejarah', href: '/profile#sejarah' },
-  { name: 'Manajemen & Pejabat', href: '/profile#pejabat' },
-  { name: 'Berita & Pengumuman', href: '/news' },
-  { name: 'Pariwisata Terdekat', href: '/tourism' },
-  { name: 'Jadwal Penerbangan', href: '/flights' },
+/* Alamatnya tetap di sini, teksnya dari kamus. Dibungkus fungsi, bukan
+   konstan, karena isinya berubah begitu bahasa berganti. */
+const informasiLinks = (t: Kamus): LinkItem[] => [
+  { name: t.footer.informasi.profil, href: '/profile' },
+  { name: t.footer.informasi.sejarah, href: '/profile#sejarah' },
+  { name: t.footer.informasi.pejabat, href: '/profile#pejabat' },
+  { name: t.footer.informasi.berita, href: '/news' },
+  { name: t.footer.informasi.wisata, href: '/tourism' },
+  { name: t.footer.informasi.jadwal, href: '/flights' },
 ];
 
-const LAYANAN: LinkItem[] = [
-  { name: 'Standar Pelayanan', href: '/ppid/standar-pelayanan' },
-  { name: 'Regulasi & Surat Keputusan', href: '/regulasi/surat-keputusan' },
-  { name: 'PPID & Informasi Publik', href: '/ppid' },
-  { name: 'Pusat Bantuan & Pengaduan', href: '/complaints' },
-  { name: 'Pusat Unduhan', href: '/downloads' },
-  { name: 'FAQ', href: '/faq' },
+const layananLinks = (t: Kamus): LinkItem[] => [
+  { name: t.footer.layanan.standar, href: '/ppid/standar-pelayanan' },
+  { name: t.footer.layanan.regulasi, href: '/regulasi/surat-keputusan' },
+  { name: t.footer.layanan.ppid, href: '/ppid' },
+  { name: t.footer.layanan.bantuan, href: '/complaints' },
+  { name: t.footer.layanan.unduhan, href: '/downloads' },
+  { name: t.footer.layanan.faq, href: '/faq' },
 ];
 
 /**
@@ -110,9 +115,10 @@ const LAYANAN: LinkItem[] = [
  * halaman /tautan-terkait. Sebelumnya URL-nya ditulis ulang di sini dan sudah
  * mulai menyimpang dari yang tayang di portal.
  */
-const TAUTAN: LinkItem[] = [
+const tautanLinks = (t: Kamus): LinkItem[] => [
+  // Nama lembaga adalah nama diri; tidak diterjemahkan.
   ...RELATED_LINKS.map((l) => ({ name: l.name, href: l.url, external: true })),
-  { name: 'Semua Tautan Terkait', href: '/tautan-terkait' },
+  { name: t.footer.semuaTautan, href: '/tautan-terkait' },
 ];
 
 /* ================================================================
@@ -156,6 +162,7 @@ function FooterLink({ item }: { item: LinkItem }) {
  * lencana, `riseIn`) dan bukan bagian dari perkakas halaman publik.
  */
 function CountUp({ value }: { value: number }) {
+  const bahasa = useBahasa();
   const [shown, setShown] = useState(0);
 
   useEffect(() => {
@@ -175,11 +182,12 @@ function CountUp({ value }: { value: number }) {
     return () => cancelAnimationFrame(raf);
   }, [value]);
 
-  return <>{shown.toLocaleString('id-ID')}</>;
+  return <>{formatAngka(shown, bahasa)}</>;
 }
 
 /** Jam WITA berjalan. */
 function ClockWita() {
+  const bahasa = useBahasa();
   // Dirender hanya setelah mount: jam server dan jam peramban tidak pernah
   // sama persis, dan menyamakannya saat hidrasi akan memicu peringatan React.
   const [now, setNow] = useState<string | null>(null);
@@ -187,7 +195,7 @@ function ClockWita() {
   useEffect(() => {
     const tampilkan = () =>
       setNow(
-        new Date().toLocaleTimeString('id-ID', {
+        new Date().toLocaleTimeString(KODE_LOKAL[bahasa], {
           timeZone: 'Asia/Makassar',
           hour: '2-digit',
           minute: '2-digit',
@@ -198,7 +206,7 @@ function ClockWita() {
     tampilkan();
     const t = setInterval(tampilkan, 1000);
     return () => clearInterval(t);
-  }, []);
+  }, [bahasa]);
 
   return (
     <span className="font-black text-white tabular-nums text-[15px]">
@@ -211,6 +219,8 @@ function ClockWita() {
 
 export default function Footer() {
   const pathname = usePathname();
+  const t = useTeks();
+  const bahasa = useBahasa();
   const stats = useVisitorStats();
   const flights = useFlightSummary();
 
@@ -250,7 +260,7 @@ export default function Footer() {
               <Clock className="w-5 h-5 text-cyan-300" />
             </span>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Waktu Bandara</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">{t.footer.waktuBandara}</p>
               <ClockWita />
             </div>
           </div>
@@ -261,7 +271,7 @@ export default function Footer() {
             <div className="flex items-center gap-2.5">
               <PlaneTakeoff className="w-4 h-4 text-sky-300 flex-shrink-0" />
               <p className="text-slate-400">
-                Keberangkatan hari ini{' '}
+                {t.footer.keberangkatanHariIni}{' '}
                 <span className="font-black text-white tabular-nums">{flights?.departures ?? '—'}</span>
               </p>
             </div>
@@ -269,7 +279,7 @@ export default function Footer() {
             <div className="flex items-center gap-2.5">
               <PlaneLanding className="w-4 h-4 text-emerald-300 flex-shrink-0" />
               <p className="text-slate-400">
-                Kedatangan hari ini{' '}
+                {t.footer.kedatanganHariIni}{' '}
                 <span className="font-black text-white tabular-nums">{flights?.arrivals ?? '—'}</span>
               </p>
             </div>
@@ -280,7 +290,7 @@ export default function Footer() {
               <div className="flex items-center gap-2.5 min-w-0">
                 <Navigation className="w-4 h-4 text-amber-300 flex-shrink-0" />
                 <p className="text-slate-400 truncate">
-                  Berikutnya{' '}
+                  {t.footer.berikutnya}{' '}
                   <span className="font-black text-white">{berikutnya.flight_number}</span>{' '}
                   <span className="text-slate-500">→</span>{' '}
                   <span className="font-semibold text-slate-200">{tujuanBerikutnya.code}</span>{' '}
@@ -294,7 +304,7 @@ export default function Footer() {
             href="/flights"
             className="inline-flex items-center justify-center gap-2 bg-white text-blue-700 hover:bg-blue-50 font-bold text-[12.5px] px-4 py-2.5 rounded-full transition-colors flex-shrink-0"
           >
-            Papan Jadwal <ArrowRight className="w-3.5 h-3.5" />
+            {t.footer.papanJadwal} <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </motion.div>
       </div>
@@ -311,13 +321,10 @@ export default function Footer() {
         <motion.div variants={rise} className="lg:col-span-4 space-y-4">
           <img src="/logo-apt.svg" alt="Bandar Udara APT Pranoto Samarinda" className="h-16 w-auto" />
 
-          <p className="text-slate-400 leading-relaxed max-w-sm">
-            Bandar Udara APT Pranoto Samarinda siap melayani dengan aman, nyaman, dan profesional.
-            Gerbang utama udara Ibu Kota Kalimantan Timur &amp; Penyangga IKN.
-          </p>
+          <p className="text-slate-400 leading-relaxed max-w-sm">{t.footer.ringkasan}</p>
 
           <div className="pt-1">
-            <ColumnTitle>Ikuti Kami</ColumnTitle>
+            <ColumnTitle>{t.footer.ikutiKami}</ColumnTitle>
             <div className="flex items-center gap-2.5 mt-3">
               {SOCIALS.map((s) => (
                 <motion.a
@@ -341,7 +348,7 @@ export default function Footer() {
 
         {/* kontak */}
         <motion.div variants={rise} className="lg:col-span-3 space-y-3">
-          <ColumnTitle>Hubungi Kami</ColumnTitle>
+          <ColumnTitle>{t.footer.hubungiKami}</ColumnTitle>
 
           <ul className="space-y-3 text-slate-400">
             <li className="flex gap-2.5">
@@ -363,7 +370,7 @@ export default function Footer() {
             <li className="flex gap-2.5">
               <Clock className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
               <span>
-                Jam operasi bandara
+                {t.footer.jamOperasi}
                 <span className="block font-semibold text-slate-200">{CONTACT.operationalHours}</span>
               </span>
             </li>
@@ -375,31 +382,31 @@ export default function Footer() {
             rel="noreferrer"
             className="inline-flex items-center gap-2 bg-white/8 border border-white/15 hover:bg-white/15 text-white font-bold text-[12px] px-4 py-2.5 rounded-full transition-colors"
           >
-            <MapPin className="w-3.5 h-3.5" /> Buka di Peta
+            <MapPin className="w-3.5 h-3.5" /> {t.footer.bukaPeta}
           </a>
         </motion.div>
 
         {/* informasi */}
         <motion.div variants={rise} className="lg:col-span-2 space-y-3">
-          <ColumnTitle>Informasi</ColumnTitle>
+          <ColumnTitle>{t.footer.kolomInformasi}</ColumnTitle>
           <ul className="space-y-2">
-            {INFORMASI.map((l) => <FooterLink key={l.name} item={l} />)}
+            {informasiLinks(t).map((l) => <FooterLink key={l.href} item={l} />)}
           </ul>
         </motion.div>
 
         {/* layanan */}
         <motion.div variants={rise} className="lg:col-span-2 space-y-3">
-          <ColumnTitle>Layanan Publik</ColumnTitle>
+          <ColumnTitle>{t.footer.kolomLayanan}</ColumnTitle>
           <ul className="space-y-2">
-            {LAYANAN.map((l) => <FooterLink key={l.name} item={l} />)}
+            {layananLinks(t).map((l) => <FooterLink key={l.href} item={l} />)}
           </ul>
         </motion.div>
 
         {/* tautan terkait */}
         <motion.div variants={rise} className="lg:col-span-1 space-y-3">
-          <ColumnTitle>Tautan</ColumnTitle>
+          <ColumnTitle>{t.footer.kolomTautan}</ColumnTitle>
           <ul className="space-y-2">
-            {TAUTAN.map((l) => <FooterLink key={l.name} item={l} />)}
+            {tautanLinks(t).map((l) => <FooterLink key={l.href} item={l} />)}
           </ul>
         </motion.div>
       </motion.div>
@@ -415,25 +422,23 @@ export default function Footer() {
         >
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
             <div>
-              <ColumnTitle>Statistik Kunjungan</ColumnTitle>
+              <ColumnTitle>{t.footer.statistikKunjungan}</ColumnTitle>
               <p className="mt-1.5 text-slate-500 text-[11.5px]">
                 {/* Angka ini dihitung dari kunjungan sungguhan. Keterangan
                     tanggal mulai ada supaya angka yang masih kecil terbaca
                     sebagai awal penghitungan, bukan sebagai kerusakan. */}
                 {stats?.since
-                  ? `Dihitung sejak ${new Date(`${stats.since}T00:00:00`).toLocaleDateString('id-ID', {
-                      day: 'numeric', month: 'long', year: 'numeric',
-                    })}`
-                  : 'Penghitungan kunjungan baru dimulai'}
+                  ? `${t.footer.dihitungSejak} ${formatTanggal(`${stats.since}T00:00:00`, bahasa)}`
+                  : t.footer.penghitunganBaru}
               </p>
             </div>
           </div>
 
           <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[
-              { label: 'Total Kunjungan', value: stats?.total, icon: Users, accent: '#22d3ee' },
-              { label: 'Kunjungan Hari Ini', value: stats?.today, icon: Eye, accent: '#38bdf8' },
-              { label: 'Sedang Online', value: stats?.online, icon: Radio, accent: '#34d399', live: true },
+              { label: t.footer.totalKunjungan, value: stats?.total, icon: Users, accent: '#22d3ee' },
+              { label: t.footer.kunjunganHariIni, value: stats?.today, icon: Eye, accent: '#38bdf8' },
+              { label: t.footer.sedangOnline, value: stats?.online, icon: Radio, accent: '#34d399', live: true },
             ].map((s) => {
               const Icon = s.icon;
               return (
@@ -484,7 +489,7 @@ export default function Footer() {
       <div className="relative max-w-[1400px] mx-auto px-4 sm:px-6 mt-6">
         <div className="rounded-2xl bg-white/[0.04] border border-white/10 px-6 py-6 flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-10">
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 text-center sm:text-left">
-            Di Bawah Naungan
+            {t.footer.diBawahNaungan}
           </p>
 
           <div className="flex items-center gap-6 sm:gap-8">
@@ -524,7 +529,7 @@ export default function Footer() {
       {/* ============ BILAH BAWAH ============ */}
       <div className="relative max-w-[1400px] mx-auto px-4 sm:px-6 pt-8 mt-8 pb-8 border-t border-white/10 flex flex-col sm:flex-row justify-between items-center text-slate-500 gap-4">
         <p className="text-center sm:text-left">
-          © {new Date().getFullYear()} Kantor UPBU Kelas I A.P.T Pranoto Samarinda. Hak cipta dilindungi.
+          © {new Date().getFullYear()} {t.footer.hakCipta}
         </p>
 
         <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
@@ -536,7 +541,7 @@ export default function Footer() {
             rel="noreferrer"
             className="hover:text-cyan-400 transition-colors"
           >
-            Kebijakan Privasi
+            {t.footer.kebijakanPrivasi}
           </a>
           <span className="font-mono text-[11px]">AIAIS Portal {VERSION_LABEL}</span>
         </div>

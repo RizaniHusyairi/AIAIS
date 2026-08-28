@@ -16,7 +16,7 @@ import {
   LayoutDashboard, Plane, Newspaper, Megaphone, Building2, Store, FileText, MessageSquareWarning,
   LogOut, ExternalLink, ShieldCheck, Menu, Radar, ChevronRight, ImageIcon, ScrollText, Scale, Landmark,
   Search, SearchX, Sun, Moon,
-  CalendarClock, DoorOpen, Radio, FileBarChart, Globe, ClipboardList, Users, UserCircle, UserRound, HelpCircle, MapPin, BarChart3, CalendarRange, Wallet, School, BadgeCheck, Gavel, HardHat, PartyPopper,
+  CalendarClock, DoorOpen, Radio, FileBarChart, Globe, ClipboardList, Users, UserCircle, UserRound, HelpCircle, MapPin, BarChart3, Gauge, CalendarRange, Wallet, School, BadgeCheck, Gavel, HardHat, PartyPopper,
   PlaneTakeoff, Clock3, GraduationCap, Boxes, Wrench, Mail, CalendarCheck,
   PackageSearch, Bell,
 } from 'lucide-react';
@@ -120,6 +120,11 @@ const NAV: { section: string; items: NavItem[] }[] = [
     section: 'Pengaturan',
     items: [
       { name: 'Tampilan & Latar', href: '/admin/appearance', icon: ImageIcon },
+      // Angka ringkas beranda. Di seksi Pengaturan bersama "Tampilan & Latar"
+      // karena keduanya menyunting tampilan halaman depan, bukan isi
+      // kedinasan — dan blok "Tentang" yang memuat angka-angka ini memang
+      // disunting di halaman sebelahnya.
+      { name: 'Angka Bandara', href: '/admin/angka-bandara', icon: Gauge },
       // Terjangkau juga lewat dropdown lonceng, tetapi tetap didaftarkan di
       // sini: sakelar "nyalakan push di perangkat ini" harus dapat ditemukan
       // orang yang belum pernah menerima satu notifikasi pun — dan selama

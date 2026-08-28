@@ -8,7 +8,7 @@ import { fetchApi } from '@/lib/api';
 import { Flight } from '@/types';
 import { StatusBar, AppHeader, ShareButton } from '@/components/pwa/ui';
 import {
-  AirlineLogo, splitPlace, statusTheme, shortTime, fmtFlightDate, relativeUpdated, namaGate,
+  AirlineLogo, splitPlace, statusTheme, labelStatus, shortTime, fmtFlightDate, relativeUpdated, namaGate,
 } from '@/components/flights/shared';
 import FlightMap from '@/components/map/FlightMap';
 import SimulationNotice from '@/components/map/SimulationNotice';
@@ -18,8 +18,12 @@ import {
   ClipboardList, RefreshCw, Map as MapIcon, SearchX,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { useTeks } from '@/lib/kamus';
+import { useBahasa } from '@/lib/bahasa';
 
 export default function DetailPenerbanganScreen() {
+  const kamus = useTeks();
+  const bahasa = useBahasa();
   const params = useParams();
   const id = String(params?.id ?? '');
   const [flights, setFlights] = useState<Flight[]>([]);
@@ -131,7 +135,7 @@ export default function DetailPenerbanganScreen() {
                 </div>
               </div>
               <span className={`flex-shrink-0 text-[11px] font-bold px-3 py-1 rounded-full ${theme.badge}`}>
-                {theme.label}
+                {labelStatus(flight.status, kamus)}
               </span>
             </div>
 
@@ -171,7 +175,7 @@ export default function DetailPenerbanganScreen() {
           <div className="p-5 pt-4">
             {flight.flight_date && (
               <p className="text-center text-[12px] text-slate-500 font-medium">
-                {fmtFlightDate(flight.flight_date)}
+                {fmtFlightDate(flight.flight_date, bahasa)}
               </p>
             )}
 
@@ -214,7 +218,7 @@ export default function DetailPenerbanganScreen() {
                     : 'text-slate-400 text-[13px]'
                 }
               />
-              <Detail label="Status" value={theme.label} valueClass={theme.text} align="right" />
+              <Detail label="Status" value={labelStatus(flight.status, kamus)} valueClass={theme.text} align="right" />
             </div>
           </div>
         </motion.div>
@@ -375,7 +379,7 @@ export default function DetailPenerbanganScreen() {
 
         {flight.updated_at && (
           <p className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
-            <RefreshCw className="w-3 h-3" /> Status diperbarui {relativeUpdated(flight.updated_at)}
+            <RefreshCw className="w-3 h-3" /> Status diperbarui {relativeUpdated(flight.updated_at, kamus)}
           </p>
         )}
       </div>

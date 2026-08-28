@@ -22,9 +22,13 @@
  * tanpa isi yang terbaca sebagai portal rusak. Panel yang memang dirancang
  * untuk keadaan itu bukan kerangka kosong.
  *
- * TIDAK ADA ANGKA BARU DI SINI. Seluruh angkanya diambil dari `ANGKA_HERO`
- * yang mencerminkan `ABOUT_STATS` di beranda; mengarang statistik bandara pada
- * portal resmi jelas keliru.
+ * TIDAK ADA ANGKA BARU DI SINI. Seluruh angkanya datang dari
+ * `useStatistikBandara()` — daftar yang sama dengan yang dipakai kartu
+ * "Tentang" dan blok "dalam Angka" di beranda, dikelola petugas lewat
+ * `/admin/angka-bandara`. Berkas ini dulu menyimpan salinannya sendiri
+ * beserta catatan "bila angka di sana berubah, ubah di sini juga"; salinan
+ * itu sudah dibuang. Mengarang statistik bandara pada portal resmi jelas
+ * keliru, dan begitu pula menyimpan dua daftar yang boleh berbeda.
  *
  * JAMNYA JAM SUNGGUHAN, dalam WITA. Bilah status yang membeku pada "9:41" —
  * jam pada seluruh iklan Apple — adalah hal pertama yang membongkar bahwa ini
@@ -34,11 +38,12 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { ExternalLink, Plane, MapPin, Ruler } from 'lucide-react';
+import { ExternalLink, Plane } from 'lucide-react';
 import InstagramGlyph from '@/components/icons/InstagramGlyph';
 import InstagramFeed from '@/components/home/InstagramFeed';
 import { AIRPORTS, HOME_IATA } from '@/lib/airports';
 import type { InstagramPost } from '@/types';
+import { useStatistikBandara } from '@/lib/statistikBandara';
 
 const AKUN = 'aptpranotoairport';
 const PROFIL = `https://www.instagram.com/${AKUN}`;
@@ -48,18 +53,6 @@ const PROFIL = `https://www.instagram.com/${AKUN}`;
    menjulang jauh melewati kaki hero. */
 const LEBAR_LAYAR = 288;
 const TINGGI_LAYAR = Math.round((LEBAR_LAYAR * 19.5) / 9); // 624
-
-/**
- * Angka yang tampil pada panel kosong.
- *
- * Cermin dari `ABOUT_STATS` di `app/page.tsx` — dipilih tiga yang paling
- * ringkas. Bila angka di sana berubah, ubah di sini juga.
- */
-const ANGKA_HERO = [
-  { icon: MapPin, nilai: '18', label: 'Destinasi' },
-  { icon: Plane, nilai: '120+', label: 'Penerbangan / Hari' },
-  { icon: Ruler, nilai: '2.250 m', label: 'Panjang Runway' },
-] as const;
 
 /* ================================================================
    Bagian-bagian bingkai ponsel
@@ -215,18 +208,23 @@ function Radar({ diam }: { diam: boolean }) {
 }
 
 function PanelBandara({ diam }: { diam: boolean }) {
+  /* Tiga kolom; angka yang ditandai petugas untuk hero dipotong pada tiga
+     pertama supaya kisinya tidak pernah pincang. Menampilkan empat pada kisi
+     tiga kolom menyisakan satu kartu sendirian di baris kedua. */
+  const angka = useStatistikBandara().filter((a) => a.diHero).slice(0, 3);
+
   return (
     <div className="flex-1 min-h-0 flex flex-col justify-center px-5 py-4">
       <Radar diam={diam} />
 
       <div className="mt-6 grid grid-cols-3 gap-2">
-        {ANGKA_HERO.map((a) => {
+        {angka.map((a) => {
           const Icon = a.icon;
           return (
-            <div key={a.label} className="text-center">
+            <div key={a.slug} className="text-center">
               <Icon className="w-3.5 h-3.5 mx-auto text-blue-500" />
               <p className="mt-1 text-[15px] font-black text-slate-900 leading-none tabular-nums">
-                {a.nilai}
+                {a.value}
               </p>
               <p className="mt-0.5 text-[10px] text-slate-500 leading-tight">{a.label}</p>
             </div>

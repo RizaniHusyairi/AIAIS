@@ -28,6 +28,8 @@ import {
   ShieldCheck, Quote, Target, ListChecks, FileText, ExternalLink, Scale,
   Eye, Users, Sparkles, ArrowRight, Radio, Mail, Phone, MapPin, Plane,
 } from 'lucide-react';
+import { useBahasa } from '@/lib/bahasa';
+import { useTeks } from '@/lib/kamus';
 
 /* ================================================================
    Gerak
@@ -42,16 +44,18 @@ const container = { hidden: {}, show: { transition: { staggerChildren: 0.08 } } 
 const PILAR_ICONS = [Radio, Eye, Users, Sparkles];
 
 export default function ProfilPpidView() {
+  const t = useTeks();
+  const bahasa = useBahasa();
   const [lightbox, setLightbox] = useState<LightboxImage | null>(null);
 
   return (
     <div className="bg-slate-50">
       <PpidHero
-        eyebrow="Keterbukaan Informasi Publik"
-        title="Profil"
-        accent="PPID"
+        eyebrow={t.ppid.eyebrow}
+        title={t.ppid.judul}
+        accent={t.ppid.aksen}
         subtitle={PPID_ORG}
-        lead={`Pejabat Pengelola Informasi dan Dokumentasi menjamin hak Anda atas informasi publik sesuai ${PPID_DASAR_HUKUM}.`}
+        lead={`${t.ppid.leadAwal} ${PPID_DASAR_HUKUM}.`}
       >
         <div className="mt-7 flex flex-wrap items-center gap-3">
           <Link
@@ -59,7 +63,7 @@ export default function ProfilPpidView() {
             className="inline-flex items-center gap-2 bg-white text-blue-700 hover:bg-blue-50 font-bold text-[13.5px] px-5 py-3 rounded-full shadow-lg shadow-blue-950/20 transition-colors"
           >
             <ListChecks className="w-4 h-4" />
-            Lihat SOP PPID
+            {t.ppid.lihatSop}
             <ArrowRight className="w-4 h-4" />
           </Link>
           <a
@@ -69,10 +73,16 @@ export default function ProfilPpidView() {
             className="inline-flex items-center gap-2 bg-white/12 border border-white/25 text-white hover:bg-white/20 font-bold text-[13.5px] px-5 py-3 rounded-full transition-colors"
           >
             <FileText className="w-4 h-4" />
-            SK Tim PPID
+            {t.ppid.skTim}
             <ExternalLink className="w-3.5 h-3.5" />
           </a>
         </div>
+
+        {/* Dokumen PPID adalah dokumen hukum berbahasa Indonesia; tidak
+            diterjemahkan, dan itu dikatakan terus terang. */}
+        {bahasa === 'en' && (
+          <p className="mt-5 text-[12.5px] text-cyan-100/80 max-w-xl">{t.ppid.catatanIsi}</p>
+        )}
       </PpidHero>
 
       {/* ============================================================ */}

@@ -23,11 +23,13 @@ import FlightMap from '@/components/map/FlightMap';
 import SimulationNotice from '@/components/map/SimulationNotice';
 import { simulateAt, phaseLabel, todayWita, witaEpoch } from '@/lib/flightSim';
 import {
-  AirlineLogo, splitPlace, shortTime, statusTheme, fmtFlightDate,
+  AirlineLogo, splitPlace, shortTime, statusTheme, labelStatus, fmtFlightDate,
 } from '@/components/flights/shared';
 import {
   Plane, PlaneTakeoff, PlaneLanding, X, Maximize2, ArrowLeft, Radio, MapPinOff,
 } from 'lucide-react';
+import { useBahasa } from '@/lib/bahasa';
+import { useTeks } from '@/lib/kamus';
 
 /** Batas keras agar papan tidak kewalahan bila umpan FIDS membesar. */
 const MAX_FLIGHTS = 60;
@@ -63,6 +65,8 @@ function PetaRuteSkeleton() {
 }
 
 function PetaRuteContent() {
+  const kamus = useTeks();
+  const bahasa = useBahasa();
   const search = useSearchParams();
   const kiosk = search.get('kiosk') === '1';
   const timeParam = search.get('t');
@@ -160,7 +164,7 @@ function PetaRuteContent() {
             {dataDate && (
               <div className="text-right">
                 <p className="text-[10px] text-blue-300 uppercase tracking-wider">Tanggal</p>
-                <p className="text-[13px] font-bold">{fmtFlightDate(dataDate)}</p>
+                <p className="text-[13px] font-bold">{fmtFlightDate(dataDate, bahasa)}</p>
               </div>
             )}
             <Link
@@ -221,7 +225,7 @@ function PetaRuteContent() {
               </h1>
               <p className="mt-3 text-[14px] text-blue-100/90 max-w-lg leading-relaxed">
                 Seluruh keberangkatan dan kedatangan Bandara APT Pranoto pada satu peta.
-                {dataDate && ` ${fmtFlightDate(dataDate)}.`}
+                {dataDate && ` ${fmtFlightDate(dataDate, bahasa)}.`}
               </p>
             </div>
 
@@ -321,7 +325,7 @@ function PetaRuteContent() {
                       <p className="text-[12.5px] font-bold text-slate-900 tabular-nums">
                         {shortTime(f.scheduled_time)}
                       </p>
-                      <p className={`text-[10px] font-semibold ${theme.text}`}>{theme.label}</p>
+                      <p className={`text-[10px] font-semibold ${theme.text}`}>{labelStatus(f.status, kamus)}</p>
                     </div>
                   </button>
                 );

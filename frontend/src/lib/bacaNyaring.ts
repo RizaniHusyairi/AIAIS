@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { usePathname } from 'next/navigation';
+import { useBahasa } from './bahasa';
+import { KODE_LOKAL, type Bahasa } from './bahasaShared';
 
 /**
  * Baca nyaring isi halaman lewat Web Speech API peramban.
@@ -85,16 +87,49 @@ function penggal(teks: string): string[] {
   return potongan;
 }
 
-/** Suara terbaik yang tersedia: Indonesia dulu, lalu Inggris, lalu apa pun. */
-function pilihSuara(): SpeechSynthesisVoice | null {
+/**
+ * Suara terbaik yang tersedia untuk bahasa yang sedang aktif.
+ *
+ * Bahasanya WAJIB ikut pilihan pemakai, bukan dipatok Indonesia. Membacakan
+ * halaman berbahasa Inggris dengan suara Indonesia menghasilkan bunyi yang
+ * tidak dapat dimengerti siapa pun — dan justru pemakai tunanetra, yang paling
+ * bergantung pada fitur ini, yang menanggungnya.
+ *
+ * Bahasa lain tetap dipakai sebagai cadangan: sebagian peramban di Indonesia
+ * tidak memasang satu pun suara Inggris, dan suara yang salah masih lebih
+ * berguna daripada diam.
+ */
+function pilihSuara(bahasa: Bahasa): SpeechSynthesisVoice | null {
   const semua = window.speechSynthesis.getVoices();
   if (!semua.length) return null;
-  return (
-    semua.find((s) => s.lang.toLowerCase().startsWith('id')) ??
-    semua.find((s) => s.lang.toLowerCase().startsWith('en')) ??
-    semua[0] ??
-    null
-  );
+
+  // Peramban menuliskan `lang` dengan pemisah yang berbeda-beda: "en-US" di
+  // Chrome, "en_US" di sebagian mesin Android. Disamakan sekali di sini.
+  const kode = (s: SpeechSynthesisVoice) => s.lang.toLowerCase().replace('_', '-');
+
+  const penuh = KODE_LOKAL[bahasa].toLowerCase(); // id-id | en-us
+  const pokok = bahasa; // id | en
+
+  /* Suara lokal (terpasang di perangkat) didahulukan atas suara awan. Bukan
+     soal selera: suara awan diam saja ketika jaringan bandara sedang padat,
+     dan pemakai yang bergantung pada baca-nyaring justru mendapat halaman
+     yang bisu tanpa penjelasan. */
+  const urut = (daftar: SpeechSynthesisVoice[]) =>
+    daftar.slice().sort((a, b) => Number(b.localService) - Number(a.localService));
+
+  // Aksen yang persis (en-US untuk Inggris, id-ID untuk Indonesia) lebih dulu,
+  // baru varian lain dari bahasa yang sama (en-GB, en-AU, ...).
+  const tepat = urut(semua.filter((s) => kode(s) === penuh));
+  if (tepat.length) return tepat[0];
+
+  const sebahasa = urut(semua.filter((s) => kode(s).startsWith(`${pokok}-`) || kode(s) === pokok));
+  if (sebahasa.length) return sebahasa[0];
+
+  /* Bahasa lain sebagai cadangan terakhir: sebagian peramban di Indonesia
+     tidak memasang satu pun suara Inggris, dan aksen yang salah masih lebih
+     berguna daripada diam. */
+  const lain = bahasa === 'id' ? 'en' : 'id';
+  return urut(semua.filter((s) => kode(s).startsWith(lain)))[0] ?? semua[0] ?? null;
 }
 
 /**
@@ -106,6 +141,7 @@ function pilihSuara(): SpeechSynthesisVoice | null {
  */
 function jalankanAntrean(
   potongan: string[],
+  bahasa: Bahasa,
   dihentikan: { current: boolean },
   selesai: () => void,
 ) {
@@ -119,8 +155,8 @@ function jalankanAntrean(
     }
 
     const ucapan = new SpeechSynthesisUtterance(teks);
-    ucapan.lang = 'id-ID';
-    const suara = pilihSuara();
+    ucapan.lang = KODE_LOKAL[bahasa];
+    const suara = pilihSuara(bahasa);
     if (suara) ucapan.voice = suara;
 
     ucapan.onend = () => {
@@ -144,22 +180,76 @@ function jalankanAntrean(
 
 const adaSintesis = () => typeof window !== 'undefined' && 'speechSynthesis' in window;
 
+/* ------------------------------------------------------------------ */
+/*  Ucapan lepas — dipakai pembacaan yang mengikuti kursor              */
+/* ------------------------------------------------------------------ */
+
 /**
- * Keadaan dukungan suara sebagai SATU string.
+ * Membacakan satu potong teks, menggantikan apa pun yang sedang diucapkan.
+ *
+ * Berbeda dari `useBacaNyaring` yang mengantre seluruh halaman, fungsi ini
+ * melayani pembacaan per elemen: satuannya pendek, datang bertubi-tubi saat
+ * kursor menyapu halaman, dan yang TERBARU selalu menang.
+ *
+ * `cancel()` di awal itu wajib, bukan kehati-hatian berlebih: `speak()`
+ * MENUMPUK ke antrean alih-alih menggantikan, sehingga tanpa itu menyapu
+ * sepuluh paragraf berarti mendengarkan kesepuluhnya berurutan sampai habis —
+ * persis kebalikan dari yang diinginkan pemakai.
+ *
+ * Fungsi tingkat modul, bukan hook: pemanggilnya sebuah pendengar peristiwa
+ * DOM yang hidup di luar daur render React.
+ */
+export function ucapkanSekali(teks: string, bahasa: Bahasa) {
+  if (!adaSintesis()) return;
+
+  window.speechSynthesis.cancel();
+
+  const bersih = teks.replace(/\s+/g, ' ').trim();
+  if (!bersih) return;
+
+  /* Tetap dipenggal meski satuannya sudah pendek. Chrome memutus ucapan
+     panjang di tengah jalan — cacat yang sama yang menjadi alasan
+     `MAKS_POTONGAN` ada — dan satu paragraf panjang dapat melampauinya. */
+  const suara = pilihSuara(bahasa);
+
+  for (const bagian of penggal(bersih)) {
+    const ucapan = new SpeechSynthesisUtterance(bagian);
+    ucapan.lang = KODE_LOKAL[bahasa];
+    if (suara) ucapan.voice = suara;
+    window.speechSynthesis.speak(ucapan);
+  }
+}
+
+/** Menghentikan ucapan apa pun yang sedang berjalan. */
+export function hentikanUcapan() {
+  if (!adaSintesis()) return;
+  window.speechSynthesis.cancel();
+}
+
+/**
+ * Daftar bahasa yang benar-benar punya suara di perangkat ini.
  *
  * Dibaca lewat `useSyncExternalStore`, bukan `useState` yang diisi dari dalam
  * efek: mengisi state secara langsung di badan efek memicu render bertingkat,
  * dan daftar suara memang persis berbentuk sumber luar — ia dimuat peramban
  * secara asinkron dan mengabarkan perubahannya lewat `voiceschanged`.
  *
- * Nilainya string, bukan objek, supaya perbandingan `===` milik
- * `useSyncExternalStore` tidak selalu menganggapnya berubah.
+ * Mengembalikan STRING, bukan larik: `useSyncExternalStore` membandingkan
+ * hasilnya dengan `===`, dan larik baru pada tiap panggilan berarti render tak
+ * berujung. Bentuknya "en,id" — kode dua huruf, unik, terurut, sehingga
+ * nilainya sama persis selama daftar suaranya tidak berubah.
+ *
+ * Sebelumnya fungsi ini hanya menjawab ada-tidaknya suara Indonesia. Sejak
+ * portal dwibahasa itu tidak cukup: pemakai Inggris di perangkat tanpa suara
+ * Inggris menghadapi persoalan yang sama persis.
  */
 function cuplikanSuara(): string {
   if (!adaSintesis()) return 'tak-didukung';
   const semua = window.speechSynthesis.getVoices();
   if (!semua.length) return 'belum-dimuat';
-  return semua.some((s) => s.lang.toLowerCase().startsWith('id')) ? 'ada-id' : 'tanpa-id';
+
+  const kode = new Set(semua.map((s) => s.lang.toLowerCase().slice(0, 2)));
+  return [...kode].sort().join(',');
 }
 
 function langgananSuara(cb: () => void) {
@@ -176,8 +266,8 @@ export type BacaNyaring = {
   didukung: boolean;
   sedangBaca: boolean;
   terjeda: boolean;
-  /** Benar bila perangkat ini tidak punya satu pun suara berbahasa Indonesia. */
-  tanpaSuaraIndonesia: boolean;
+  /** Benar bila perangkat tidak punya suara untuk bahasa yang sedang aktif. */
+  tanpaSuaraBahasa: boolean;
   mulai: () => void;
   jeda: () => void;
   lanjut: () => void;
@@ -186,6 +276,7 @@ export type BacaNyaring = {
 
 export function useBacaNyaring(): BacaNyaring {
   const pathname = usePathname();
+  const bahasa = useBahasa();
   const [sedangBaca, setSedangBaca] = useState(false);
   const [terjeda, setTerjeda] = useState(false);
 
@@ -215,11 +306,11 @@ export function useBacaNyaring(): BacaNyaring {
     setSedangBaca(true);
     setTerjeda(false);
 
-    jalankanAntrean(penggal(teks), dihentikan, () => {
+    jalankanAntrean(penggal(teks), bahasa, dihentikan, () => {
       setSedangBaca(false);
       setTerjeda(false);
     });
-  }, []);
+  }, [bahasa]);
 
   const jeda = useCallback(() => {
     if (!adaSintesis()) return;
@@ -248,7 +339,10 @@ export function useBacaNyaring(): BacaNyaring {
     didukung: keadaanSuara !== 'tak-didukung',
     sedangBaca,
     terjeda,
-    tanpaSuaraIndonesia: keadaanSuara === 'tanpa-id',
+    tanpaSuaraBahasa:
+      keadaanSuara !== 'tak-didukung' &&
+      keadaanSuara !== 'belum-dimuat' &&
+      !keadaanSuara.split(',').includes(bahasa),
     mulai,
     jeda,
     lanjut,

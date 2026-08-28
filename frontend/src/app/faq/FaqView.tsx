@@ -31,6 +31,7 @@ import { gabungFaq, kategoriDari, SEMUA_KATEGORI, type FaqTampil } from '@/lib/f
 import { fetchApi } from '@/lib/api';
 import SafeHtml from '@/components/SafeHtml';
 import type { FaqItem } from '@/types';
+import { useTeks } from '@/lib/kamus';
 
 /* Gerak baku portal — sama persis dengan halaman PPID dan Pusat Bantuan. */
 const rise = {
@@ -40,6 +41,7 @@ const rise = {
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
 
 export default function FaqView({ awal }: { awal: FaqItem[] }) {
+  const t = useTeks();
   /*
    * Bentuk siap tampil dirakit DI SINI, bukan di server. `gabungFaq`
    * melekatkan komponen ikon pada tiap butir, dan komponen tidak dapat
@@ -105,16 +107,17 @@ export default function FaqView({ awal }: { awal: FaqItem[] }) {
   return (
     <div className="bg-slate-50 min-h-screen">
       <PpidHero
-        title="Pertanyaan yang"
-        accent="Sering Diajukan"
-        subtitle="Bandar Udara APT Pranoto Samarinda"
-        lead="Jawaban atas hal-hal yang paling sering ditanyakan pengunjung — rute penerbangan, jam operasional, tarif parkir, taksi, kargo, hingga cara menyampaikan pengaduan. Semuanya disusun dan diperbarui petugas layanan informasi."
+        title={t.faq.heroJudul}
+        accent={t.faq.heroAksen}
+        subtitle={t.faq.heroSub}
+        lead={t.faq.heroLead}
         showBack={false}
       >
         <div className="mt-6 inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm ring-1 ring-white/25 px-3.5 py-2 rounded-full">
           <HelpCircle className="w-3.5 h-3.5 text-sky-200" />
           <span className="text-[11.5px] font-bold text-white/95 tabular-nums">
-            {items.length} pertanyaan · {Math.max(CATEGORIES.length - 1, 0)} kategori
+            {items.length} {t.faq.hitungPertanyaan} · {Math.max(CATEGORIES.length - 1, 0)}{' '}
+            {t.faq.hitungKategori}
           </span>
         </div>
       </PpidHero>
@@ -125,14 +128,13 @@ export default function FaqView({ awal }: { awal: FaqItem[] }) {
         <motion.section variants={container} initial="hidden" animate="show">
           <motion.div variants={rise} className="text-center max-w-2xl mx-auto">
             <span className="inline-flex items-center gap-2 text-blue-600 text-[11px] font-bold uppercase tracking-[0.16em] bg-blue-50 px-3 py-1.5 rounded-full">
-              <Search className="w-3.5 h-3.5" /> Cari Jawaban
+              <Search className="w-3.5 h-3.5" /> {t.faq.cariKicker}
             </span>
             <h2 className="mt-4 text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-              Ketik kata kuncinya
+              {t.faq.cariJudul}
             </h2>
             <p className="mt-2 text-slate-500 text-[13.5px] leading-relaxed">
-              Pencarian menelusuri isi jawaban, bukan judul pertanyaannya saja — jadi
-              kata yang hanya muncul di tengah penjelasan pun tetap ketemu.
+              {t.faq.cariRingkas}
             </p>
           </motion.div>
 
@@ -143,15 +145,15 @@ export default function FaqView({ awal }: { awal: FaqItem[] }) {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                aria-label="Cari pertanyaan"
-                placeholder="Contoh: rute, parkir inap, taksi, disabilitas, perintis..."
+                aria-label={t.faq.cariLabel}
+                placeholder={t.faq.cariContoh}
                 className="w-full bg-white rounded-2xl ring-1 ring-slate-200 shadow-lg shadow-slate-200/50 pl-12 pr-11 py-4 text-[14px] text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery('')}
-                  aria-label="Bersihkan pencarian"
+                  aria-label={t.faq.bersihkanCari}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
                 >
                   <X className="w-4 h-4" />
@@ -168,7 +170,7 @@ export default function FaqView({ awal }: { awal: FaqItem[] }) {
           <aside className="lg:col-span-3">
             <div className="lg:sticky lg:top-24">
               <p className="text-[10.5px] font-bold uppercase tracking-[0.16em] text-blue-600 mb-3 flex items-center gap-1.5">
-                <ListFilter className="w-3.5 h-3.5" /> Kategori
+                <ListFilter className="w-3.5 h-3.5" /> {t.faq.kategori}
               </p>
 
               <div className="flex lg:flex-col gap-2 overflow-x-auto no-scrollbar pb-1 lg:pb-0">
@@ -204,11 +206,11 @@ export default function FaqView({ awal }: { awal: FaqItem[] }) {
                   <Info className="w-3.5 h-3.5 text-blue-600" />
                 </span>
                 <p className="text-[11.5px] text-slate-600 leading-relaxed">
-                  Belum menemukan jawabannya? Kirim pertanyaan lewat{' '}
+                  {t.faq.belumKetemuAwal}{' '}
                   <Link href="/complaints" className="font-bold text-blue-700 hover:underline">
-                    Pusat Bantuan
+                    {t.faq.ctaBantuan}
                   </Link>{' '}
-                  — dijawab petugas dan dapat dilacak dengan nomor tiket.
+                  {t.faq.belumKetemuAkhir}
                 </p>
               </div>
             </div>
@@ -219,21 +221,23 @@ export default function FaqView({ awal }: { awal: FaqItem[] }) {
 
             <div className="flex items-center justify-between gap-4 text-[12px] text-slate-500">
               <span>
-                Menampilkan <strong className="text-slate-800 font-black tabular-nums">{filteredFAQs.length}</strong> pertanyaan
+                {t.faq.menampilkan}{' '}
+                <strong className="text-slate-800 font-black tabular-nums">{filteredFAQs.length}</strong>{' '}
+                {t.faq.hitungPertanyaan}
               </span>
               <div className="flex items-center gap-3 font-bold">
                 <button type="button" onClick={expandAll} className="hover:text-blue-600 transition-colors cursor-pointer">
-                  Buka Semua
+                  {t.faq.bukaSemua}
                 </button>
                 <span className="text-slate-300">·</span>
                 <button type="button" onClick={collapseAll} className="hover:text-blue-600 transition-colors cursor-pointer">
-                  Tutup Semua
+                  {t.faq.tutupSemua}
                 </button>
               </div>
             </div>
 
             {loading ? (
-              <div className="space-y-4" aria-busy="true" aria-label="Memuat pertanyaan">
+              <div className="space-y-4" aria-busy="true" aria-label={t.faq.memuatPertanyaan}>
                 {[0, 1, 2, 3].map((i) => (
                   <div key={i} className="h-[86px] rounded-2xl bg-white ring-1 ring-slate-200/70 animate-pulse" />
                 ))}
@@ -316,17 +320,16 @@ export default function FaqView({ awal }: { awal: FaqItem[] }) {
                 <span className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
                   <Search className="w-5 h-5" />
                 </span>
-                <h3 className="text-[15px] font-black text-slate-800">Tidak ada pertanyaan yang cocok</h3>
+                <h3 className="text-[15px] font-black text-slate-800">{t.faq.kosongJudul}</h3>
                 <p className="text-slate-500 text-[13px] max-w-sm mx-auto leading-relaxed">
-                  Coba kata kunci lain atau pilih kategori &ldquo;Semua&rdquo; untuk menelusuri
-                  seluruh jawaban yang tersedia.
+                  {t.faq.kosongPesan}
                 </p>
                 <button
                   type="button"
                   onClick={() => { setSearchQuery(''); setActiveCategory(SEMUA_KATEGORI); }}
                   className="mt-1 text-[12.5px] font-bold text-blue-600 hover:underline cursor-pointer"
                 >
-                  Bersihkan penyaring
+                  {t.faq.bersihkanPenyaring}
                 </button>
               </div>
             )}
@@ -350,14 +353,13 @@ export default function FaqView({ awal }: { awal: FaqItem[] }) {
 
             <div className="min-w-0 flex-1">
               <span className="inline-block text-[10px] font-black uppercase tracking-[0.18em] text-sky-200 bg-white/10 px-2 py-0.5 rounded">
-                Layanan Informasi
+                {t.faq.ctaKicker}
               </span>
               <h2 className="mt-2 text-xl sm:text-2xl font-black leading-tight">
-                Masih ada yang ingin ditanyakan?
+                {t.faq.ctaJudul}
               </h2>
               <p className="mt-1.5 text-[13px] text-blue-100/80 leading-relaxed max-w-2xl">
-                Petugas layanan informasi bertugas 07.00–20.00 WITA. Pertanyaan dan pengaduan
-                yang masuk diberi nomor tiket sehingga dapat dilacak sendiri.
+                {t.faq.ctaRingkas}
               </p>
             </div>
 
@@ -373,13 +375,13 @@ export default function FaqView({ awal }: { awal: FaqItem[] }) {
                 className="inline-flex items-center justify-center gap-2 bg-white text-[#0b1e5b] hover:bg-sky-100 font-bold text-[12.5px] px-5 py-3 rounded-full transition-colors"
               >
                 <MessageCircle className="w-4 h-4" />
-                Pusat Bantuan
+                {t.faq.ctaBantuan}
               </Link>
               <Link
                 href="/ppid"
                 className="inline-flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 ring-1 ring-white/25 text-white font-bold text-[12.5px] px-5 py-3 rounded-full transition-colors"
               >
-                Layanan PPID
+                {t.faq.ctaPpid}
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>

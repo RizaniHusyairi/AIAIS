@@ -5,13 +5,14 @@ import { createPortal } from 'react-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
   ALargeSmall, Contrast, Eye, Link2, MoveHorizontal, Pause, Play,
-  RotateCcw, Square, Type, Volume2, X, Zap,
+  RotateCcw, Square, Type, Volume2, X, Zap, MousePointer2,
 } from 'lucide-react';
 import {
   resetAksesibilitas, setAksesibilitas, useAksesibilitas,
 } from '@/lib/aksesibilitas';
 import { semuanyaBawaan, UKURAN_TEKS, type Aksesibilitas } from '@/lib/aksesibilitasShared';
 import { useBacaNyaring } from '@/lib/bacaNyaring';
+import { useTeks } from '@/lib/kamus';
 
 /**
  * Panel penyetelan aksesibilitas.
@@ -26,50 +27,24 @@ import { useBacaNyaring } from '@/lib/bacaNyaring';
  * fokus ke peluncurnya saat ditutup.
  */
 
+/* Hanya kunci dan ikon; label serta keterangannya diambil dari kamus saat
+   render — lihat `t.a11y.sakelar`. Daftar ini tetap di sini karena urutan dan
+   pasangan ikonnya sama di kedua bahasa. */
 type Sakelar = {
-  kunci: Exclude<keyof Aksesibilitas, 'teks'>;
-  label: string;
-  ket: string;
+  /* `baca` sengaja di luar daftar ini: kendalinya berada di dalam bagian
+     "Baca nyaring" di bawah, bersama peringatan ketersediaan suara yang
+     hanya masuk akal dibaca berdampingan dengannya. */
+  kunci: Exclude<keyof Aksesibilitas, 'teks' | 'baca'>;
   Ikon: React.ComponentType<{ className?: string }>;
 };
 
 const SAKELAR: Sakelar[] = [
-  {
-    kunci: 'kontras',
-    label: 'Kontras tinggi',
-    ket: 'Teks hitam pekat di atas latar polos, garis tepi dipertegas.',
-    Ikon: Contrast,
-  },
-  {
-    kunci: 'gerak',
-    label: 'Kurangi gerak',
-    ket: 'Menghentikan animasi, partikel, dan hiasan bergerak.',
-    Ikon: Zap,
-  },
-  {
-    kunci: 'tautan',
-    label: 'Garis bawah tautan',
-    ket: 'Tautan dalam teks tidak lagi dibedakan warnanya saja.',
-    Ikon: Link2,
-  },
-  {
-    kunci: 'fokus',
-    label: 'Penanda fokus tebal',
-    ket: 'Memperjelas posisi kursor papan tik saat menekan Tab.',
-    Ikon: Eye,
-  },
-  {
-    kunci: 'spasi',
-    label: 'Perenggangan teks',
-    ket: 'Menambah jarak baris, huruf, dan kata pada paragraf.',
-    Ikon: MoveHorizontal,
-  },
-  {
-    kunci: 'font',
-    label: 'Font ramah baca',
-    ket: 'Atkinson Hyperlegible, dirancang agar huruf mirip tetap terbedakan.',
-    Ikon: Type,
-  },
+  { kunci: 'kontras', Ikon: Contrast },
+  { kunci: 'gerak', Ikon: Zap },
+  { kunci: 'tautan', Ikon: Link2 },
+  { kunci: 'fokus', Ikon: Eye },
+  { kunci: 'spasi', Ikon: MoveHorizontal },
+  { kunci: 'font', Ikon: Type },
 ];
 
 /** Elemen yang dapat menerima fokus di dalam panel; dipakai penjebak fokus. */
@@ -84,6 +59,7 @@ export default function PanelAksesibilitas({
   /** Tombol yang membuka panel; fokus dikembalikan ke sana saat panel ditutup. */
   kembalikanFokusKe: React.RefObject<HTMLButtonElement | null>;
 }) {
+  const t = useTeks();
   const a11y = useAksesibilitas();
   const kurangiGerak = useReducedMotion();
   const suara = useBacaNyaring();
@@ -149,6 +125,11 @@ export default function PanelAksesibilitas({
         ref={panelRef}
         role="dialog"
         aria-modal="true"
+        /* Panel ini dikecualikan dari pembacaan-saat-disentuh. Sakelar
+           pemadamnya ada di dalam sini, jadi tanpa penanda ini pemakai yang
+           hendak mematikan mode itu harus menyeberangi panel yang membacakan
+           setiap keterangan yang dilewati kursornya. */
+        data-baca-lewati=""
         aria-labelledby={judulId}
         onKeyDown={onKeyDown}
         initial={kurangiGerak ? { opacity: 0 } : { opacity: 0, y: 32, scale: 0.98 }}
@@ -159,11 +140,11 @@ export default function PanelAksesibilitas({
       >
         <div className="sticky top-0 bg-white border-b border-slate-100 px-5 py-4 flex items-center justify-between gap-3 rounded-t-3xl">
           <h2 id={judulId} className="text-[15px] font-extrabold text-slate-900">
-            Aksesibilitas
+            {t.a11y.judul}
           </h2>
           <button
             onClick={tutup}
-            aria-label="Tutup panel aksesibilitas"
+            aria-label={t.a11y.tutup}
             className="w-9 h-9 rounded-xl text-slate-500 hover:text-blue-600 hover:bg-blue-50 flex items-center justify-center transition-colors cursor-pointer"
           >
             <X className="w-[18px] h-[18px]" />
@@ -175,12 +156,12 @@ export default function PanelAksesibilitas({
           <div>
             <div className="flex items-center gap-2 mb-2.5">
               <ALargeSmall className="w-4 h-4 text-blue-600" />
-              <span className="text-[13.5px] font-bold text-slate-800">Ukuran teks</span>
+              <span className="text-[13.5px] font-bold text-slate-800">{t.a11y.ukuranTeks}</span>
             </div>
             {/* Kelompok radio, bukan empat tombol lepas: pembaca layar
                 mengumumkan "2 dari 4", dan panah kiri/kanan berpindah pilihan
                 seperti yang diharapkan dari sekelompok pilihan tunggal. */}
-            <div role="radiogroup" aria-label="Ukuran teks" className="grid grid-cols-4 gap-1.5">
+            <div role="radiogroup" aria-label={t.a11y.ukuranTeks} className="grid grid-cols-4 gap-1.5">
               {UKURAN_TEKS.map((u) => {
                 const aktif = a11y.teks === u;
                 return (
@@ -204,7 +185,8 @@ export default function PanelAksesibilitas({
 
           {/* ---- Sakelar ---- */}
           <div className="space-y-1">
-            {SAKELAR.map(({ kunci, label, ket, Ikon }) => {
+            {SAKELAR.map(({ kunci, Ikon }) => {
+              const { label, ket } = t.a11y.sakelar[kunci];
               const aktif = a11y[kunci];
               return (
                 <button
@@ -246,22 +228,54 @@ export default function PanelAksesibilitas({
             <div className="pt-4 border-t border-slate-100">
               <div className="flex items-center gap-2 mb-1.5">
                 <Volume2 className="w-4 h-4 text-blue-600" />
-                <span className="text-[13.5px] font-bold text-slate-800">Baca nyaring</span>
+                <span className="text-[13.5px] font-bold text-slate-800">{t.a11y.bacaNyaring}</span>
               </div>
               <p className="text-[11.5px] text-slate-500 leading-snug mb-2.5">
-                Membacakan isi halaman ini memakai suara bawaan perangkat Anda.
-                {suara.tanpaSuaraIndonesia
-                  ? ' Perangkat ini tidak memiliki suara berbahasa Indonesia, sehingga pelafalannya akan terdengar asing.'
-                  : ' Tidak ada teks yang dikirim keluar dari perangkat Anda.'}
+                {t.a11y.bacaKet}{' '}
+                {suara.tanpaSuaraBahasa ? t.a11y.bacaTanpaSuara : t.a11y.bacaAman}
               </p>
 
+              {/* Kendali utamanya. Ditaruh di ATAS tombol seluruh halaman
+                  karena inilah yang dicari orang: mendengar satu baris yang
+                  sedang dilihat, bukan pidato dari awal halaman. Pekerjaannya
+                  sendiri dilakukan <PembacaSentuh /> di layout akar. */}
+              <button
+                onClick={() => setAksesibilitas({ baca: !a11y.baca })}
+                aria-pressed={a11y.baca}
+                className="w-full flex items-start gap-3 px-3 py-3 mb-2 rounded-xl text-left hover:bg-slate-50 transition-colors cursor-pointer"
+              >
+                <MousePointer2
+                  className={`w-4 h-4 mt-0.5 flex-shrink-0 ${a11y.baca ? 'text-blue-600' : 'text-slate-400'}`}
+                />
+                <span className="flex-grow min-w-0">
+                  <span className="block text-[13.5px] font-bold text-slate-800">{t.a11y.sentuhLabel}</span>
+                  <span className="block text-[11.5px] text-slate-500 leading-snug mt-0.5">{t.a11y.sentuhKet}</span>
+                </span>
+                <span
+                  className={`relative w-10 h-[22px] rounded-full flex-shrink-0 mt-0.5 transition-colors ${
+                    a11y.baca ? 'bg-blue-600' : 'bg-slate-200'
+                  }`}
+                  aria-hidden="true"
+                >
+                  <motion.span
+                    className="absolute top-[3px] w-4 h-4 rounded-full bg-white shadow"
+                    animate={{ left: a11y.baca ? 22 : 3 }}
+                    transition={{ type: 'spring', stiffness: 480, damping: 34 }}
+                  />
+                </span>
+              </button>
+
+              {/* Pembacaan seluruh halaman TIDAK dihapus, hanya turun pangkat
+                  menjadi pilihan kedua: ia tetap satu-satunya cara mendengar
+                  halaman panjang tanpa harus menuntun kursor baris demi
+                  baris. */}
               <div className="flex gap-2">
                 {!suara.sedangBaca ? (
                   <button
                     onClick={suara.mulai}
                     className="flex-grow flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-[12.5px] font-bold transition-colors cursor-pointer"
                   >
-                    <Play className="w-3.5 h-3.5" /> Mulai membaca
+                    <Play className="w-3.5 h-3.5" /> {t.a11y.seluruhHalaman}
                   </button>
                 ) : (
                   <>
@@ -271,17 +285,17 @@ export default function PanelAksesibilitas({
                     >
                       {suara.terjeda ? (
                         <>
-                          <Play className="w-3.5 h-3.5" /> Lanjutkan
+                          <Play className="w-3.5 h-3.5" /> {t.a11y.lanjutkan}
                         </>
                       ) : (
                         <>
-                          <Pause className="w-3.5 h-3.5" /> Jeda
+                          <Pause className="w-3.5 h-3.5" /> {t.a11y.jeda}
                         </>
                       )}
                     </button>
                     <button
                       onClick={suara.henti}
-                      aria-label="Hentikan pembacaan"
+                      aria-label={t.a11y.hentikan}
                       className="w-11 flex items-center justify-center rounded-xl border border-slate-200 text-slate-600 hover:border-rose-300 hover:text-rose-600 transition-colors cursor-pointer"
                     >
                       <Square className="w-3.5 h-3.5" />
@@ -298,11 +312,11 @@ export default function PanelAksesibilitas({
             disabled={bawaan}
             className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-slate-200 text-[12.5px] font-bold text-slate-600 hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed disabled:hover:bg-transparent"
           >
-            <RotateCcw className="w-3.5 h-3.5" /> Kembalikan ke bawaan
+            <RotateCcw className="w-3.5 h-3.5" /> {t.a11y.kembalikan}
           </button>
 
           <p className="text-[11px] text-slate-400 leading-snug text-center">
-            Penyetelan disimpan di peramban ini saja dan tidak dikirim ke mana pun.
+            {t.a11y.catatanSimpan}
           </p>
         </div>
       </motion.div>

@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { Flight } from '@/types';
+import { KODE_LOKAL, type Bahasa } from '@/lib/bahasaShared';
+import type { Kamus } from '@/lib/kamus';
 
 /* ------------------------------------------------------------------ */
 /*  Identitas maskapai                                                 */
@@ -136,29 +138,30 @@ export function AirlineLogo({
 export { splitPlace, shortTime } from '@/lib/place';
 
 /** Tanggal penerbangan FIDS (YYYY-MM-DD) -> "Senin, 27 Juli 2026". */
-export function fmtFlightDate(date?: string | null): string {
+export function fmtFlightDate(date: string | null | undefined, bahasa: Bahasa): string {
   if (!date) return '';
   const d = new Date(`${date}T00:00:00`);
   if (Number.isNaN(d.getTime())) return date;
-  return d.toLocaleDateString('id-ID', {
+  return d.toLocaleDateString(KODE_LOKAL[bahasa], {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   });
 }
 
 /** Selisih waktu pembaruan status FIDS dalam bahasa manusia. */
-export function relativeUpdated(iso?: string | null): string {
+export function relativeUpdated(iso: string | null | undefined, t: Kamus): string {
   if (!iso) return '';
   const then = new Date(iso).getTime();
   if (Number.isNaN(then)) return '';
 
+  const p = t.penerbangan;
   const mins = Math.round((Date.now() - then) / 60000);
-  if (mins < 1) return 'baru saja';
-  if (mins < 60) return `${mins} menit lalu`;
+  if (mins < 1) return p.baruSaja;
+  if (mins < 60) return `${mins} ${p.menitLalu}`;
 
   const hours = Math.round(mins / 60);
-  if (hours < 24) return `${hours} jam lalu`;
+  if (hours < 24) return `${hours} ${p.jamLalu}`;
 
-  return `${Math.round(hours / 24)} hari lalu`;
+  return `${Math.round(hours / 24)} ${p.hariLalu}`;
 }
 
 /**
@@ -207,19 +210,21 @@ export function namaGate(gate: string | number | null | undefined): string | nul
   return NAMA_GATE[kunci] ?? kunci;
 }
 
-export function gateLabel(flight: Flight): {
+export function gateLabel(flight: Flight, t: Kamus): {
   label: string;
   bare: string;
   value: string;
   assigned: boolean;
 } {
+  const p = t.penerbangan;
+
   if (flight.flight_type === 'arrival') {
     const assigned = flight.baggage_belt != null;
-    const bare = assigned ? String(flight.baggage_belt) : 'Belum ditentukan';
+    const bare = assigned ? String(flight.baggage_belt) : p.belumDitentukan;
     return {
-      label: 'Conveyor',
+      label: p.conveyor,
       bare,
-      value: assigned ? `Conveyor ${flight.baggage_belt}` : 'Belum ditentukan',
+      value: assigned ? `${p.conveyor} ${flight.baggage_belt}` : p.belumDitentukan,
       assigned,
     };
   }
@@ -228,9 +233,9 @@ export function gateLabel(flight: Flight): {
   const assigned = nama !== null;
 
   return {
-    label: 'Gate',
-    bare: nama ?? 'Belum ditentukan',
-    value: nama ? `Gate ${nama}` : 'Belum ditentukan',
+    label: p.gate,
+    bare: nama ?? p.belumDitentukan,
+    value: nama ? `${p.gate} ${nama}` : p.belumDitentukan,
     assigned,
   };
 }
@@ -243,7 +248,7 @@ export function gateLabel(flight: Flight): {
  * FIDS mengirim tiga kolom (konter, konter2, konter3) dan memakai 0 untuk
  * "tidak dipakai"; penyaringannya sudah dilakukan di lapisan pemetaan.
  */
-export function counterLabel(flight: Flight): {
+export function counterLabel(flight: Flight, t: Kamus): {
   list: number[];
   value: string;
   assigned: boolean;
@@ -251,7 +256,9 @@ export function counterLabel(flight: Flight): {
   const list = flight.flight_type === 'departure' ? flight.checkin_counters ?? [] : [];
   return {
     list,
-    value: list.length ? `Konter ${list.join(', ')}` : 'Belum ditentukan',
+    value: list.length
+      ? `${t.penerbangan.konter} ${list.join(', ')}`
+      : t.penerbangan.belumDitentukan,
     assigned: list.length > 0,
   };
 }
@@ -349,6 +356,24 @@ const STATUS_THEMES: Record<string, StatusTheme> = {
 
 export function statusTheme(status: string): StatusTheme {
   return STATUS_THEMES[status] || STATUS_THEMES.scheduled;
+}
+
+/**
+ * Label status dalam bahasa yang sedang aktif.
+ *
+ * Dipisahkan dari `statusTheme`/`statusInfo` dengan sengaja. Keduanya
+ * mengembalikan kelas CSS dan dipanggil dari panel admin juga, yang tetap
+ * berbahasa Indonesia; menambahkan parameter bahasa di sana berarti menyeret
+ * kamus ke seluruh perangkat admin demi satu kata. Yang dibutuhkan halaman
+ * publik hanya labelnya, dan itulah yang dilayani fungsi ini.
+ *
+ * Status yang tidak dikenal jatuh ke `scheduled`, aturan yang sama dengan
+ * `statusTheme` — FIDS sesekali mengirim nilai baru tanpa pemberitahuan, dan
+ * lencana kosong lebih membingungkan daripada lencana yang terlalu optimis.
+ */
+export function labelStatus(status: string, t: Kamus): string {
+  const peta = t.penerbangan.status;
+  return peta[status as keyof typeof peta] ?? peta.scheduled;
 }
 
 /* ------------------------------------------------------------------ */

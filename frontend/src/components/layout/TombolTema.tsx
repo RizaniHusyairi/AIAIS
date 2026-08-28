@@ -6,6 +6,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Moon, Sun, Plane } from 'lucide-react';
 import { setSiteTheme, useSiteTheme } from '@/lib/siteTheme';
 import type { SiteTheme } from '@/lib/siteThemeShared';
+import { useTeks } from '@/lib/kamus';
 
 /**
  * Tombol pergantian tema portal publik.
@@ -123,6 +124,7 @@ export default function TombolTema({
   className?: string;
 }) {
   const theme = useSiteTheme();
+  const t = useTeks();
   const kurangiGerak = useReducedMotion();
   const tombolRef = useRef<HTMLButtonElement>(null);
   const [sapuan, setSapuan] = useState<Sapuan | null>(null);
@@ -143,7 +145,7 @@ export default function TombolTema({
 
   const malam = theme === 'night';
   const tujuan: SiteTheme = malam ? 'day' : 'night';
-  const label = malam ? 'Beralih ke mode terang' : 'Beralih ke mode malam';
+  const label = malam ? t.umum.keModeTerang : t.umum.keModeMalam;
 
   const tukar = useCallback(() => {
     // Sapuan sebelumnya belum selesai membuka — abaikan, jangan menumpuk.
@@ -210,7 +212,7 @@ export default function TombolTema({
         >
           <span className="flex items-center gap-3">
             {ikonBeranimasi}
-            {malam ? 'Mode terang' : 'Mode malam'}
+            {malam ? t.umum.modeTerang : t.umum.modeMalam}
           </span>
           {/* Sakelar kecil; posisinya sendiri yang memberi tahu keadaan
               sekarang, sementara ikon di kiri memberi tahu tujuannya. */}

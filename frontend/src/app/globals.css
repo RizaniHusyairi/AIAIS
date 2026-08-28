@@ -90,6 +90,22 @@
   transform: translateY(0);
 }
 
+/* ---- Sorotan teks yang sedang dibacakan ----
+   Dipasang <PembacaSentuh /> pada elemen yang sedang diucapkan ketika
+   penyetelan "baca saat disentuh" menyala.
+
+   Memakai `outline`, BUKAN `border` atau `background`: outline tidak ikut
+   dalam perhitungan tata letak, jadi menyorot satu baris tabel jadwal tidak
+   menggeser satu piksel pun di sekelilingnya. Warnanya cukup pekat untuk
+   terlihat pada penglihatan lemah — itulah pemakai fitur ini — dan sengaja
+   tidak beranimasi karena mode "kurangi gerak" kerap dinyalakan bersamaan. */
+[data-baca-sorot] {
+  outline: 3px solid #2563eb;
+  outline-offset: 2px;
+  border-radius: 4px;
+  background-color: rgba(37, 99, 235, 0.08);
+}
+
 /* ---- Cincin fokus dasar ----
    Sebelumnya portal ini tidak punya satu pun aturan `:focus-visible` global,
    sementara sejumlah komponen memasang `focus:outline-none` dan hanya

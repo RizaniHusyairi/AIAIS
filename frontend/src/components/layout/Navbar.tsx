@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -18,6 +18,8 @@ import type { LucideIcon } from 'lucide-react';
 import { RELATED_LINKS } from '@/lib/relatedLinks';
 import { usesOwnChrome } from '@/lib/layoutChrome';
 import TombolTema from './TombolTema';
+import TombolBahasa from './TombolBahasa';
+import { useTeks, type Kamus } from '@/lib/kamus';
 
 /* ------------------------------------------------------------------ */
 /*  Definisi menu                                                      */
@@ -50,126 +52,156 @@ type MenuNode = {
   children?: MenuNode[];
 };
 
-type MenuItem = { name: string; href: string; icon: LucideIcon; children?: MenuNode[] };
+/**
+ * `id` adalah kunci yang STABIL antar bahasa; `name` ikut berganti.
+ *
+ * State navbar (menu mana yang terbuka) memakai `id`, bukan `name`. Kalau
+ * memakai nama, dropdown yang sedang terbuka menutup sendiri begitu pengunjung
+ * menekan tombol bahasa — nilai state lama tidak lagi cocok dengan nama mana
+ * pun.
+ */
+type MenuItem = { id: string; name: string; href: string; icon: LucideIcon; children?: MenuNode[] };
 
-const MENU: MenuItem[] = [
-  { name: 'Beranda', href: '/', icon: Home },
+/**
+ * Menu dibangun dari kamus, bukan konstan.
+ *
+ * Susunannya, urutannya, dan seluruh `href`-nya tetap sama persis dengan
+ * sebelumnya — yang berpindah hanyalah asal teksnya. Ikon dan alamat tidak
+ * pernah masuk kamus: keduanya sama di kedua bahasa, dan menyalinnya ke sana
+ * berarti dua daftar alamat yang perlahan menyimpang.
+ */
+function buatMenu(t: Kamus): MenuItem[] {
+  const n = t.nav;
 
-  {
-    name: 'Informasi Publik',
-    href: '/profile',
-    icon: Info,
-    children: [
-      { name: 'Profil Bandara', href: '/profile', icon: Info, desc: 'Sejarah, visi-misi, dan tata kelola UPBU APT Pranoto' },
-      { name: 'Struktur Organisasi', href: '/profile#struktur', icon: Users, desc: 'Bagan organisasi Kantor UPBU Kelas I' },
-      { name: 'Pejabat Bandara', href: '/profile#pejabat', icon: UserRound, desc: 'Struktur pimpinan Kantor UPBU Kelas I APT Pranoto' },
-      { name: 'Fasilitas Bandara', href: '/facilities', icon: Building2, desc: 'Ruang tunggu, musala, kesehatan, dan fasilitas umum' },
-      { name: 'Statistik Lalu Lintas', href: '/statistik', icon: BarChart3, desc: 'Pergerakan pesawat, penumpang, bagasi, dan kargo per periode' },
-    ],
-  },
+  return [
+    { id: 'beranda', name: n.beranda, href: '/', icon: Home },
 
-  {
-    name: 'PPID',
-    href: '/ppid',
-    icon: ShieldCheck,
-    children: [
-      { name: 'Profil PPID BLU', href: '/ppid', icon: Info, desc: 'Profil Pejabat Pengelola Informasi dan Dokumentasi' },
-      { name: 'SOP PPID', href: '/ppid/sop', icon: FileText, desc: 'Prosedur operasional standar layanan informasi' },
-      { name: 'Standar Pelayanan', href: '/ppid/standar-pelayanan', icon: ClipboardList, desc: 'Standar & maklumat pelayanan serta survei kepuasan masyarakat' },
-      { name: 'Pengajuan Informasi Publik', href: '/ppid/pengajuan-informasi', icon: MessageSquareWarning, desc: 'Formulir permohonan informasi publik' },
-      { name: 'Regulasi PPID', href: '/ppid/regulasi', icon: Scale, desc: 'Dasar hukum penyelenggaraan PPID' },
-      {
-        // Tingkat ketiga, sama seperti pada v1.
-        name: 'Layanan Informasi',
-        icon: FolderOpen,
-        desc: 'Laporan dan klasifikasi informasi publik',
-        children: [
-          { name: 'Laporan Layanan Informasi', href: '/ppid/laporan-layanan-informasi', icon: FileText },
-          { name: 'Informasi Berkala', href: '/ppid/informasi-berkala', icon: FileText },
-          { name: 'Informasi Serta Merta', href: '/ppid/informasi-serta-merta', icon: FileText },
-          { name: 'Informasi Setiap Saat', href: '/ppid/informasi-setiap-saat', icon: FileText },
-        ],
-      },
-    ],
-  },
+    {
+      id: 'informasi-publik',
+      name: n.informasiPublik,
+      href: '/profile',
+      icon: Info,
+      children: [
+        { name: n.profilBandara.nama, href: '/profile', icon: Info, desc: n.profilBandara.desc },
+        { name: n.strukturOrganisasi.nama, href: '/profile#struktur', icon: Users, desc: n.strukturOrganisasi.desc },
+        { name: n.pejabatBandara.nama, href: '/profile#pejabat', icon: UserRound, desc: n.pejabatBandara.desc },
+        { name: n.fasilitasBandara.nama, href: '/facilities', icon: Building2, desc: n.fasilitasBandara.desc },
+        { name: n.statistikLaluLintas.nama, href: '/statistik', icon: BarChart3, desc: n.statistikLaluLintas.desc },
+      ],
+    },
 
-  {
-    name: 'Informasi',
-    href: '/flights',
-    icon: Plane,
-    children: [
-      { name: 'Jadwal Penerbangan', href: '/flights', icon: Plane, desc: 'Status keberangkatan & kedatangan real-time' },
-      { name: 'Peta Rute', href: '/peta-rute', icon: MapPin, desc: 'Rute penerbangan hari ini pada satu peta' },
-      { name: 'Berita', href: '/news', icon: Newspaper, desc: 'Kabar terbaru & pengumuman resmi operasional' },
-      { name: 'Kinerja Keuangan', href: '/keuangan', icon: TrendingUp, desc: 'Pemasukan dan anggaran Badan Layanan Umum' },
-      { name: 'Papan Posko Nataru', href: '/posko-nataru', icon: CalendarRange, desc: 'Perkembangan arus penumpang selama Posko Natal & Tahun Baru' },
-      { name: 'FAQ', href: '/faq', icon: CircleHelp, desc: 'Pertanyaan yang sering diajukan' },
-    ],
-  },
+    {
+      id: 'ppid',
+      name: n.ppid,
+      href: '/ppid',
+      icon: ShieldCheck,
+      children: [
+        { name: n.profilPpid.nama, href: '/ppid', icon: Info, desc: n.profilPpid.desc },
+        { name: n.sopPpid.nama, href: '/ppid/sop', icon: FileText, desc: n.sopPpid.desc },
+        { name: n.standarPelayanan.nama, href: '/ppid/standar-pelayanan', icon: ClipboardList, desc: n.standarPelayanan.desc },
+        { name: n.pengajuanInformasi.nama, href: '/ppid/pengajuan-informasi', icon: MessageSquareWarning, desc: n.pengajuanInformasi.desc },
+        { name: n.regulasiPpid.nama, href: '/ppid/regulasi', icon: Scale, desc: n.regulasiPpid.desc },
+        {
+          // Tingkat ketiga, sama seperti pada v1.
+          name: n.layananInformasi.nama,
+          icon: FolderOpen,
+          desc: n.layananInformasi.desc,
+          children: [
+            { name: n.laporanLayananInformasi.nama, href: '/ppid/laporan-layanan-informasi', icon: FileText },
+            { name: n.informasiBerkala.nama, href: '/ppid/informasi-berkala', icon: FileText },
+            { name: n.informasiSertaMerta.nama, href: '/ppid/informasi-serta-merta', icon: FileText },
+            { name: n.informasiSetiapSaat.nama, href: '/ppid/informasi-setiap-saat', icon: FileText },
+          ],
+        },
+      ],
+    },
 
-  {
-    name: 'Regulasi',
-    href: '/regulasi/surat-keputusan',
-    icon: Scale,
-    children: [
-      { name: 'Surat Keputusan', href: '/regulasi/surat-keputusan', icon: FileText, desc: 'Keputusan resmi Kepala Kantor UPBU' },
-      { name: 'Surat Edaran', href: '/regulasi/surat-edaran', icon: FileText, desc: 'Edaran resmi operasional bandara' },
-    ],
-  },
+    {
+      id: 'informasi',
+      name: n.informasi,
+      href: '/flights',
+      icon: Plane,
+      children: [
+        { name: n.jadwalPenerbangan.nama, href: '/flights', icon: Plane, desc: n.jadwalPenerbangan.desc },
+        { name: n.petaRute.nama, href: '/peta-rute', icon: MapPin, desc: n.petaRute.desc },
+        { name: n.berita.nama, href: '/news', icon: Newspaper, desc: n.berita.desc },
+        { name: n.kinerjaKeuangan.nama, href: '/keuangan', icon: TrendingUp, desc: n.kinerjaKeuangan.desc },
+        { name: n.poskoNataru.nama, href: '/posko-nataru', icon: CalendarRange, desc: n.poskoNataru.desc },
+        { name: n.faq.nama, href: '/faq', icon: CircleHelp, desc: n.faq.desc },
+      ],
+    },
 
-  {
-    // Induknya kini `/layanan`, bukan `/complaints`: menu ini punya halaman
-    // daftar sendiri, dan sembilan layanan pengajuan v1 sudah tayang di sini.
-    name: 'Layanan',
-    href: '/layanan',
-    icon: Building2,
-    children: [
-      { name: 'PAS', href: 'https://pas.aptpairport.id/website/layanan/pas_orang.html', icon: UserRound, desc: 'Pas bandara untuk orang', external: true },
-      { name: 'TIM', href: 'https://pas.aptpairport.id/website/layanan/tim.html', icon: ShieldCheck, desc: 'Tanda Izin Mengemudi sisi udara', external: true },
-      { name: 'Keuangan dan Penagihan', href: 'https://sikeren.aptpairport.id', icon: TrendingUp, desc: 'Sistem keuangan dan penagihan', external: true },
-      // Pusat Bantuan naik ke menu sejak tombol utama navbar dialihkan ke
-      // Portal Aplikasi. Tanpa entri ini, kanal pengaduan hanya tersisa di
-      // footer — terlalu dalam untuk sesuatu yang sifatnya mendesak.
-      { name: 'Pusat Bantuan', href: '/complaints', icon: MessageSquareWarning, desc: 'Pengaduan, pertanyaan, dan chat petugas' },
-      // Menunjuk ke tab Pusat Bantuan, bukan rute sendiri: `/complaints` sudah
-      // punya pemetaan ke layar PWA, dan rute baru yang lupa didaftarkan di
-      // `proxy.ts` tidak akan pernah terbuka dari ponsel.
-      { name: 'Lapor Kehilangan Barang', href: '/complaints?mode=hilang', icon: PackageSearch, desc: 'Laporkan barang yang tertinggal di area bandara' },
-      { name: 'Beauty Contest', href: '/layanan/beauty-contest', icon: Building2, desc: 'Seleksi mitra usaha bandara' },
-      { name: 'Extend Advance', href: '/layanan/extend-advance', icon: ClipboardList, desc: 'Perpanjangan uang muka' },
-      { name: 'Field Trip', href: '/layanan/field-trip', icon: Users, desc: 'Kunjungan edukasi ke area bandara' },
-      { name: 'Pengajuan Informasi Publik', href: '/ppid/pengajuan-informasi', icon: MessageSquareWarning, desc: 'Permohonan informasi publik' },
-      { name: 'Pengiklanan', href: '/layanan/pengiklanan', icon: Megaphone, desc: 'Pemasangan iklan di area bandara' },
-      { name: 'Perijinan Usaha', href: '/layanan/perijinan-usaha', icon: ClipboardList, desc: 'Izin kegiatan usaha di bandara' },
-      { name: 'Sertifikat OJT', href: '/layanan/sertifikat-ojt', icon: FileText, desc: 'Sertifikat on-the-job training' },
-      { name: 'Sewa', href: '/layanan/sewa', icon: Building2, desc: 'Sewa ruang dan lahan bandara' },
-      { name: 'Slot Charter', href: '/layanan/slot-charter', icon: Plane, desc: 'Pengajuan slot penerbangan charter' },
-      { name: 'Tenant', href: '/layanan/tenant', icon: Store, desc: 'Pendaftaran tenant komersial' },
-    ],
-  },
+    {
+      id: 'regulasi',
+      name: n.regulasi,
+      href: '/regulasi/surat-keputusan',
+      icon: Scale,
+      children: [
+        { name: n.suratKeputusan.nama, href: '/regulasi/surat-keputusan', icon: FileText, desc: n.suratKeputusan.desc },
+        { name: n.suratEdaran.nama, href: '/regulasi/surat-edaran', icon: FileText, desc: n.suratEdaran.desc },
+      ],
+    },
 
-  {
-    // Induknya kini halaman `/tautan-terkait`, bukan `/profile`.
-    //
-    // Empat tautan di bawah dibangkitkan dari `lib/relatedLinks.ts` — sumber
-    // yang sama dengan halaman dan footer. Sebelumnya URL-nya ditulis ulang
-    // di tiga tempat, dan URL SIPPN di sini sudah menyimpang dari yang tayang
-    // (beranda nasional, bukan halaman instansi bandara ini).
-    name: 'Tautan Terkait',
-    href: '/tautan-terkait',
-    icon: Globe,
-    children: [
-      ...RELATED_LINKS.map((l) => ({
-        name: l.name,
-        href: l.url,
-        icon: l.slug === 'lapor' ? MessageSquareWarning : l.slug === 'e-kinerja' ? TrendingUp : Globe,
-        desc: l.description,
-        external: true,
-      })),
-      { name: 'Semua Tautan Terkait', href: '/tautan-terkait', icon: FolderOpen, desc: 'Daftar lengkap tautan instansi terkait' },
-    ],
-  },
-];
+    {
+      // Induknya kini `/layanan`, bukan `/complaints`: menu ini punya halaman
+      // daftar sendiri, dan sembilan layanan pengajuan v1 sudah tayang di sini.
+      id: 'layanan',
+      name: n.layanan,
+      href: '/layanan',
+      icon: Building2,
+      children: [
+        { name: n.pas.nama, href: 'https://pas.aptpairport.id/website/layanan/pas_orang.html', icon: UserRound, desc: n.pas.desc, external: true },
+        { name: n.tim.nama, href: 'https://pas.aptpairport.id/website/layanan/tim.html', icon: ShieldCheck, desc: n.tim.desc, external: true },
+        { name: n.keuanganPenagihan.nama, href: 'https://sikeren.aptpairport.id', icon: TrendingUp, desc: n.keuanganPenagihan.desc, external: true },
+        // Pusat Bantuan naik ke menu sejak tombol utama navbar dialihkan ke
+        // Portal Aplikasi. Tanpa entri ini, kanal pengaduan hanya tersisa di
+        // footer — terlalu dalam untuk sesuatu yang sifatnya mendesak.
+        { name: n.pusatBantuan.nama, href: '/complaints', icon: MessageSquareWarning, desc: n.pusatBantuan.desc },
+        // Menunjuk ke tab Pusat Bantuan, bukan rute sendiri: `/complaints` sudah
+        // punya pemetaan ke layar PWA, dan rute baru yang lupa didaftarkan di
+        // `proxy.ts` tidak akan pernah terbuka dari ponsel.
+        { name: n.laporKehilangan.nama, href: '/complaints?mode=hilang', icon: PackageSearch, desc: n.laporKehilangan.desc },
+        { name: n.beautyContest.nama, href: '/layanan/beauty-contest', icon: Building2, desc: n.beautyContest.desc },
+        { name: n.extendAdvance.nama, href: '/layanan/extend-advance', icon: ClipboardList, desc: n.extendAdvance.desc },
+        { name: n.fieldTrip.nama, href: '/layanan/field-trip', icon: Users, desc: n.fieldTrip.desc },
+        { name: n.pengajuanInformasiSingkat.nama, href: '/ppid/pengajuan-informasi', icon: MessageSquareWarning, desc: n.pengajuanInformasiSingkat.desc },
+        { name: n.pengiklanan.nama, href: '/layanan/pengiklanan', icon: Megaphone, desc: n.pengiklanan.desc },
+        { name: n.perijinanUsaha.nama, href: '/layanan/perijinan-usaha', icon: ClipboardList, desc: n.perijinanUsaha.desc },
+        { name: n.sertifikatOjt.nama, href: '/layanan/sertifikat-ojt', icon: FileText, desc: n.sertifikatOjt.desc },
+        { name: n.sewa.nama, href: '/layanan/sewa', icon: Building2, desc: n.sewa.desc },
+        { name: n.slotCharter.nama, href: '/layanan/slot-charter', icon: Plane, desc: n.slotCharter.desc },
+        { name: n.tenant.nama, href: '/layanan/tenant', icon: Store, desc: n.tenant.desc },
+      ],
+    },
+
+    {
+      // Induknya kini halaman `/tautan-terkait`, bukan `/profile`.
+      //
+      // Empat tautan di bawah dibangkitkan dari `lib/relatedLinks.ts` — sumber
+      // yang sama dengan halaman dan footer. Sebelumnya URL-nya ditulis ulang
+      // di tiga tempat, dan URL SIPPN di sini sudah menyimpang dari yang tayang
+      // (beranda nasional, bukan halaman instansi bandara ini).
+      //
+      // Nama dan keterangannya TIDAK diterjemahkan: itu nama lembaga
+      // pemerintah beserta layanannya, dan pengunjung asing justru perlu
+      // membacanya sebagaimana tertulis pada situs tujuan.
+      id: 'tautan-terkait',
+      name: n.tautanTerkait,
+      href: '/tautan-terkait',
+      icon: Globe,
+      children: [
+        ...RELATED_LINKS.map((l) => ({
+          name: l.name,
+          href: l.url,
+          icon: l.slug === 'lapor' ? MessageSquareWarning : l.slug === 'e-kinerja' ? TrendingUp : Globe,
+          desc: l.description,
+          external: true,
+        })),
+        { name: n.semuaTautan.nama, href: '/tautan-terkait', icon: FolderOpen, desc: n.semuaTautan.desc },
+      ],
+    },
+  ];
+}
 
 /* ------------------------------------------------------------------ */
 /*  Satu entri di dalam dropdown                                       */
@@ -181,6 +213,7 @@ const MENU: MenuItem[] = [
 /*  ketiga bentuk selain tautan biasa.                                 */
 /* ------------------------------------------------------------------ */
 function DropdownEntry({ node, nested = false }: { node: MenuNode; nested?: boolean }) {
+  const t = useTeks();
   const Icon = node.icon;
 
   const body = (
@@ -236,7 +269,7 @@ function DropdownEntry({ node, nested = false }: { node: MenuNode; nested?: bool
           )}
         </span>
         <span className="flex-shrink-0 mt-1 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-slate-100 text-slate-400">
-          Segera
+          {t.umum.segera}
         </span>
       </div>
     );
@@ -263,6 +296,7 @@ function DropdownEntry({ node, nested = false }: { node: MenuNode; nested?: bool
 
 /** Padanan `DropdownEntry` untuk drawer mobile; gaya mengikuti daftar yang ada. */
 function MobileEntry({ node, nested = false }: { node: MenuNode; nested?: boolean }) {
+  const t = useTeks();
   const Icon = node.icon;
   const pad = nested ? 'px-2 py-2' : 'px-2 py-2.5';
 
@@ -295,7 +329,7 @@ function MobileEntry({ node, nested = false }: { node: MenuNode; nested?: boolea
           )}
         </span>
         <span className="flex-shrink-0 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-slate-100 text-slate-400 mt-0.5">
-          Segera
+          {t.umum.segera}
         </span>
       </div>
     );
@@ -327,6 +361,12 @@ function MobileEntry({ node, nested = false }: { node: MenuNode; nested?: boolea
 
 export default function Navbar() {
   const pathname = usePathname();
+
+  const t = useTeks();
+  /* Menu dibangun ulang hanya saat kamusnya berganti — bukan tiap render.
+     Larik baru pada setiap render akan mematahkan pembanding rujukan di
+     seluruh anak yang menerimanya. */
+  const MENU = useMemo(() => buatMenu(t), [t]);
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
@@ -421,7 +461,7 @@ export default function Navbar() {
                     <span className="w-px h-3.5 bg-white/20" />
                     <PlaneTakeoff className="w-3.5 h-3.5 text-cyan-300 flex-shrink-0" />
                     <span className="truncate">
-                      Berikutnya <b className="text-white">{nextFlight.flight_number}</b> ke{' '}
+                      {t.nav.strip.berikutnya} <b className="text-white">{nextFlight.flight_number}</b> {t.nav.strip.ke}{' '}
                       <b className="text-white">{nextFlight.destination}</b> · {nextFlight.scheduled_time}
                     </span>
                   </motion.span>
@@ -431,7 +471,7 @@ export default function Navbar() {
               {/* right: utilities */}
               <div className="flex items-center gap-4 flex-shrink-0">
                 <span className="hidden md:flex items-center gap-1.5 text-blue-100">
-                  <CloudSun className="w-3.5 h-3.5 text-amber-300" /> 26°C Berawan
+                  <CloudSun className="w-3.5 h-3.5 text-amber-300" /> 26°C {t.nav.strip.cuaca}
                 </span>
                 <span className="flex items-center gap-1.5 text-blue-100 tabular-nums">
                   <Clock className="w-3.5 h-3.5 text-cyan-300" /> {clock} WITA
@@ -479,9 +519,9 @@ export default function Navbar() {
 
                 return (
                   <div
-                    key={item.name}
+                    key={item.id}
                     className="relative"
-                    onMouseEnter={() => setOpenMenu(hasChildren ? item.name : null)}
+                    onMouseEnter={() => setOpenMenu(hasChildren ? item.id : null)}
                   >
                     <Link
                       href={item.href}
@@ -500,7 +540,7 @@ export default function Navbar() {
                       <span className="relative">{item.name}</span>
                       {hasChildren && (
                         <ChevronDown
-                          className={`relative w-3.5 h-3.5 transition-transform ${openMenu === item.name ? 'rotate-180' : ''}`}
+                          className={`relative w-3.5 h-3.5 transition-transform ${openMenu === item.id ? 'rotate-180' : ''}`}
                         />
                       )}
                       {/* runway underline */}
@@ -515,7 +555,7 @@ export default function Navbar() {
 
                     {/* ---- mega dropdown ---- */}
                     <AnimatePresence>
-                      {hasChildren && openMenu === item.name && (
+                      {hasChildren && openMenu === item.id && (
                         <motion.div
                           initial={{ opacity: 0, y: 10, scale: 0.98 }}
                           animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -584,20 +624,22 @@ export default function Navbar() {
                 whileTap={{ scale: 0.9 }}
                 onClick={() => setSearchOpen((s) => !s)}
                 className="w-10 h-10 rounded-xl text-slate-500 hover:text-blue-600 hover:bg-blue-50 flex items-center justify-center transition-colors cursor-pointer"
-                title="Cari informasi"
+                title={t.umum.cariInformasi}
                 /* `title` saja tidak cukup: pembaca layar tidak diwajibkan
                    membacakannya, sehingga tombol ini sebelumnya diumumkan
                    sebagai "tombol" tanpa nama sama sekali. */
-                aria-label="Cari informasi"
+                aria-label={t.umum.cariInformasi}
                 aria-expanded={searchOpen}
                 aria-controls="panel-cari"
               >
                 {searchOpen ? <X className="w-[18px] h-[18px]" /> : <Search className="w-[18px] h-[18px]" />}
               </motion.button>
 
-              <button className="hidden 2xl:flex items-center gap-1.5 px-3 h-10 rounded-xl text-[12.5px] font-semibold text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer">
-                <Globe className="w-4 h-4" /> ID <ChevronDown className="w-3 h-3" />
-              </button>
+              {/* Pergantian bahasa portal. Tempat ini sejak awal ditempati
+                  tombol Globe yang belum punya perilaku; kini tombolnya
+                  bekerja. Ambang `2xl` dilepas: bahasa bukan hiasan yang
+                  boleh hilang di layar sedang. */}
+              <TombolBahasa />
 
               {/* Tema malam portal. Tombolnya berkas sendiri karena sapuan
                   peralihannya membawa portal, state, dan pewaktu — semuanya
@@ -617,7 +659,7 @@ export default function Navbar() {
                 className="group relative overflow-hidden ml-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[13px] px-5 h-10 rounded-full shadow-lg shadow-blue-600/25 flex items-center gap-2 transition-colors"
               >
                 <LayoutGrid className="w-4 h-4" />
-                <span className="relative">Portal Aplikasi</span>
+                <span className="relative">{t.nav.portalAplikasi}</span>
                 <motion.span
                   className="absolute inset-0 pointer-events-none"
                   initial={false}
@@ -631,7 +673,7 @@ export default function Navbar() {
             <button
               onClick={() => setMobileOpen((s) => !s)}
               className="xl:hidden w-10 h-10 rounded-xl text-slate-600 hover:bg-slate-100 flex items-center justify-center cursor-pointer"
-              aria-label={mobileOpen ? 'Tutup menu' : 'Buka menu'}
+              aria-label={mobileOpen ? t.umum.tutupMenu : t.umum.bukaMenu}
               aria-expanded={mobileOpen}
               aria-controls="laci-menu"
             >
@@ -666,18 +708,18 @@ export default function Navbar() {
                   <Search className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
                   <input
                     autoFocus
-                    placeholder="Cari jadwal penerbangan, fasilitas, berita..."
+                    placeholder={t.umum.cariPlaceholder}
                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 text-[14px] text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-blue-400 focus:bg-white transition-colors"
                   />
                 </div>
                 <div className="flex flex-wrap gap-2 mt-3">
-                  <span className="text-[12px] text-slate-400 py-1.5">Pencarian populer:</span>
+                  <span className="text-[12px] text-slate-400 py-1.5">{t.umum.pencarianPopuler}</span>
                   {[
-                    { label: 'Jadwal Penerbangan', href: '/flights' },
-                    { label: 'Fasilitas Terminal', href: '/facilities' },
-                    { label: 'Berita Terbaru', href: '/news' },
-                    { label: 'Wisata Terdekat', href: '/tourism' },
-                    { label: 'Pusat Bantuan', href: '/complaints' },
+                    { label: t.nav.populer.jadwal, href: '/flights' },
+                    { label: t.nav.populer.fasilitas, href: '/facilities' },
+                    { label: t.nav.populer.berita, href: '/news' },
+                    { label: t.nav.populer.wisata, href: '/tourism' },
+                    { label: t.nav.populer.bantuan, href: '/complaints' },
                   ].map((s) => (
                     <Link
                       key={s.label}
@@ -713,11 +755,11 @@ export default function Navbar() {
               {MENU.map((item, i) => {
                 const Icon = item.icon;
                 const active = isActive(item.href);
-                const expanded = mobileSub === item.name;
+                const expanded = mobileSub === item.id;
 
                 return (
                   <motion.div
-                    key={item.name}
+                    key={item.id}
                     initial={{ opacity: 0, x: -14 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: i * 0.05 }}
@@ -725,7 +767,7 @@ export default function Navbar() {
                     {item.children ? (
                       <>
                         <button
-                          onClick={() => setMobileSub(expanded ? null : item.name)}
+                          onClick={() => setMobileSub(expanded ? null : item.id)}
                           className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-[14px] font-semibold transition-colors cursor-pointer ${
                             active ? 'bg-blue-50 text-blue-700' : 'text-slate-700 hover:bg-slate-50'
                           }`}
@@ -779,7 +821,7 @@ export default function Navbar() {
                   <div className="flex items-center gap-2 bg-blue-50 rounded-xl px-3 py-2.5 text-[12px] text-slate-700">
                     <PlaneTakeoff className="w-4 h-4 text-blue-600 flex-shrink-0" />
                     <span className="truncate">
-                      Berikutnya <b>{nextFlight.flight_number}</b> · {nextFlight.scheduled_time}
+                      {t.nav.strip.berikutnya} <b>{nextFlight.flight_number}</b> · {nextFlight.scheduled_time}
                     </span>
                   </div>
                 )}
@@ -789,12 +831,16 @@ export default function Navbar() {
                     tema malam — justru kalangan yang paling sering membaca
                     portal dalam gelap. */}
                 <TombolTema variant="laci" />
+                {/* Sejajar tombol tema, dan alasannya sama: gugus tombol
+                    kanan ber-`hidden md:flex`, jadi tanpa baris ini pemakai
+                    ponsel tidak punya jalan sama sekali ke bahasa lain. */}
+                <TombolBahasa variant="laci" />
 
                 <Link
                   href="/aplikasi"
                   className="flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold text-[14px] py-3.5 rounded-full shadow-lg shadow-blue-600/25"
                 >
-                  <LayoutGrid className="w-4 h-4" /> Portal Aplikasi
+                  <LayoutGrid className="w-4 h-4" /> {t.nav.portalAplikasi}
                 </Link>
               </div>
             </div>

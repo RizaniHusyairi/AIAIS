@@ -17,6 +17,8 @@ import {
   Radio, Flame, ArrowRight, Quote, CheckCircle2, Sparkles, Navigation, Clock, Globe2, Heart,
   ScrollText, Scale, Route, Phone, Mail, X, Briefcase,
 } from 'lucide-react';
+import { useBahasa } from '@/lib/bahasa';
+import { useTeks } from '@/lib/kamus';
 
 /* ================================================================
    Animated counter
@@ -265,6 +267,8 @@ function DialogList({
 }
 
 export default function ProfileView() {
+  const t = useTeks();
+  const bahasa = useBahasa();
   const heroBg = useSetting('bg_profile');
   /** Objek, bukan indeks, supaya animasi keluar masih punya konten. */
   const [openOfficial, setOpenOfficial] = useState<Official | null>(null);
@@ -325,27 +329,32 @@ export default function ProfileView() {
         <div className="relative z-10 max-w-[1400px] mx-auto px-4 sm:px-6 py-20 w-full">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="max-w-2xl">
             <span className="inline-flex items-center gap-2 bg-white/12 backdrop-blur border border-white/20 text-cyan-200 text-[11px] font-bold uppercase tracking-[0.16em] px-3.5 py-2 rounded-full">
-              <Compass className="w-3.5 h-3.5" /> Kantor UPBU Kelas I
+              <Compass className="w-3.5 h-3.5" /> {t.profil.heroKicker}
             </span>
 
             <h1 className="mt-5 text-4xl sm:text-5xl md:text-[56px] font-black text-white leading-[1.08] tracking-tight">
-              Profil &amp; Visi Misi
+              {t.profil.heroJudul}
               <br />
-              <span className="text-cyan-300">Bandara APT Pranoto</span>
+              <span className="text-cyan-300">{t.profil.heroAksen}</span>
             </h1>
 
             <p className="mt-5 text-blue-100/90 text-[15px] leading-relaxed max-w-xl">
-              Bandar Udara Aji Pangeran Tumenggung Pranoto <b className="text-white">(IATA: AAP · ICAO: WALS)</b> adalah gerbang
-              transportasi udara utama Kota Samarinda, Kalimantan Timur, sekaligus simpul konektivitas kawasan penyangga
-              Ibu Kota Nusantara.
+              {t.profil.heroLeadAwal} <b className="text-white">(IATA: AAP · ICAO: WALS)</b>{' '}
+              {t.profil.heroLeadAkhir}
             </p>
+
+            {/* Isi halaman ini dokumen resmi berbahasa Indonesia; dikatakan
+                sekali di muka alih-alih diterjemahkan setengah-setengah. */}
+            {bahasa === 'en' && (
+              <p className="mt-3 text-[12.5px] text-cyan-100/80">{t.profil.catatanIsi}</p>
+            )}
 
             <div className="mt-7 flex flex-wrap gap-3">
               <Link href="#visi-misi" className="inline-flex items-center gap-2 bg-white text-blue-700 font-bold text-[13.5px] px-5 py-3 rounded-full shadow-lg hover:bg-blue-50 transition-colors">
-                Lihat Visi &amp; Misi <ArrowRight className="w-4 h-4" />
+                {t.profil.lihatVisiMisi} <ArrowRight className="w-4 h-4" />
               </Link>
               <Link href="#pejabat" className="inline-flex items-center gap-2 bg-white/12 backdrop-blur border border-white/25 text-white font-bold text-[13.5px] px-5 py-3 rounded-full hover:bg-white/20 transition-colors">
-                <Users className="w-4 h-4" /> Pejabat Bandara
+                <Users className="w-4 h-4" /> {t.profil.pejabatBandara}
               </Link>
             </div>
           </motion.div>

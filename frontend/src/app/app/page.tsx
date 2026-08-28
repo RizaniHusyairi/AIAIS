@@ -10,7 +10,7 @@ import {
 } from '@/types';
 import { StatusBar, Segmented, listContainer, listItem } from '@/components/pwa/ui';
 import {
-  AirlineLogo, splitPlace, statusInfo, gateLabel, counterLabel,
+  AirlineLogo, splitPlace, statusInfo, labelStatus, gateLabel, counterLabel,
 } from '@/components/flights/shared';
 import { TOURISM_SPOTS, TOURISM_CAT_META } from '@/lib/tourismData';
 import { facilityCatMeta, facilityIcon } from '@/lib/facilityMeta';
@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 // lucide-react membuang seluruh ikon merek; lambang Instagram digambar sendiri.
 import InstagramGlyph from '@/components/icons/InstagramGlyph';
+import { useTeks } from '@/lib/kamus';
 
 /* Enam pintasan. "Peta Bandara" diganti "Pusat Bantuan": layar peta memuat
    denah karangan dan sudah dihapus, sementara bantuan justru yang paling
@@ -81,6 +82,7 @@ const ANGKA_TRAFIK = [
 ];
 
 export default function BerandaScreen() {
+  const kamus = useTeks();
   const [flights, setFlights] = useState<Flight[]>([]);
   const [news, setNews] = useState<NewsItem[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -392,7 +394,7 @@ export default function BerandaScreen() {
                     </div>
                     <div className="text-right">
                       <p className="font-bold text-slate-900 text-[14px]">{f.scheduled_time.replace(' WITA', '')}</p>
-                      <p className={`text-[10px] font-semibold ${st.className}`}>{st.label}</p>
+                      <p className={`text-[10px] font-semibold ${st.className}`}>{labelStatus(f.status, kamus)}</p>
                     </div>
                   </div>
 
@@ -401,8 +403,8 @@ export default function BerandaScreen() {
                       untuk lapor, gate mana untuk naik, conveyor mana untuk
                       mengambil bagasi. */}
                   {(() => {
-                    const g = gateLabel(f);
-                    const c = counterLabel(f);
+                    const g = gateLabel(f, kamus);
+                    const c = counterLabel(f, kamus);
                     const departing = f.flight_type === 'departure';
                     const Icon = departing ? DoorOpen : Luggage;
 

@@ -275,6 +275,16 @@ export default function HeroParticles({ className = '' }: { className?: string }
       par.x += (par.tx - par.x) * 0.045;
       par.y += (par.ty - par.y) * 0.045;
 
+      /* Jaring pengaman, bukan pengganti penjagaan di `onPointer`.
+         Perataan di atas tidak punya jalan pulih dari NaN, jadi satu nilai
+         buruk dari sumber mana pun — kelak mungkin bukan lagi kursor — akan
+         mematikan kanvas ini secara permanen. Diperiksa sekali per bingkai;
+         `Number.isFinite` pada dua angka tidak terukur biayanya. */
+      if (!Number.isFinite(par.x) || !Number.isFinite(par.y)) {
+        par.x = 0; par.y = 0;
+        par.tx = 0; par.ty = 0;
+      }
+
       ctx.clearRect(0, 0, w, h);
       drawSunriseGlow(now);
       drawStreams(now);
@@ -310,8 +320,24 @@ export default function HeroParticles({ className = '' }: { className?: string }
 
     /* ---------------- event ---------------- */
 
+    /*
+     * Pendengarnya di `window`, bukan di kanvas — parallaxnya memang harus
+     * mengikuti kursor ke mana pun ia bergerak di halaman. Konsekuensinya,
+     * peristiwa tetap datang ketika kanvasnya sendiri sedang berukuran nol:
+     * leluhur ber-`display:none`, hero yang menciut saat navbar menyusut, atau
+     * satu bingkai di tengah peralihan tata letak.
+     *
+     * Pada saat itu `rect.width` bernilai 0 dan pembagian di bawah menghasilkan
+     * Infinity atau NaN. Nilai itu tidak berhenti di sini: ia masuk ke
+     * `par.tx`, lalu perataan di `render` menjadikan `par.x` NaN SELAMANYA —
+     * `NaN + apa pun` tetap NaN — dan `createRadialGradient` melempar di setiap
+     * bingkai sesudahnya. Satu gerakan tetikus pada saat yang salah mematikan
+     * seluruh lapisan partikel sampai halaman dimuat ulang.
+     */
     const onPointer = (e: PointerEvent) => {
       const rect = canvas.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return;
+
       const nx = (e.clientX - rect.left) / rect.width - 0.5;
       const ny = (e.clientY - rect.top) / rect.height - 0.5;
       par.tx = -nx * 16;

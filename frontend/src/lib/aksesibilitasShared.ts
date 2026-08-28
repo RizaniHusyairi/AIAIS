@@ -27,6 +27,17 @@ export type Aksesibilitas = {
   spasi: boolean;
   /** Benar = font ramah baca menggantikan font antarmuka. */
   font: boolean;
+  /**
+   * Benar = teks yang disentuh kursor (atau menerima fokus papan tik)
+   * langsung dibacakan.
+   *
+   * Tinggal di sini, bukan di dalam panel, karena pembacaannya berlaku di
+   * SELURUH halaman sementara panelnya dilepas begitu ditutup. Penyetelan
+   * kedelapan inilah yang sudah diantisipasi catatan pada `A11Y_KEY` di
+   * bawah: ia menumpang kunci JSON yang sama, tanpa kunci penyimpanan baru
+   * yang harus diingat di tiga tempat sekaligus.
+   */
+  baca: boolean;
 };
 
 /**
@@ -50,6 +61,7 @@ export const A11Y_BAWAAN: Aksesibilitas = {
   fokus: false,
   spasi: false,
   font: false,
+  baca: false,
 };
 
 /** Pengali yang dibawa ke dalam `calc()` lewat variabel `--a11y-skala`. */
@@ -80,6 +92,9 @@ export const PETA_ATRIBUT: {
   { kunci: 'fokus', atribut: 'data-a11y-fokus', nilai: 'tebal' },
   { kunci: 'spasi', atribut: 'data-a11y-spasi', nilai: 'lega' },
   { kunci: 'font', atribut: 'data-a11y-font', nilai: 'terbaca' },
+  /* Atributnya dipakai CSS untuk menyalakan gaya sorotan pada teks yang
+     sedang dibacakan; lihat `[data-baca-sorot]` di globals.css. */
+  { kunci: 'baca', atribut: 'data-a11y-baca', nilai: 'sentuh' },
 ];
 
 /**
@@ -101,6 +116,7 @@ export function normalkan(mentah: unknown): Aksesibilitas {
     fokus: o.fokus === true,
     spasi: o.spasi === true,
     font: o.font === true,
+    baca: o.baca === true,
   };
 }
 

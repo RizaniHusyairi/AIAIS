@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\ComplaintController;
 use App\Http\Controllers\Api\DocumentController;
 use App\Http\Controllers\Api\EvergreenInformationController;
 use App\Http\Controllers\Api\ExtendAdvanceController;
+use App\Http\Controllers\Api\AirportStatController;
 use App\Http\Controllers\Api\ExternalLinkController;
 use App\Http\Controllers\Api\FacilityController;
 use App\Http\Controllers\Api\FaqController;
@@ -171,6 +172,10 @@ Route::prefix(config('api.version'))->group(function () {
     // belum memakainya selama tabel warisannya masih kosong — lihat
     // InformationServiceReportController.
     Route::get('/information-service-reports', [InformationServiceReportController::class, 'index']);
+
+    // Angka ringkas bandara pada beranda. Satu daftar untuk tiga blok
+    // penampil sekaligus; penyaringannya di sisi klien — lihat controllernya.
+    Route::get('/airport-stats', [AirportStatController::class, 'index']);
 
     // Tautan Terkait — portal pemerintah di luar aptpairport.id.
     Route::get('/external-links', [ExternalLinkController::class, 'index']);
@@ -433,6 +438,11 @@ Route::prefix(config('api.version'))->group(function () {
             Route::post('/information-service-reports', [InformationServiceReportController::class, 'store']);
             Route::put('/information-service-reports/{id}', [InformationServiceReportController::class, 'update']);
             Route::delete('/information-service-reports/{id}', [InformationServiceReportController::class, 'destroy']);
+
+            Route::get('/airport-stats', [AirportStatController::class, 'adminIndex']);
+            Route::post('/airport-stats', [AirportStatController::class, 'store']);
+            Route::put('/airport-stats/{id}', [AirportStatController::class, 'update']);
+            Route::delete('/airport-stats/{id}', [AirportStatController::class, 'destroy']);
 
             Route::get('/external-links', [ExternalLinkController::class, 'adminIndex']);
             Route::post('/external-links', [ExternalLinkController::class, 'store']);

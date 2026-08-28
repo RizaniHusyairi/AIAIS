@@ -37,6 +37,25 @@ export const SKM_KEYS = ['skm_title', 'skm_text', 'skm_label', 'skm_url', 'skm_i
 
 export type SkmKey = (typeof SKM_KEYS)[number];
 
+/**
+ * Kunci blok "Tentang Bandar Udara APT Pranoto" pada beranda.
+ *
+ * Berpasangan `_id`/`_en` karena portalnya dwibahasa dan tabel `settings`
+ * hanya menyimpan satu nilai per kunci. Bawaannya kosong; lihat catatan
+ * panjang pada `SettingController::DEFAULTS` untuk alasan teksnya TIDAK
+ * disalin ke sini dari kamus.
+ */
+export const TENTANG_KEYS = [
+  'tentang_kicker_id', 'tentang_kicker_en',
+  'tentang_judul_id', 'tentang_judul_en',
+  'tentang_teks_id', 'tentang_teks_en',
+  'tentang_caption_id', 'tentang_caption_en',
+  'tentang_gambar',
+  'tentang_video_url',
+] as const;
+
+export type TentangKey = (typeof TENTANG_KEYS)[number];
+
 /** Nilai bawaan — harus selaras dengan SettingController::DEFAULTS di backend. */
 export const DEFAULT_SETTINGS: Record<string, string> = {
   bg_home: '/bg/bg-beranda.png',
@@ -55,4 +74,17 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   skm_is_active: '1',
   skm_title: 'Ikut Serta dalam Survei Kepuasan Masyarakat',
   skm_text: 'Penilaian Anda kami olah menjadi Indeks Kepuasan Masyarakat, dan laporan hasilnya diterbitkan pada halaman ini.',
+
+  // Blok "Tentang" — semuanya kosong dengan sengaja; teks bawaannya ada di
+  // kamus, bukan di sini. Lihat SettingController::DEFAULTS.
+  tentang_kicker_id: '',
+  tentang_kicker_en: '',
+  tentang_judul_id: '',
+  tentang_judul_en: '',
+  tentang_teks_id: '',
+  tentang_teks_en: '',
+  tentang_caption_id: '',
+  tentang_caption_en: '',
+  tentang_gambar: '',
+  tentang_video_url: '',
 };

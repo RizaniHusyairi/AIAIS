@@ -417,6 +417,30 @@ export interface OfficialItem {
   has_photo: boolean;
 }
 
+/**
+ * Satu angka ringkas bandara pada beranda.
+ *
+ * `value` teks, bukan bilangan: yang tayang berbentuk "1.250.000+",
+ * "2.250 m", dan "4 Star" — pemisah ribuan, satuan, dan tanda "lebih dari"
+ * semuanya bagian dari yang ingin disampaikan.
+ */
+export interface AirportStatItem {
+  id: number;
+  /** Kunci stabil; dipakai sebagai React key. */
+  slug: string;
+  /** Nama ikon lucide sebagai teks; dipetakan di `lib/statistikBandara.ts`. */
+  icon: string | null;
+  value: string;
+  label_id: string;
+  label_en: string;
+  /** Tiga blok penampil; satu angka boleh tampil di lebih dari satu. */
+  show_about: boolean;
+  show_numbers: boolean;
+  show_hero: boolean;
+  sort_order: number;
+  is_active: boolean;
+}
+
 /** Pertanyaan yang sering diajukan. */
 export interface FaqItem {
   id: number;

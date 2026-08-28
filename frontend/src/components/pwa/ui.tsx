@@ -6,6 +6,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ChevronLeft, Share2, Search, Inbox, LoaderCircle } from 'lucide-react';
 import { TABS_PWA, tabAktif } from './nav';
+import { useTeks } from '@/lib/kamus';
 
 /* ------------------------------------------------------------------ */
 /*  Jarak aman di sisi atas layar                                      */
@@ -141,10 +142,13 @@ const KILAU_UTAMA = 'bg-gradient-to-br from-sky-500 to-blue-700 shadow-lg shadow
 
 export function BottomNav() {
   const pathname = usePathname();
+  /* Bernama `kamus`, bukan `t`: variabel `t` di bawah sudah dipakai untuk
+     tab yang sedang dipetakan. */
+  const kamus = useTeks();
 
   return (
     <nav
-      aria-label="Navigasi utama"
+      aria-label={kamus.pwa.navigasiUtama}
       className="md:hidden flex-shrink-0 relative bg-white/92 backdrop-blur-xl border-t border-slate-100 px-1 pt-1.5"
       style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
     >
@@ -169,7 +173,7 @@ export function BottomNav() {
                   <Icon className="w-[26px] h-[26px] text-white" strokeWidth={2.2} />
                 </motion.span>
                 <span className={`text-[10.5px] font-bold ${aktif ? 'text-blue-700' : 'text-blue-600'}`}>
-                  {t.label}
+                  {kamus.pwa[t.kunci]}
                 </span>
               </Link>
             );
@@ -198,7 +202,7 @@ export function BottomNav() {
                   />
                 </span>
                 <span className={`text-[10.5px] font-semibold transition-colors ${aktif ? 'text-blue-600' : 'text-slate-400'}`}>
-                  {t.label}
+                  {kamus.pwa[t.kunci]}
                 </span>
               </motion.span>
             </Link>
@@ -218,16 +222,17 @@ export function BottomNav() {
  */
 export function SideRail() {
   const pathname = usePathname();
+  const kamus = useTeks();
   const utama = TABS_PWA.find((t) => t.utama);
   const sisanya = TABS_PWA.filter((t) => !t.utama);
 
   return (
     <nav
-      aria-label="Navigasi utama"
+      aria-label={kamus.pwa.navigasiUtama}
       className="hidden md:flex flex-shrink-0 w-[92px] flex-col items-center gap-1 bg-white border-r border-slate-100 py-4"
       style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top))' }}
     >
-      <Link href="/app" className="mb-3" aria-label="Beranda aplikasi">
+      <Link href="/app" className="mb-3" aria-label={kamus.pwa.berandaAplikasi}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/icon-192.png" alt="APT Pranoto" className="w-10 h-10 rounded-xl" />
       </Link>
@@ -240,7 +245,7 @@ export function SideRail() {
             className={`w-16 rounded-2xl py-2.5 flex flex-col items-center gap-1 text-white transition-transform active:scale-95 ${KILAU_UTAMA}`}
           >
             <utama.icon className="w-[22px] h-[22px]" strokeWidth={2.2} />
-            <span className="text-[10.5px] font-bold">{utama.label}</span>
+            <span className="text-[10.5px] font-bold">{kamus.pwa[utama.kunci]}</span>
           </Link>
           <span className="my-2 w-8 h-px bg-slate-200" aria-hidden="true" />
         </>
@@ -273,7 +278,7 @@ export function SideRail() {
               strokeWidth={aktif ? 2.4 : 2}
             />
             <span className={`text-[10.5px] font-semibold ${aktif ? 'text-blue-600' : 'text-slate-400'}`}>
-              {t.label}
+              {kamus.pwa[t.kunci]}
             </span>
           </Link>
         );
@@ -291,11 +296,13 @@ export function SideRail() {
 /*  berbeda-beda dan membuat aplikasi terasa tambal sulam.             */
 /* ------------------------------------------------------------------ */
 
-export function Memuat({ label = 'Memuat…' }: { label?: string }) {
+export function Memuat({ label }: { label?: string }) {
+  const t = useTeks();
+
   return (
     <div className="flex flex-col items-center justify-center gap-2.5 py-14 text-slate-400">
       <LoaderCircle className="w-6 h-6 animate-spin" />
-      <p className="text-[12.5px] font-semibold">{label}</p>
+      <p className="text-[12.5px] font-semibold">{label ?? t.pwa.memuat}</p>
     </div>
   );
 }
@@ -326,20 +333,25 @@ export function LayarKosong({
 export function KotakCari({
   value,
   onChange,
-  placeholder = 'Cari…',
+  placeholder,
 }: {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
 }) {
+  const t = useTeks();
+  /* Bawaannya diselesaikan di sini, bukan sebagai nilai bawaan parameter:
+     nilai bawaan parameter dihitung sebelum hook mana pun boleh dipanggil. */
+  const teksCari = placeholder ?? t.pwa.cari;
+
   return (
     <div className="relative">
       <Search className="w-[18px] h-[18px] text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        aria-label={placeholder}
+        placeholder={teksCari}
+        aria-label={teksCari}
         className="w-full bg-slate-100 rounded-2xl pl-11 pr-4 py-3 text-[13px] text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
       />
     </div>

@@ -19,10 +19,15 @@ import { NewsItem, InstagramPost } from '@/types';
 import GambarBerita from '@/components/GambarBerita';
 import PetaSematanGoogle from '@/components/map/PetaSematanGoogle';
 import { AIRPORTS, HOME_IATA } from '@/lib/airports';
+import { useBahasa } from '@/lib/bahasa';
+import { useTeks, formatTanggal, type Kamus } from '@/lib/kamus';
+import { useStatistikBandara } from '@/lib/statistikBandara';
+import { useTentang } from '@/lib/tentang';
+import VideoProfil from '@/components/home/VideoProfil';
 import {
-  Plane, ArrowRight, Building2, ChevronRight, ChevronLeft, Users, MapPin, Star, Car,
-  ParkingSquare, Headphones, Play, Wifi, Sofa, UtensilsCrossed, MoonStar, Baby, Accessibility,
-  Ruler, Award, CarFront, Bus, Mail, Share2, Send, Navigation, Calendar, Palmtree, Clock,
+  Plane, ArrowRight, Building2, ChevronRight, ChevronLeft, MapPin, Car,
+  ParkingSquare, Headphones, Wifi, Sofa, UtensilsCrossed, MoonStar, Baby, Accessibility,
+  CarFront, Bus, Mail, Share2, Send, Navigation, Calendar, Palmtree, Clock,
 } from 'lucide-react';
 
 /* ================================================================
@@ -41,45 +46,51 @@ const KOORDINAT_BANDARA = `${BANDARA_LOKASI.lat.toFixed(4)}, ${BANDARA_LOKASI.lo
    pencarian "APT Pranoto" masih kerap mendarat di kantor perwakilan di dalam
    kota, sedangkan koordinat selalu menunjuk apronnya sendiri. */
 const TAUTAN_PETA = `https://www.google.com/maps/search/?api=1&query=${BANDARA_LOKASI.lat},${BANDARA_LOKASI.lon}`;
-const QUICK = [
-  { title: 'Penerbangan', desc: 'Info Jadwal', icon: Plane, color: '#2563eb', bg: '#eff6ff', href: '/flights' },
-  { title: 'Fasilitas', desc: 'Layanan Bandara', icon: Building2, color: '#0d9488', bg: '#f0fdfa', href: '/facilities' },
-  { title: 'Transportasi', desc: 'Menuju Bandara', icon: Car, color: '#ea580c', bg: '#fff7ed', href: '/tenants' },
-  { title: 'Parkir', desc: 'Area Parkir', icon: ParkingSquare, color: '#7c3aed', bg: '#f5f3ff', href: '/facilities#parkir' },
-  { title: 'Layanan Online', desc: 'Pengaduan & Layanan', icon: Headphones, color: '#e11d48', bg: '#fff1f2', href: '/complaints' },
-  { title: 'Peta Bandara', desc: 'Navigasi Terminal', icon: MapPin, color: '#059669', bg: '#ecfdf5', href: '/facilities#peta' },
+/*
+ * Daftar-daftar di bawah dibangun dari kamus.
+ *
+ * Yang berpindah ke kamus HANYA teksnya. Ikon, warna, alamat, dan angka tetap
+ * di sini: keempatnya sama persis di kedua bahasa, dan menyalinnya ke kamus
+ * berarti dua daftar angka resmi yang perlahan menyimpang — kesalahan yang
+ * paling mahal justru pada angka.
+ *
+ * `kunci` dipakai sebagai kunci React, bukan teksnya: teks berganti saat
+ * bahasa berganti, dan kunci yang ikut berganti memaksa React membuang lalu
+ * memasang ulang seluruh kartunya.
+ */
+const quickAccess = (t: Kamus) => [
+  { kunci: 'penerbangan', ...t.beranda.cepat.penerbangan, icon: Plane, color: '#2563eb', bg: '#eff6ff', href: '/flights' },
+  { kunci: 'fasilitas', ...t.beranda.cepat.fasilitas, icon: Building2, color: '#0d9488', bg: '#f0fdfa', href: '/facilities' },
+  { kunci: 'transportasi', ...t.beranda.cepat.transportasi, icon: Car, color: '#ea580c', bg: '#fff7ed', href: '/tenants' },
+  { kunci: 'parkir', ...t.beranda.cepat.parkir, icon: ParkingSquare, color: '#7c3aed', bg: '#f5f3ff', href: '/facilities#parkir' },
+  { kunci: 'layanan', ...t.beranda.cepat.layananOnline, icon: Headphones, color: '#e11d48', bg: '#fff1f2', href: '/complaints' },
+  { kunci: 'peta', ...t.beranda.cepat.peta, icon: MapPin, color: '#059669', bg: '#ecfdf5', href: '/facilities#peta' },
 ];
 
-const ABOUT_STATS = [
-  { icon: Users, value: '1.250.000+', label: 'Penumpang / Tahun' },
-  { icon: MapPin, value: '18', label: 'Destinasi' },
-  { icon: Plane, value: '120+', label: 'Penerbangan / Hari' },
-  { icon: Ruler, value: '2.250 m', label: 'Panjang Runway' },
-  { icon: Award, value: '4 Star', label: 'Bandara Terakreditasi' },
+const fasilitasUnggulan = (t: Kamus) => [
+  { kunci: 'wifi', ...t.beranda.fasilitas.wifi, icon: Wifi, color: '#2563eb', bg: '#eff6ff' },
+  { kunci: 'ruang-tunggu', ...t.beranda.fasilitas.ruangTunggu, icon: Sofa, color: '#0d9488', bg: '#f0fdfa' },
+  { kunci: 'restoran', ...t.beranda.fasilitas.restoran, icon: UtensilsCrossed, color: '#e11d48', bg: '#fff1f2' },
+  { kunci: 'musala', ...t.beranda.fasilitas.musala, icon: MoonStar, color: '#059669', bg: '#ecfdf5' },
+  { kunci: 'anak', ...t.beranda.fasilitas.bermainAnak, icon: Baby, color: '#d97706', bg: '#fffbeb' },
+  { kunci: 'disabilitas', ...t.beranda.fasilitas.disabilitas, icon: Accessibility, color: '#7c3aed', bg: '#f5f3ff' },
 ];
 
-const FASILITAS = [
-  { name: 'Wi-Fi Gratis', sub: 'Tersedia di seluruh area', icon: Wifi, color: '#2563eb', bg: '#eff6ff' },
-  { name: 'Ruang Tunggu', sub: 'Nyaman & Luas', icon: Sofa, color: '#0d9488', bg: '#f0fdfa' },
-  { name: 'Restaurant', sub: 'Beragam pilihan kuliner', icon: UtensilsCrossed, color: '#e11d48', bg: '#fff1f2' },
-  { name: 'Mushola', sub: 'Bersih & Nyaman', icon: MoonStar, color: '#059669', bg: '#ecfdf5' },
-  { name: 'Area Bermain Anak', sub: 'Ramah Keluarga', icon: Baby, color: '#d97706', bg: '#fffbeb' },
-  { name: 'Layanan Disabilitas', sub: 'Aksesibilitas Terjamin', icon: Accessibility, color: '#7c3aed', bg: '#f5f3ff' },
+const aksesBandara = (t: Kamus) => [
+  { kunci: 'pribadi', ...t.beranda.akses.pribadi, icon: Car },
+  { kunci: 'taksi', ...t.beranda.akses.taksi, icon: CarFront },
+  { kunci: 'bus', ...t.beranda.akses.bus, icon: Bus },
+  { kunci: 'rental', ...t.beranda.akses.rental, icon: Navigation },
 ];
 
-const AKSES = [
-  { name: 'Kendaraan Pribadi', desc: 'Tersedia area parkir yang luas', icon: Car },
-  { name: 'Taksi & Rideshare', desc: 'Layanan tersedia 24 jam', icon: CarFront },
-  { name: 'Bus & Shuttle', desc: 'Tersedia layanan bus dari berbagai titik kota', icon: Bus },
-  { name: 'Rental Mobil', desc: 'Berbagai pilihan rental mobil di area bandara', icon: Navigation },
-];
-
-const ANGKA = [
-  { icon: Users, value: '1.250.000+', label: 'Penumpang / Tahun' },
-  { icon: MapPin, value: '18', label: 'Destinasi' },
-  { icon: Plane, value: '120+', label: 'Penerbangan / Hari' },
-  { icon: Star, value: '98%', label: 'Tingkat Kepuasan Penumpang' },
-];
+/*
+ * Angka bandara tidak lagi ditulis di berkas ini.
+ *
+ * Dulu ada DUA larik di sini — `aboutStats` dan `dalamAngka` — yang menyalin
+ * nilai yang sama, ditambah salinan ketiga di `HeroBoardingPass.tsx`.
+ * Semuanya kini membaca `useStatistikBandara()` dan menyaring benderanya
+ * masing-masing, sehingga satu suntingan petugas mengubah ketiga blok.
+ */
 
 /*
  * Pejabat bandara kini datang dari `usePejabat()` — dikelola petugas lewat
@@ -106,10 +117,20 @@ const rise = {
 };
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } };
 
-const fmtDate = (d: string) =>
-  new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+/* Pemformat tanggal berpindah ke `formatTanggal` supaya tanggal berita ikut
+   berganti bahasa; lihat lib/kamus/index.ts. */
 
 export default function HomePage() {
+  const t = useTeks();
+  const bahasa = useBahasa();
+  const QUICK = quickAccess(t);
+  const tentang = useTentang();
+  const semuaAngka = useStatistikBandara();
+  const ABOUT_STATS = semuaAngka.filter((s) => s.diTentang);
+  const FASILITAS = fasilitasUnggulan(t);
+  const AKSES = aksesBandara(t);
+  const ANGKA = semuaAngka.filter((s) => s.diAngka);
+
   /* Unggahan Instagram — kini mengisi kolom kanan hero, menggantikan papan
      penerbangan. Dibaca dari tabel LOKAL portal, bukan dari Instagram: token
      tidak boleh sampai ke peramban, dan gangguan di Instagram tidak boleh ikut
@@ -189,20 +210,20 @@ export default function HomePage() {
                 kesatuan. Lihat komponennya untuk urutan animasinya. */}
             <NamaBandaraHero />
             <p className="text-slate-600 text-base leading-relaxed max-w-md">
-              Gerbang udara Kalimantan Timur yang menghubungkan Anda ke berbagai destinasi di Indonesia dan dunia.
+              {t.beranda.intro}
             </p>
             <div className="flex flex-wrap items-center gap-4 pt-3">
               <Link href="/flights" className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-6 py-3.5 rounded-full shadow-lg shadow-blue-600/30 flex items-center gap-2 transition-all">
-                <Plane className="w-4 h-4" /> Cek Penerbangan <ArrowRight className="w-4 h-4" />
+                <Plane className="w-4 h-4" /> {t.beranda.cekPenerbangan} <ArrowRight className="w-4 h-4" />
               </Link>
               <Link href="/facilities" className="bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 font-semibold text-sm px-6 py-3.5 rounded-full shadow-sm flex items-center gap-2 transition-all">
-                <Building2 className="w-4 h-4 text-blue-600" /> Lihat Fasilitas
+                <Building2 className="w-4 h-4 text-blue-600" /> {t.beranda.lihatFasilitas}
               </Link>
               {/* Wisata terdekat. Bergaya sekunder seperti Fasilitas: hero
                   hanya boleh punya satu ajakan utama, dan "Cek Penerbangan"
                   yang paling sering dicari pengunjung bandara. */}
               <Link href="/tourism" className="bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 font-semibold text-sm px-6 py-3.5 rounded-full shadow-sm flex items-center gap-2 transition-all">
-                <Palmtree className="w-4 h-4 text-emerald-600" /> Lihat Destinasi Wisata
+                <Palmtree className="w-4 h-4 text-emerald-600" /> {t.beranda.lihatWisata}
               </Link>
             </div>
           </motion.div>
@@ -240,7 +261,7 @@ export default function HomePage() {
             {QUICK.map((s) => {
               const Icon = s.icon;
               return (
-                <motion.div key={s.title} variants={rise}>
+                <motion.div key={s.kunci} variants={rise}>
                   <Link
                     href={s.href}
                     className="relative flex items-center gap-3 px-4 py-3 md:py-2 group rounded-xl transition-colors hover:bg-slate-50/80"
@@ -253,7 +274,7 @@ export default function HomePage() {
                     </div>
                     <div className="min-w-0">
                       <h4 className="font-bold text-slate-900 text-sm group-hover:text-blue-600 transition-colors truncate">
-                        {s.title}
+                        {s.judul}
                       </h4>
                       <p className="text-xs text-slate-500 truncate">{s.desc}</p>
                     </div>
@@ -274,17 +295,16 @@ export default function HomePage() {
       <section className="max-w-[1400px] mx-auto px-4 sm:px-6 mt-8">
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 sm:p-7 grid grid-cols-1 lg:grid-cols-12 gap-7 items-center">
           <motion.div initial={{ opacity: 0, x: -24 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="lg:col-span-7">
-            <JudulBagian kicker="Profil Bandara">Tentang Bandar Udara APT Pranoto</JudulBagian>
+            <JudulBagian kicker={tentang.kicker}>{tentang.judul}</JudulBagian>
             <p className="mt-3 text-slate-500 text-[13.5px] leading-relaxed max-w-xl">
-              Bandar Udara APT Pranoto Samarinda merupakan gerbang utama Kalimantan Timur yang melayani penerbangan
-              domestik dan terus berkembang menjadi bandara modern berstandar internasional.
+              {tentang.teks}
             </p>
 
             <motion.div variants={container} initial="hidden" whileInView="show" viewport={{ once: true }} className="mt-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
               {ABOUT_STATS.map((s) => {
                 const Icon = s.icon;
                 return (
-                  <motion.div key={s.label} variants={rise} whileHover={{ y: -4 }} className="rounded-xl border border-slate-100 bg-slate-50/60 p-3.5">
+                  <motion.div key={s.slug} variants={rise} whileHover={{ y: -4 }} className="rounded-xl border border-slate-100 bg-slate-50/60 p-3.5">
                     <Icon className="w-5 h-5 text-blue-600" />
                     <p className="mt-2.5 text-[17px] font-black text-slate-900 leading-none">{s.value}</p>
                     <p className="mt-1 text-[10.5px] text-slate-500 leading-tight">{s.label}</p>
@@ -295,22 +315,11 @@ export default function HomePage() {
           </motion.div>
 
           <motion.div initial={{ opacity: 0, x: 24 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="lg:col-span-5">
-            <div className="relative rounded-2xl overflow-hidden group">
-              <img src="/bg/bg-beranda.png" alt="Profil Bandara APT Pranoto" className="w-full h-[220px] object-cover group-hover:scale-105 transition-transform duration-700" />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0b1e5b]/70 via-transparent to-transparent" />
-
-              <button className="absolute inset-0 flex items-center justify-center cursor-pointer" aria-label="Putar video profil">
-                <motion.span
-                  animate={{ scale: [1, 1.12, 1] }}
-                  transition={{ repeat: Infinity, duration: 2.4, ease: 'easeInOut' }}
-                  className="w-14 h-14 rounded-full bg-blue-600 flex items-center justify-center shadow-xl shadow-blue-900/40"
-                >
-                  <Play className="w-6 h-6 text-white fill-white ml-0.5" />
-                </motion.span>
-              </button>
-
-              <span className="absolute bottom-4 right-4 text-white text-[12.5px] font-semibold drop-shadow">Lihat Profile Bandara</span>
-            </div>
+            <VideoProfil
+              gambar={tentang.gambar}
+              videoUrl={tentang.videoUrl}
+              caption={tentang.caption}
+            />
           </motion.div>
         </div>
       </section>
@@ -320,9 +329,9 @@ export default function HomePage() {
         {/* Berita */}
         <div className="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
           <div className="flex items-start justify-between gap-3 mb-5">
-            <JudulBagian kicker="Kabar Terkini">Berita &amp; Pengumuman</JudulBagian>
+            <JudulBagian kicker={t.beranda.beritaKicker}>{t.beranda.beritaJudul}</JudulBagian>
             <Link href="/news" className="text-[13px] font-semibold text-blue-600 flex items-center gap-1.5 hover:gap-2.5 transition-all">
-              Lihat Semua <ArrowRight className="w-4 h-4" />
+              {t.umum.lihatSemua} <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
 
@@ -338,13 +347,13 @@ export default function HomePage() {
                     </span>
                   </div>
                   <p className="mt-2.5 flex items-center gap-1.5 text-[11px] text-slate-400">
-                    <Calendar className="w-3 h-3" /> {fmtDate(n.published_at)}
+                    <Calendar className="w-3 h-3" /> {formatTanggal(n.published_at, bahasa)}
                   </p>
                   <h3 className="mt-1 font-bold text-slate-900 text-[13px] leading-snug line-clamp-2 group-hover:text-blue-600 transition-colors">
                     {n.title}
                   </h3>
                   <span className="mt-2.5 inline-flex items-center gap-1.5 text-blue-600 text-[12px] font-bold">
-                    Selengkapnya <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                    {t.umum.selengkapnya} <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                   </span>
                 </Link>
               </motion.article>
@@ -355,9 +364,9 @@ export default function HomePage() {
         {/* Fasilitas Unggulan */}
         <div className="lg:col-span-5 bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
           <div className="flex items-start justify-between gap-3 mb-5">
-            <JudulBagian kicker="Kenyamanan">Fasilitas Unggulan</JudulBagian>
+            <JudulBagian kicker={t.beranda.fasilitasKicker}>{t.beranda.fasilitasJudul}</JudulBagian>
             <Link href="/facilities" className="text-[13px] font-semibold text-blue-600 flex items-center gap-1.5 hover:gap-2.5 transition-all">
-              Lihat Semua <ArrowRight className="w-4 h-4" />
+              {t.umum.lihatSemua} <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
 
@@ -365,12 +374,12 @@ export default function HomePage() {
             {FASILITAS.map((f) => {
               const Icon = f.icon;
               return (
-                <motion.div key={f.name} variants={rise} className="flex items-center gap-3 group">
+                <motion.div key={f.kunci} variants={rise} className="flex items-center gap-3 group">
                   <span className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105" style={{ backgroundColor: f.bg }}>
                     <Icon className="w-[18px] h-[18px]" style={{ color: f.color }} />
                   </span>
                   <div className="min-w-0">
-                    <p className="font-bold text-slate-900 text-[13px] truncate">{f.name}</p>
+                    <p className="font-bold text-slate-900 text-[13px] truncate">{f.nama}</p>
                     <p className="text-[11px] text-slate-500 truncate">{f.sub}</p>
                   </div>
                 </motion.div>
@@ -383,7 +392,7 @@ export default function HomePage() {
       {/* ================= 5. PEJABAT BANDARA ================= */}
       <section className="max-w-[1400px] mx-auto px-4 sm:px-6 mt-6">
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-          <JudulBagian kicker="Tata Kelola" className="mb-5">Pejabat Bandara Udara APT Pranoto Samarinda</JudulBagian>
+          <JudulBagian kicker={t.beranda.pejabatKicker} className="mb-5">{t.beranda.pejabatJudul}</JudulBagian>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
             {/* kartu utama dengan latar bandara */}
@@ -413,13 +422,13 @@ export default function HomePage() {
                     <a href="mailto:mail.aptpranotoairport@gmail.com" className="w-8 h-8 rounded-lg bg-white/12 border border-white/20 flex items-center justify-center text-white hover:bg-white/22 transition-colors" aria-label="Email">
                       <Mail className="w-4 h-4" />
                     </a>
-                    <a href="#" className="w-8 h-8 rounded-lg bg-white/12 border border-white/20 flex items-center justify-center text-white hover:bg-white/22 transition-colors" aria-label="Bagikan profil">
+                    <a href="#" className="w-8 h-8 rounded-lg bg-white/12 border border-white/20 flex items-center justify-center text-white hover:bg-white/22 transition-colors" aria-label={t.beranda.bagikanProfil}>
                       <Share2 className="w-4 h-4" />
                     </a>
                   </div>
 
                   <Link href="/profile#pejabat" className="mt-5 inline-flex items-center gap-2 bg-white text-blue-700 font-bold text-[12.5px] px-4 py-2.5 rounded-full w-fit hover:bg-blue-50 transition-colors">
-                    <Plane className="w-3.5 h-3.5 rotate-45" /> Profil Lengkap
+                    <Plane className="w-3.5 h-3.5 rotate-45" /> {t.beranda.profilLengkap}
                   </Link>
                 </motion.div>
 
@@ -466,7 +475,7 @@ export default function HomePage() {
                   whileTap={{ scale: 0.9 }}
                   onClick={() => pickExec((aman - 1 + EXECUTIVES.length) % EXECUTIVES.length)}
                   className="w-9 h-9 rounded-full bg-white/15 border border-white/25 backdrop-blur flex items-center justify-center text-white hover:bg-white/25 transition-colors cursor-pointer"
-                  aria-label="Sebelumnya"
+                  aria-label={t.beranda.sebelumnya}
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </motion.button>
@@ -474,7 +483,7 @@ export default function HomePage() {
                   whileTap={{ scale: 0.9 }}
                   onClick={() => pickExec((aman + 1) % EXECUTIVES.length)}
                   className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-blue-700 shadow-lg hover:bg-blue-50 transition-colors cursor-pointer"
-                  aria-label="Selanjutnya"
+                  aria-label={t.beranda.selanjutnya}
                 >
                   <ChevronRight className="w-4 h-4" />
                 </motion.button>
@@ -509,16 +518,16 @@ export default function HomePage() {
       <section className="max-w-[1400px] mx-auto px-4 sm:px-6 mt-6 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
         {/* moda transportasi */}
         <div className="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-          <JudulBagian kicker="Transportasi" className="mb-5">Akses Menuju Bandara</JudulBagian>
+          <JudulBagian kicker={t.beranda.aksesKicker} className="mb-5">{t.beranda.aksesJudul}</JudulBagian>
           <motion.div variants={container} initial="hidden" whileInView="show" viewport={{ once: true }} className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {AKSES.map((a) => {
               const Icon = a.icon;
               return (
-                <motion.div key={a.name} variants={rise} whileHover={{ y: -4 }} className="group">
+                <motion.div key={a.kunci} variants={rise} whileHover={{ y: -4 }} className="group">
                   <span className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center group-hover:bg-blue-50 group-hover:border-blue-100 transition-colors">
                     <Icon className="w-5 h-5 text-slate-600 group-hover:text-blue-600 transition-colors" />
                   </span>
-                  <p className="mt-2.5 font-bold text-slate-900 text-[12.5px] leading-snug">{a.name}</p>
+                  <p className="mt-2.5 font-bold text-slate-900 text-[12.5px] leading-snug">{a.nama}</p>
                   <p className="mt-1 text-[10.5px] text-slate-500 leading-snug">{a.desc}</p>
                 </motion.div>
               );
@@ -563,8 +572,8 @@ export default function HomePage() {
             rel="noopener noreferrer"
             className="absolute bottom-5 left-5 inline-flex items-center gap-2 bg-white text-slate-800 font-bold text-[12px] px-4 py-2.5 rounded-full shadow-lg border border-slate-100 hover:bg-blue-50 hover:text-blue-700 transition-colors"
           >
-            <Navigation className="w-3.5 h-3.5 text-blue-600" /> Buka di aplikasi peta
-            <span className="sr-only"> (membuka tab baru)</span>
+            <Navigation className="w-3.5 h-3.5 text-blue-600" /> {t.beranda.bukaPetaAplikasi}
+            <span className="sr-only">{t.beranda.membukaTabBaru}</span>
           </a>
         </motion.div>
 
@@ -576,15 +585,15 @@ export default function HomePage() {
           <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
             <div>
               <span className="inline-flex items-center gap-2 text-emerald-600 text-[10.5px] font-bold uppercase tracking-[0.16em] bg-emerald-50 px-2.5 py-1 rounded-full">
-                <Palmtree className="w-3.5 h-3.5" /> Pariwisata Terdekat
+                <Palmtree className="w-3.5 h-3.5" /> {t.beranda.wisataKicker}
               </span>
-              <h2 className="mt-2.5 text-[19px] font-black text-slate-900">Jelajahi Sekitar Bandara</h2>
+              <h2 className="mt-2.5 text-[19px] font-black text-slate-900">{t.beranda.wisataJudul}</h2>
               <p className="mt-1 text-[12px] text-slate-500 max-w-lg leading-relaxed">
-                Destinasi budaya, alam, dan belanja khas Kalimantan Timur — terdekat hanya 15 menit dari terminal.
+                {t.beranda.wisataRingkas}
               </p>
             </div>
             <Link href="/tourism" className="inline-flex items-center gap-1.5 text-[12.5px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-4 py-2.5 rounded-full transition-colors">
-              Lihat Semua Destinasi <ArrowRight className="w-3.5 h-3.5" />
+              {t.beranda.wisataSemua} <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
 
@@ -617,7 +626,7 @@ export default function HomePage() {
                           {spot.description}
                         </p>
                         <p className="mt-3 flex items-center gap-1.5 text-[11px] font-semibold text-slate-600">
-                          <Clock className="w-3.5 h-3.5" style={{ color: meta.color }} /> {spot.duration} dari bandara
+                          <Clock className="w-3.5 h-3.5" style={{ color: meta.color }} /> {spot.duration} {t.beranda.dariBandara}
                         </p>
                       </div>
                     </Link>
@@ -643,13 +652,13 @@ export default function HomePage() {
             style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.4) 1px, transparent 0)', backgroundSize: '22px 22px' }}
           />
 
-          <h2 className="relative z-10 text-[19px] font-black text-white">APT Pranoto dalam Angka</h2>
+          <h2 className="relative z-10 text-[19px] font-black text-white">{t.beranda.angkaJudul}</h2>
 
           <motion.div variants={container} initial="hidden" whileInView="show" viewport={{ once: true }} className="relative z-10 mt-6 grid grid-cols-2 lg:grid-cols-4 gap-6">
             {ANGKA.map((s, i) => {
               const Icon = s.icon;
               return (
-                <motion.div key={s.label} variants={rise} className={`space-y-2 ${i < ANGKA.length - 1 ? 'lg:border-r lg:border-white/10' : ''}`}>
+                <motion.div key={s.slug} variants={rise} className={`space-y-2 ${i < ANGKA.length - 1 ? 'lg:border-r lg:border-white/10' : ''}`}>
                   <span className="w-10 h-10 rounded-xl bg-white/8 border border-white/12 flex items-center justify-center">
                     <Icon className="w-5 h-5 text-blue-300" />
                   </span>
@@ -671,9 +680,9 @@ export default function HomePage() {
           className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 sm:p-7 grid grid-cols-1 lg:grid-cols-12 gap-5 items-center"
         >
           <div className="lg:col-span-5">
-            <h2 className="text-[18px] font-black text-slate-900">Dapatkan Informasi Terbaru</h2>
+            <h2 className="text-[18px] font-black text-slate-900">{t.beranda.newsletterJudul}</h2>
             <p className="mt-2 text-slate-500 text-[12.5px] leading-relaxed max-w-sm">
-              Berlangganan newsletter kami untuk mendapatkan informasi terbaru seputar penerbangan dan promo menarik.
+              {t.beranda.newsletterRingkas}
             </p>
           </div>
 
@@ -681,14 +690,14 @@ export default function HomePage() {
             <input
               type="email"
               required
-              placeholder="Masukkan email Anda"
+              placeholder={t.beranda.newsletterEmail}
               className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-[13px] text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-blue-400 focus:bg-white transition-colors"
             />
             <button
               type="submit"
               className="flex-shrink-0 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[13px] px-6 py-3.5 rounded-xl shadow-lg shadow-blue-600/25 flex items-center justify-center gap-2 transition-colors active:scale-95"
             >
-              Berlangganan <Send className="w-4 h-4" />
+              {t.beranda.newsletterKirim} <Send className="w-4 h-4" />
             </button>
           </form>
         </motion.div>

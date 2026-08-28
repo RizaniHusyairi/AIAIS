@@ -22,6 +22,8 @@ import { CONTACT } from '@/lib/airportProfile';
 import { SERVICES, EXTERNAL_SERVICES, gabungLayanan } from '@/lib/serviceData';
 import { fetchApi } from '@/lib/api';
 import type { ServiceItem } from '@/types';
+import { useBahasa } from '@/lib/bahasa';
+import { useTeks } from '@/lib/kamus';
 
 function FlightArc({ className = '', d = 'M-20 170 Q 380 50 1020 130' }: { className?: string; d?: string }) {
   return (
@@ -47,6 +49,8 @@ const rise = {
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
 
 export default function LayananIndexView() {
+  const t = useTeks();
+  const bahasa = useBahasa();
   // Bawaan presentasi dipakai sampai data API tiba, supaya daftar tidak
   // berkedip kosong pada kunjungan pertama.
   const [layanan, setLayanan] = useState(SERVICES);
@@ -86,20 +90,25 @@ export default function LayananIndexView() {
         <div className="relative z-10 max-w-[1400px] mx-auto px-4 sm:px-6 py-16 w-full">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="max-w-2xl">
             <span className="inline-flex items-center gap-2 bg-white/12 backdrop-blur border border-white/20 text-cyan-200 text-[11px] font-bold uppercase tracking-[0.16em] px-3.5 py-2 rounded-full">
-              <Building2 className="w-3.5 h-3.5" /> Layanan Bandara
+              <Building2 className="w-3.5 h-3.5" /> {t.layanan.heroKicker}
             </span>
 
             <h1 className="mt-5 text-4xl sm:text-5xl font-black text-white leading-[1.1] tracking-tight">
-              Layanan
+              {t.layanan.heroJudul}
               <br />
-              <span className="text-cyan-300">Pengajuan</span>
+              <span className="text-cyan-300">{t.layanan.heroAksen}</span>
             </h1>
 
             <p className="mt-4 text-blue-100/90 text-[15px] leading-relaxed max-w-xl">
-              Layanan pengajuan usaha, perizinan, dan kegiatan di lingkungan Bandar Udara Kelas I
-              Aji Pangeran Tumenggung Pranoto Samarinda — lengkap dengan persyaratan dan alur
-              prosesnya.
+              {t.layanan.heroLead}
             </p>
+
+            {/* Nama dan ringkasan tiap layanan datang dari basis data dan belum
+                punya versi Inggris. Dikatakan terus terang di sini, sekali,
+                alih-alih membiarkan pengunjung mengira fitur bahasanya rusak. */}
+            {bahasa === 'en' && (
+              <p className="mt-3 text-[12.5px] text-cyan-100/80">{t.umum.kontenIndonesia}</p>
+            )}
           </motion.div>
         </div>
 
@@ -142,7 +151,7 @@ export default function LayananIndexView() {
                   <p className="mt-1.5 text-[12.5px] text-slate-500 leading-relaxed">{s.summary}</p>
 
                   <span className="mt-4 inline-flex items-center gap-1.5 text-[12.5px] font-bold" style={{ color: s.accent }}>
-                    Lihat Persyaratan
+                    {t.layanan.lihatPersyaratan}
                     <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                   </span>
 
@@ -154,10 +163,8 @@ export default function LayananIndexView() {
         </motion.div>
 
         {/* ---- Layanan pada portal terpisah ---- */}
-        <h2 className="mt-12 text-[15px] font-black text-slate-900 uppercase tracking-wider">Portal Layanan Terpisah</h2>
-        <p className="mt-1.5 text-[12.5px] text-slate-500">
-          Ketiga layanan berikut dikelola pada sistem tersendiri dan terbuka di tab baru.
-        </p>
+        <h2 className="mt-12 text-[15px] font-black text-slate-900 uppercase tracking-wider">{t.layanan.portalTerpisah}</h2>
+        <p className="mt-1.5 text-[12.5px] text-slate-500">{t.layanan.portalTerpisahRingkas}</p>
 
         <motion.div
           variants={container}
@@ -204,10 +211,9 @@ export default function LayananIndexView() {
               <Headphones className="w-8 h-8 text-cyan-300" />
             </span>
             <div className="flex-1 text-center sm:text-left">
-              <h3 className="text-white font-black text-[19px]">Butuh Bantuan Memilih Layanan?</h3>
+              <h3 className="text-white font-black text-[19px]">{t.layanan.bantuanJudul}</h3>
               <p className="mt-1.5 text-blue-100/85 text-[13px] leading-relaxed">
-                Hubungi bandara pada jam layanan {CONTACT.operationalHours}, atau ajukan pertanyaan
-                melalui permohonan informasi publik agar tercatat dengan nomor tiket.
+                {t.layanan.bantuanAwal} {CONTACT.operationalHours}{t.layanan.bantuanAkhir}
               </p>
             </div>
             <div className="flex flex-wrap gap-3 justify-center flex-shrink-0">
@@ -221,7 +227,7 @@ export default function LayananIndexView() {
                 href={`mailto:${CONTACT.email}`}
                 className="inline-flex items-center gap-2 bg-white text-blue-700 font-bold text-[13.5px] px-5 py-3 rounded-full shadow-lg hover:bg-blue-50 transition-colors"
               >
-                <Mail className="w-4 h-4" /> Email
+                <Mail className="w-4 h-4" /> {t.layanan.email}
               </a>
             </div>
           </motion.div>

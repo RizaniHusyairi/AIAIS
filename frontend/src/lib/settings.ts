@@ -13,9 +13,11 @@ import { API_BASE_URL } from '@/lib/api';
 export {
   BACKGROUND_KEYS,
   SKM_KEYS,
+  TENTANG_KEYS,
   DEFAULT_SETTINGS,
   type BackgroundKey,
   type SkmKey,
+  type TentangKey,
 } from './settingsShared';
 
 import { DEFAULT_SETTINGS, type BackgroundKey } from './settingsShared';
