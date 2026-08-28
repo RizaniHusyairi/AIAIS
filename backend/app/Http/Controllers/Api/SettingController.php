@@ -112,6 +112,23 @@ class SettingController extends Controller
          * — tombol mati lebih buruk daripada tidak ada tombol.
          */
         'tentang_video_url' => '',
+
+        /*
+         * Notifikasi WhatsApp ke petugas piket.
+         *
+         * HANYA yang bukan rahasia yang boleh ada di sini. Endpoint
+         * GET /settings bersifat publik, jadi kunci API gateway dan nomor
+         * ponsel petugas TIDAK pernah masuk daftar ini — keduanya punya
+         * tabelnya sendiri (wa_credentials, wa_recipients) yang hanya terbaca
+         * lewat endpoint bertoken. Lihat WaController.
+         *
+         * Bawaannya kosong supaya nilai .env yang sudah terpasang tetap
+         * berlaku sampai petugas benar-benar menyuntingnya dari panel; lihat
+         * WhatsAppGateway::setelan().
+         */
+        'wa_enabled' => '',
+        'wa_endpoint' => '',
+        'wa_daily_cap' => '',
     ];
 
     /** Mode yang dikenali; dipakai pula sebagai aturan validasi. */

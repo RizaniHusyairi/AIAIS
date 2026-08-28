@@ -16,7 +16,7 @@ import {
   LayoutDashboard, Plane, Newspaper, Megaphone, Building2, Store, FileText, MessageSquareWarning,
   LogOut, ExternalLink, ShieldCheck, Menu, Radar, ChevronRight, ImageIcon, ScrollText, Scale, Landmark,
   Search, SearchX, Sun, Moon,
-  CalendarClock, DoorOpen, Radio, FileBarChart, Globe, ClipboardList, Users, UserCircle, UserRound, HelpCircle, MapPin, BarChart3, Gauge, CalendarRange, Wallet, School, BadgeCheck, Gavel, HardHat, PartyPopper,
+  CalendarClock, DoorOpen, Radio, FileBarChart, Globe, ClipboardList, Users, UserCircle, UserRound, HelpCircle, MapPin, BarChart3, Gauge, MessageSquare, CalendarRange, Wallet, School, BadgeCheck, Gavel, HardHat, PartyPopper,
   PlaneTakeoff, Clock3, GraduationCap, Boxes, Wrench, Mail, CalendarCheck,
   PackageSearch, Bell,
 } from 'lucide-react';
@@ -130,6 +130,10 @@ const NAV: { section: string; items: NavItem[] }[] = [
       // orang yang belum pernah menerima satu notifikasi pun — dan selama
       // loncengnya kosong, tidak ada apa pun yang menuntun ke sana.
       { name: 'Notifikasi', href: '/admin/notifikasi', icon: Bell },
+      // Notifikasi WhatsApp ke nomor piket. Terbuka bagi staf karena piket
+      // harian memang dipegang staf; kunci gatewaynya sendiri hanya dapat
+      // disimpan admin — rutenya di backend pun dijaga `role:admin`.
+      { name: 'WhatsApp', href: '/admin/whatsapp', icon: MessageSquare },
       // Manajemen akun hanya untuk admin; rutenya di backend pun `role:admin`.
       { name: 'Pengguna', href: '/admin/users', icon: Users, roles: ['admin'] },
       // Profil sendiri terbuka bagi semua yang boleh masuk panel — mengganti

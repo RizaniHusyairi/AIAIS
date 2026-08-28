@@ -83,11 +83,19 @@ return new class extends Migration
             /**
              * Perangkat pengirim pada gateway multi-perangkat.
              *
-             * Kosong bila kunci API sudah terikat perangkat bawaannya —
-             * gateway bandara hanya menuntutnya ketika kuncinya tidak terikat
-             * perangkat mana pun.
+             * Bawaannya '0', yang berarti "PAKAI PERANGKAT BAWAAN KUNCI API" —
+             * bukan "perangkat nomor nol". Tidak ada perangkat ber-ID 0 pada
+             * gateway mana pun (penomorannya mulai dari 1), sehingga nilai itu
+             * aman dipakai sebagai penanda "tidak ditentukan" dan
+             * `WhatsAppGateway` memang menghilangkan `deviceId` dari badan
+             * permintaan ketika membacanya.
+             *
+             * Itu juga perilaku yang dijanjikan dokumentasi gateway bandara:
+             * `deviceId` hanya perlu disertakan bila kunci API tidak punya
+             * perangkat bawaan. Karena kunci yang dipakai portal ini selalu
+             * punya, kolomnya tidak dimunculkan sebagai isian di panel.
              */
-            $table->string('device_id', 30)->nullable();
+            $table->string('device_id', 30)->default('0');
 
             $table->timestamps();
         });

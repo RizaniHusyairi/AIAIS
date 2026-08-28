@@ -40,11 +40,44 @@ class AktivitasPusatBantuan extends Notification implements ShouldQueue
         'kehilangan' => ['judul' => 'Laporan kehilangan baru', 'path' => '/admin/lapor-hilang'],
         'informasi' => ['judul' => 'Permohonan informasi publik baru', 'path' => '/admin/information-requests'],
         'penilaian' => ['judul' => 'Penilaian layanan baru', 'path' => '/admin/complaints'],
+        /*
+         * Pengajuan layanan warga — slot charter, field trip, OJT, extend
+         * advance, pengiklanan, perizinan, sewa, dan tenant.
+         *
+         * Satu jenis untuk kedelapannya, bukan delapan. Yang membedakan hanya
+         * label layanannya, dan itu dibawa `$rincian`; memecahnya menjadi
+         * delapan berarti delapan baris yang harus diselaraskan tiap kali
+         * bentuk pesannya berubah — persis yang dihindari catatan di kepala
+         * kelas ini.
+         *
+         * Tujuannya daftar pengajuan; tiap jenis punya halamannya sendiri,
+         * tetapi daftar induk inilah satu-satunya yang pasti ada.
+         */
+        'pengajuan' => ['judul' => 'Pengajuan layanan baru', 'path' => '/admin/dashboard'],
     ];
 
+    /**
+     * `$rincian` adalah label LAYANAN, bukan keterangan pemohon.
+     *
+     * Dipakai jenis `pengajuan` untuk membedakan "Sewa" dari "Slot Charter"
+     * pada satu baris notifikasi. Aturan tanpa data pribadi di atas berlaku
+     * penuh untuknya: yang boleh masuk hanya nama layanan yang sudah tertulis
+     * di menu portal.
+     */
     public function __construct(
         public readonly string $jenis,
         public readonly ?string $ticket = null,
+        public readonly ?string $rincian = null,
+        /**
+         * Tujuan panel, bila berbeda dari bawaan jenisnya.
+         *
+         * Diperlukan `pengajuan`: kedelapan layanan berbagi satu jenis demi
+         * penyaringan penerima, tetapi masing-masing punya halaman
+         * tersendiri (`/admin/pengajuan/sewa`, `/admin/slots`, ...).
+         * Tautan yang mendarat di halaman yang salah membuat petugas
+         * mencari-cari kiriman yang baru saja dikabarkan kepadanya.
+         */
+        public readonly ?string $path = null,
     ) {
     }
 
@@ -150,11 +183,13 @@ class AktivitasPusatBantuan extends Notification implements ShouldQueue
 
     private function judul(): string
     {
-        return $this->meta()['judul'];
+        $judul = $this->meta()['judul'];
+
+        return $this->rincian ? $judul . ' — ' . $this->rincian : $judul;
     }
 
     private function path(): string
     {
-        return $this->meta()['path'];
+        return $this->path ?: $this->meta()['path'];
     }
 }

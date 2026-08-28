@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use App\Support\Notifikasi;
 
 /**
  * Extend Advance — permohonan beroperasi di luar jam layanan bandara.
@@ -135,6 +136,8 @@ class ExtendAdvanceController extends Controller
         );
         $item->submission_status = 'Diajukan';
         $item->save();
+
+        Notifikasi::kirim('pengajuan', null, 'Extend Advance', '/admin/extend-advance');
 
         return ApiResponse::success($item->fresh(), 'Pernyataan bertanda tangan berhasil diunggah. Pengajuan Anda kini menunggu peninjauan petugas.');
     }

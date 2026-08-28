@@ -25,10 +25,20 @@ use Illuminate\Support\Facades\Notification;
  */
 class Notifikasi
 {
-    public static function kirim(string $jenis, ?string $ticket = null): void
-    {
+    /**
+     * @param  string|null  $rincian  Label LAYANAN untuk jenis `pengajuan`.
+     *                                Bukan keterangan pemohon — lihat aturan
+     *                                tanpa data pribadi pada notifikasinya.
+     * @param  string|null  $path     Tujuan panel, bila berbeda dari bawaan.
+     */
+    public static function kirim(
+        string $jenis,
+        ?string $ticket = null,
+        ?string $rincian = null,
+        ?string $path = null,
+    ): void {
         try {
-            $notif = new AktivitasPusatBantuan($jenis, $ticket);
+            $notif = new AktivitasPusatBantuan($jenis, $ticket, $rincian, $path);
 
             $penerima = User::penerimaNotifikasi()->get();
 
@@ -43,9 +53,17 @@ class Notifikasi
              * tujuan bersama. Diantrekan supaya panggilan ke server vendor
              * tidak pernah menahan respons untuk warga.
              */
-            if (config('whatsapp.enabled')) {
-                KirimWhatsApp::dispatch($notif->toWhatsApp());
-            }
+            /* Sakelarnya TIDAK diperiksa di sini lagi.
+             *
+             * Sejak penyetelan WhatsApp dapat diubah dari panel, satu-satunya
+             * yang tahu apakah pengiriman aktif adalah `WhatsAppGateway::siap()`
+             * — ia membaca basis data lebih dulu, baru .env. Memeriksa
+             * `config('whatsapp.enabled')` di sini berarti sakelar panel tidak
+             * pernah berpengaruh selama .env belum ikut diubah.
+             *
+             * Pekerjaan yang ternyata tidak perlu berhenti sendiri di
+             * `siap()` tanpa memanggil server mana pun. */
+            KirimWhatsApp::dispatch($notif->toWhatsApp(), $jenis);
         } catch (\Throwable $e) {
             Log::warning('Notifikasi Pusat Bantuan gagal dikirim: ' . $e->getMessage(), [
                 'jenis' => $jenis,

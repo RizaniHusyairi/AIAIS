@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use App\Support\Notifikasi;
 
 /**
  * Peserta OJT (praktik kerja lapangan).
@@ -53,6 +54,8 @@ class OjtController extends Controller
         $item->save();
 
         $this->simpanBerkas($request, $item);
+
+        Notifikasi::kirim('pengajuan', null, 'Pendaftaran OJT', '/admin/ojt');
 
         return ApiResponse::success($item->fresh(), 'Pendaftaran OJT berhasil dikirim', null, 201);
     }

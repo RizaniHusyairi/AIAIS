@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use App\Support\Notifikasi;
 
 /**
  * Pengajuan slot penerbangan charter.
@@ -65,6 +66,8 @@ class SlotController extends Controller
             'documents' => $lintasan,
             'user_id' => $request->user()->id,
         ]);
+
+        Notifikasi::kirim('pengajuan', null, 'Slot Charter', '/admin/slots');
 
         return ApiResponse::success($item, 'Pengajuan slot charter berhasil dikirim', null, 201);
     }

@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use App\Support\Notifikasi;
 
 /**
  * Satu controller untuk enam jenis pengajuan layanan bandara.
@@ -96,6 +97,8 @@ class SubmissionController extends Controller
             'documents' => $lintasan,
             'user_id' => $request->user()->id,
         ]);
+
+        Notifikasi::kirim('pengajuan', null, $def['label'], '/admin/pengajuan/'.$jenis);
 
         return ApiResponse::success($item, $def['label'].' berhasil dikirim', null, 201);
     }

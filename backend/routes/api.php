@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\DocumentController;
 use App\Http\Controllers\Api\EvergreenInformationController;
 use App\Http\Controllers\Api\ExtendAdvanceController;
 use App\Http\Controllers\Api\AirportStatController;
+use App\Http\Controllers\Api\WaController;
 use App\Http\Controllers\Api\ExternalLinkController;
 use App\Http\Controllers\Api\FacilityController;
 use App\Http\Controllers\Api\FaqController;
@@ -439,6 +440,21 @@ Route::prefix(config('api.version'))->group(function () {
             Route::put('/information-service-reports/{id}', [InformationServiceReportController::class, 'update']);
             Route::delete('/information-service-reports/{id}', [InformationServiceReportController::class, 'destroy']);
 
+            /*
+             * Notifikasi WhatsApp — status, kiriman uji, dan nomor piket.
+             *
+             * TIDAK ADA padanan publiknya, dan jangan dibuatkan: isinya nomor
+             * ponsel petugas. Berada di grup staf karena piket harian memang
+             * dipegang staf; KUNCI gatewaynya sendiri dijaga lebih ketat di
+             * grup admin-saja di bawah.
+             */
+            Route::get('/wa/status', [WaController::class, 'status']);
+            Route::post('/wa/test', [WaController::class, 'uji']);
+            Route::get('/wa/recipients', [WaController::class, 'index']);
+            Route::post('/wa/recipients', [WaController::class, 'store']);
+            Route::put('/wa/recipients/{id}', [WaController::class, 'update']);
+            Route::delete('/wa/recipients/{id}', [WaController::class, 'destroy']);
+
             Route::get('/airport-stats', [AirportStatController::class, 'adminIndex']);
             Route::post('/airport-stats', [AirportStatController::class, 'store']);
             Route::put('/airport-stats/{id}', [AirportStatController::class, 'update']);
@@ -727,6 +743,16 @@ Route::prefix(config('api.version'))->group(function () {
                 Route::put('/users/{id}/reject', [UserController::class, 'reject']);
                 Route::put('/users/{id}/role', [UserController::class, 'setRole']);
                 Route::post('/users/{id}/reset-password', [UserController::class, 'sendResetLink']);
+
+                /*
+                 * Kunci gateway WhatsApp.
+                 *
+                 * Admin saja, sejajar manajemen akun: kunci ini dapat dipakai
+                 * mengirim pesan atas nama bandara, dan yang memegangnya tidak
+                 * perlu sama dengan yang memegang piket harian.
+                 */
+                Route::post('/wa/credential', [WaController::class, 'simpanKredensial']);
+                Route::delete('/wa/credential', [WaController::class, 'hapusKredensial']);
 
                 Route::get('/information-requests', [InformationRequestController::class, 'index']);
                 Route::put('/information-requests/{id}/respond', [InformationRequestController::class, 'respond']);

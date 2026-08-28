@@ -31,12 +31,25 @@ class KirimWhatsApp implements ShouldQueue
     /** Jeda antar percobaan, dalam detik. */
     public array $backoff = [10, 60];
 
-    public function __construct(public readonly string $teks)
-    {
+    /**
+     * `$jenis` menentukan nomor mana yang menerima.
+     *
+     * Dibawa terpisah dari teksnya, bukan disimpulkan dari isi pesan: teks
+     * notifikasi ditujukan untuk dibaca manusia dan boleh berubah kata-katanya
+     * kapan saja, sedangkan penyaringan penerima tidak boleh ikut berubah
+     * karenanya.
+     *
+     * Boleh null demi pekerjaan lama yang mungkin masih mengendap di tabel
+     * `jobs` saat penggelaran — tanpa penyaringan, sama seperti sebelumnya.
+     */
+    public function __construct(
+        public readonly string $teks,
+        public readonly ?string $jenis = null,
+    ) {
     }
 
     public function handle(WhatsAppGateway $gateway): void
     {
-        $gateway->kirim($this->teks);
+        $gateway->kirim($this->teks, $this->jenis);
     }
 }

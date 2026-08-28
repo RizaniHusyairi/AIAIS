@@ -14,10 +14,12 @@ export {
   BACKGROUND_KEYS,
   SKM_KEYS,
   TENTANG_KEYS,
+  WA_KEYS,
   DEFAULT_SETTINGS,
   type BackgroundKey,
   type SkmKey,
   type TentangKey,
+  type WaKey,
 } from './settingsShared';
 
 import { DEFAULT_SETTINGS, type BackgroundKey } from './settingsShared';

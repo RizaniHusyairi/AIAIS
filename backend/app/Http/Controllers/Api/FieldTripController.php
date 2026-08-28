@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use App\Support\Notifikasi;
 
 /**
  * Pengajuan kunjungan lapangan (field trip).
@@ -92,6 +93,8 @@ class FieldTripController extends Controller
             'documents' => $lintasan,
             'user_id' => $request->user()->id,
         ]);
+
+        Notifikasi::kirim('pengajuan', null, 'Kunjungan Lapangan', '/admin/fieldtrips');
 
         return ApiResponse::success($item, 'Pengajuan field trip berhasil dikirim', null, 201);
     }

@@ -56,6 +56,17 @@ export const TENTANG_KEYS = [
 
 export type TentangKey = (typeof TENTANG_KEYS)[number];
 
+/**
+ * Kunci notifikasi WhatsApp yang BUKAN rahasia.
+ *
+ * Kunci API gateway dan nomor ponsel petugas sengaja tidak ada di sini:
+ * endpoint GET /settings bersifat publik. Keduanya dilayani endpoint bertoken
+ * tersendiri — lihat halaman /admin/whatsapp.
+ */
+export const WA_KEYS = ['wa_enabled', 'wa_endpoint', 'wa_daily_cap'] as const;
+
+export type WaKey = (typeof WA_KEYS)[number];
+
 /** Nilai bawaan — harus selaras dengan SettingController::DEFAULTS di backend. */
 export const DEFAULT_SETTINGS: Record<string, string> = {
   bg_home: '/bg/bg-beranda.png',
@@ -87,4 +98,9 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   tentang_caption_en: '',
   tentang_gambar: '',
   tentang_video_url: '',
+
+  // Notifikasi WhatsApp — kosong berarti "pakai nilai .env di server".
+  wa_enabled: '',
+  wa_endpoint: '',
+  wa_daily_cap: '',
 };
