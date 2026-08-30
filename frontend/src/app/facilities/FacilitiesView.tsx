@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { fetchApi } from '@/lib/api';
 import { useSetting } from '@/lib/settings';
 import { Facility } from '@/types';
@@ -11,6 +11,7 @@ import { useTeks, type Kamus } from '@/lib/kamus';
 import {
   Building2, MapPin, Search, Compass, Plane, ArrowRight, Sparkles, CheckCircle2,
   Armchair, Store, Layers, Accessibility, Headphones, DoorOpen, ParkingSquare,
+  Maximize2, X,
 } from 'lucide-react';
 
 /* ================================================================
@@ -53,6 +54,228 @@ const rise = {
 };
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } };
 
+/* ================================================================
+   Kartu fasilitas
+   ================================================================
+
+   Dijadikan komponen tersendiri karena tiap kartu perlu ingatannya sendiri
+   tentang "foto ini gagal dimuat". Ditaruh di state induk, satu foto rusak
+   akan memicu render ulang seluruh kisi.
+
+   Kepala kartu memakai fotonya bila ada, dan kembali ke ikon kategori bila
+   tidak — termasuk saat berkasnya raib dari cakram, keadaan yang baru
+   ketahuan setelah peramban gagal memuatnya. `image_url` sudah bernilai null
+   dari server bila lintasannya tak ditemukan, sehingga `<img src="">` tidak
+   pernah terbentuk. */
+function KartuFasilitas({ fac, t, onBuka }: { fac: Facility; t: Kamus; onBuka: () => void }) {
+  const meta = catMeta(fac.category);
+  /* Ikonnya dirakit lewat createElement, bukan disimpan pada peubah berhuruf
+     besar lalu dipakai sebagai <Icon />. Keduanya menghasilkan elemen yang
+     sama, tetapi bentuk kedua terbaca linter React sebagai komponen yang
+     dibuat ulang setiap render — padahal `facilityIcon` hanya membaca peta
+     ikon yang tetap. */
+  const ikon = facilityIcon(fac);
+  const [gagal, setGagal] = useState(false);
+  const foto = gagal ? null : fac.image_url;
+
+  return (
+    <motion.article
+      variants={rise}
+      whileHover={{ y: -7 }}
+      className="group relative overflow-hidden bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-slate-300/40 transition-shadow flex flex-col"
+    >
+      <button
+        type="button"
+        onClick={onBuka}
+        aria-label={`${t.fasilitas.lihatFoto} — ${fac.name}`}
+        className="relative h-40 w-full overflow-hidden block cursor-pointer"
+        style={{ backgroundColor: foto ? undefined : meta.bg }}
+      >
+        {foto ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={foto}
+              alt={fac.name}
+              loading="lazy"
+              decoding="async"
+              onError={() => setGagal(true)}
+              className="absolute inset-0 w-full h-full object-cover transition-transform duration-[900ms] ease-out group-hover:scale-[1.08]"
+            />
+            {/* Pil kategori dan badge status duduk di atas foto sembarang
+                warna; tanpa gradien ini keduanya kerap tak terbaca. */}
+            <span className="absolute inset-0 bg-gradient-to-b from-slate-950/45 via-slate-950/5 to-slate-950/45" />
+            <span className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 bg-white/90 backdrop-blur text-slate-700 text-[10.5px] font-bold px-2.5 py-1 rounded-full opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
+              <Maximize2 className="w-3 h-3" /> {t.fasilitas.lihatFoto}
+            </span>
+          </>
+        ) : (
+          <span className="absolute inset-0 flex items-center justify-center">
+            {React.createElement(ikon, {
+              className: 'w-16 h-16 transition-transform duration-500 group-hover:scale-110',
+              style: { color: meta.color, opacity: 0.4 },
+              strokeWidth: 1.4,
+            })}
+            <Plane className="absolute -bottom-3 -right-2 w-14 h-14 text-white/50 rotate-[25deg]" />
+          </span>
+        )}
+
+        <span
+          className="absolute top-3 left-3 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full shadow"
+          style={{ backgroundColor: meta.color }}
+        >
+          {fac.category}
+        </span>
+
+        <span
+          className={`absolute top-3 right-3 inline-flex items-center gap-1 bg-white/90 backdrop-blur text-[10px] font-bold px-2 py-1 rounded-full shadow-sm ${
+            fac.is_operational ? 'text-emerald-700' : 'text-slate-500'
+          }`}
+        >
+          <span className={`w-1.5 h-1.5 rounded-full ${fac.is_operational ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+          {fac.is_operational ? t.fasilitas.statusBeroperasi : t.fasilitas.statusTutup}
+        </span>
+      </button>
+
+      <div className="p-5 flex flex-col flex-1">
+        <h3 className="font-black text-slate-900 text-[16px] leading-snug group-hover:text-blue-700 transition-colors">
+          {fac.name}
+        </h3>
+        <p className="mt-1.5 text-slate-500 text-[12.5px] leading-relaxed line-clamp-3">
+          {fac.description || t.fasilitas.deskripsiBawaan}
+        </p>
+
+        <div className="mt-4 pt-4 border-t border-dashed border-slate-200 flex items-start gap-2">
+          <MapPin className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: meta.color }} />
+          <span className="text-[12px] text-slate-600 leading-relaxed">{fac.location_description}</span>
+        </div>
+      </div>
+
+      <span className="block h-1 w-0 group-hover:w-full transition-all duration-500" style={{ backgroundColor: meta.color }} />
+    </motion.article>
+  );
+}
+
+/* ================================================================
+   Lightbox — foto besar beserta keterangan lengkapnya
+   ================================================================ */
+function LightboxFasilitas({ fac, t, onTutup }: { fac: Facility; t: Kamus; onTutup: () => void }) {
+  const meta = catMeta(fac.category);
+  const ikon = facilityIcon(fac);   // lihat catatan pada KartuFasilitas
+
+  /* Migrasi v1 menyalin `details` ke `description`, sehingga sebagian besar
+     fasilitas memuat kalimat yang sama persis di kedua kolom. Ditampilkan apa
+     adanya, lightbox mengulang isi yang sama dua kali. Ringkasannya karena itu
+     hanya ditampilkan bila ia benar-benar menambah sesuatu di luar butirnya. */
+  const butir = (fac.details ?? []).map((d) => d.trim()).filter(Boolean);
+  const ringkas = (fac.description ?? '').trim();
+  const rapikan = (s: string) => s.replace(/\s+/g, ' ').toLowerCase();
+  const ringkasBerbeda = ringkas !== '' && rapikan(ringkas) !== rapikan(butir.join(' '));
+
+  /* Esc menutup, dan halaman di belakangnya dikunci supaya gulirannya tidak
+     ikut bergerak saat pengunjung menggulir isi lightbox. */
+  useEffect(() => {
+    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') onTutup(); };
+    window.addEventListener('keydown', onEsc);
+    const semula = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onEsc);
+      document.body.style.overflow = semula;
+    };
+  }, [onTutup]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onTutup}
+      role="dialog"
+      aria-modal="true"
+      aria-label={fac.name}
+      className="fixed inset-0 z-[90] flex items-center justify-center p-4 sm:p-6 bg-slate-950/80 backdrop-blur-sm"
+    >
+      <motion.div
+        onClick={(e) => e.stopPropagation()}
+        initial={{ opacity: 0, y: 26, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 16, scale: 0.98 }}
+        transition={{ type: 'spring', stiffness: 280, damping: 26 }}
+        className="relative w-full max-w-3xl max-h-[88vh] overflow-y-auto bg-white rounded-3xl shadow-2xl"
+      >
+        <button
+          type="button"
+          onClick={onTutup}
+          aria-label={t.fasilitas.tutup}
+          className="absolute top-3.5 right-3.5 z-10 w-9 h-9 rounded-full bg-slate-900/60 hover:bg-slate-900 text-white flex items-center justify-center backdrop-blur transition-colors cursor-pointer"
+        >
+          <X className="w-4 h-4" />
+        </button>
+
+        {fac.image_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={fac.image_url} alt={fac.name} className="w-full aspect-[16/10] object-cover bg-slate-100" />
+        ) : (
+          <div className="w-full aspect-[16/6] flex items-center justify-center" style={{ backgroundColor: meta.bg }}>
+            {React.createElement(ikon, {
+              className: 'w-20 h-20',
+              strokeWidth: 1.2,
+              style: { color: meta.color, opacity: 0.45 },
+            })}
+          </div>
+        )}
+
+        <div className="p-6 sm:p-7">
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className="text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
+              style={{ backgroundColor: meta.color }}
+            >
+              {fac.category}
+            </span>
+            <span
+              className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full ${
+                fac.is_operational ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${fac.is_operational ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+              {fac.is_operational ? t.fasilitas.statusBeroperasi : t.fasilitas.statusTutup}
+            </span>
+          </div>
+
+          <h3 className="mt-3 text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight">{fac.name}</h3>
+
+          {(ringkasBerbeda || butir.length === 0) && (
+            <p className="mt-3 text-slate-600 text-[14px] leading-relaxed whitespace-pre-line">
+              {ringkas || t.fasilitas.deskripsiBawaan}
+            </p>
+          )}
+
+          {butir.length > 0 && (
+            <ul className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {butir.map((d) => (
+                <li key={d} className="flex items-start gap-2 text-[13px] text-slate-600">
+                  <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-[7px]" style={{ backgroundColor: meta.color }} />
+                  {d}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <div className="mt-5 pt-4 border-t border-dashed border-slate-200 flex items-start gap-2.5">
+            <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: meta.color }} />
+            <div>
+              <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-400">{t.fasilitas.labelLokasi}</p>
+              <p className="mt-0.5 text-[13.5px] text-slate-700 leading-relaxed">{fac.location_description}</p>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 /* ================================================================ */
 
 export default function FacilitiesView() {
@@ -61,6 +284,7 @@ export default function FacilitiesView() {
   const [loading, setLoading] = useState(true);
   const [cat, setCat] = useState('all');
   const [q, setQ] = useState('');
+  const [dipilih, setDipilih] = useState<Facility | null>(null);
   const heroBg = useSetting('bg_facilities');
 
   useEffect(() => {
@@ -268,62 +492,9 @@ export default function FacilitiesView() {
           </div>
         ) : (
           <motion.div key={cat + q} variants={container} initial="hidden" animate="show" className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {filtered.map((fac) => {
-              const meta = catMeta(fac.category);
-              const Icon = facilityIcon(fac);
-              return (
-                <motion.article
-                  key={fac.id}
-                  variants={rise}
-                  whileHover={{ y: -7 }}
-                  className="group relative overflow-hidden bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-slate-300/40 transition-shadow flex flex-col"
-                >
-                  {/* kepala kartu berwarna kategori */}
-                  <div className="relative h-32 overflow-hidden flex items-center justify-center" style={{ backgroundColor: meta.bg }}>
-                    <Icon
-                      className="w-16 h-16 transition-transform duration-500 group-hover:scale-110"
-                      style={{ color: meta.color, opacity: 0.4 }}
-                      strokeWidth={1.4}
-                    />
-                    <span
-                      className="absolute top-3 left-3 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full shadow"
-                      style={{ backgroundColor: meta.color }}
-                    >
-                      {fac.category}
-                    </span>
-
-                    {fac.is_operational ? (
-                      <span className="absolute top-3 right-3 inline-flex items-center gap-1 bg-white/90 backdrop-blur text-emerald-700 text-[10px] font-bold px-2 py-1 rounded-full shadow-sm">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Beroperasi
-                      </span>
-                    ) : (
-                      <span className="absolute top-3 right-3 inline-flex items-center gap-1 bg-white/90 backdrop-blur text-slate-500 text-[10px] font-bold px-2 py-1 rounded-full shadow-sm">
-                        <span className="w-1.5 h-1.5 rounded-full bg-slate-400" /> Tidak Beroperasi
-                      </span>
-                    )}
-
-                    {/* pesawat dekoratif */}
-                    <Plane className="absolute -bottom-3 -right-2 w-14 h-14 text-white/50 rotate-[25deg]" />
-                  </div>
-
-                  <div className="p-5 flex flex-col flex-1">
-                    <h3 className="font-black text-slate-900 text-[16px] leading-snug group-hover:text-blue-700 transition-colors">
-                      {fac.name}
-                    </h3>
-                    <p className="mt-1.5 text-slate-500 text-[12.5px] leading-relaxed line-clamp-3">
-                      {fac.description || 'Fasilitas resmi Bandara APT Pranoto Samarinda.'}
-                    </p>
-
-                    <div className="mt-4 pt-4 border-t border-dashed border-slate-200 flex items-start gap-2">
-                      <MapPin className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: meta.color }} />
-                      <span className="text-[12px] text-slate-600 leading-relaxed">{fac.location_description}</span>
-                    </div>
-                  </div>
-
-                  <span className="block h-1 w-0 group-hover:w-full transition-all duration-500" style={{ backgroundColor: meta.color }} />
-                </motion.article>
-              );
-            })}
+            {filtered.map((fac) => (
+              <KartuFasilitas key={fac.id} fac={fac} t={t} onBuka={() => setDipilih(fac)} />
+            ))}
           </motion.div>
         )}
       </section>
@@ -440,6 +611,10 @@ export default function FacilitiesView() {
           </div>
         </motion.div>
       </section>
+
+      <AnimatePresence>
+        {dipilih && <LightboxFasilitas fac={dipilih} t={t} onTutup={() => setDipilih(null)} />}
+      </AnimatePresence>
     </div>
   );
 }

@@ -352,6 +352,13 @@ const id = {
     kosongData: 'Data fasilitas belum tersedia saat ini.',
     kosongCari: 'Tidak ada fasilitas yang cocok dengan pencarian Anda.',
 
+    lihatFoto: 'Lihat foto',
+    tutup: 'Tutup',
+    statusBeroperasi: 'Beroperasi',
+    statusTutup: 'Tidak Beroperasi',
+    labelLokasi: 'Lokasi',
+    deskripsiBawaan: 'Fasilitas resmi Bandara APT Pranoto Samarinda.',
+
     denahKicker: 'Denah Terminal',
     denahJudul: 'Peta Skematik Terminal',
     denahRingkas:

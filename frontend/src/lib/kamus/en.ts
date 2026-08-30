@@ -336,6 +336,13 @@ const en = {
     kosongData: 'Facility data is unavailable right now.',
     kosongCari: 'No facilities match your search.',
 
+    lihatFoto: 'View photo',
+    tutup: 'Close',
+    statusBeroperasi: 'Operating',
+    statusTutup: 'Not Operating',
+    labelLokasi: 'Location',
+    deskripsiBawaan: 'An official facility of APT Pranoto Airport, Samarinda.',
+
     denahKicker: 'Terminal Map',
     denahJudul: 'Schematic Terminal Map',
     denahRingkas:

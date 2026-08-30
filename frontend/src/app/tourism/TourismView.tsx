@@ -30,9 +30,25 @@
  * GERAK. Setiap animasi berulang dimatikan saat `prefers-reduced-motion`
  * aktif; putar-otomatis panggung juga berhenti saat tab disembunyikan atau
  * kursor sedang berada di atas bingkai.
+ *
+ * BIAYA GERAK. Lapisan atmosfer di halaman ini pernah menahan 42 lapisan
+ * compositor sekaligus — dua kerucut cahaya 1920×1920 piksel, 34 butir
+ * melayang, dan tekstur grain selebar layar ber-`mix-blend-overlay` yang
+ * bergetar sembilan kali sedetik. Semuanya terus berjalan sepanjang halaman
+ * dibuka, termasuk saat pembaca sudah tergulir jauh melewati panggungnya.
+ * Tiga aturan yang sekarang menahannya tetap ringan:
+ *
+ *   1. Atmosfer hanya bergerak selama panggungnya benar-benar terlihat —
+ *      lihat `useAtmosfer`.
+ *   2. Lapisan yang paling mahal per piksel hanya dipasang pada layar lebar.
+ *   3. Grain tidak lagi dianimasikan. Menggetarkan lapisan sebesar layar yang
+ *      ber-`mix-blend-overlay` memaksa peramban memadukan ulang seluruh
+ *      viewport tiap langkahnya; butirannya sendiri sudah terbaca tanpa itu.
  */
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore,
+} from 'react';
 import Link from 'next/link';
 import {
   motion, AnimatePresence, useMotionValue, useSpring, useTransform,
@@ -128,6 +144,103 @@ function fromStatic(t: (typeof TOURISM_SPOTS)[number]): Spot {
 }
 
 /* ================================================================
+   Gerbang biaya gerak
+   ================================================================ */
+
+/**
+ * Media query yang aman dijalankan saat render server.
+ *
+ * `useSyncExternalStore` dipakai alih-alih `useState` + `useEffect` karena
+ * pasangan itu berarti memanggil `setState` langsung di dalam efek — pola yang
+ * memicu render berantai dan ditolak lint proyek ini.
+ */
+function useMediaQuery(kueri: string, bawaanServer: boolean) {
+  const langganan = useMemo(
+    () => (ubah: () => void) => {
+      const mq = window.matchMedia(kueri);
+      mq.addEventListener('change', ubah);
+      return () => mq.removeEventListener('change', ubah);
+    },
+    [kueri],
+  );
+
+  return useSyncExternalStore(
+    langganan,
+    () => window.matchMedia(kueri).matches,
+    () => bawaanServer,
+  );
+}
+
+/**
+ * Apakah lapisan atmosfer perlu bergerak, dan seberapa penuh.
+ *
+ * `bergerak` mati begitu babak yang memakai atmosfer itu tergulir lewat.
+ * Sebelum ini seluruh lapisan tetap berputar sepanjang halaman dibuka —
+ * pembaca yang sudah sampai ke daftar destinasi di bawah tetap membayar 42
+ * lapisan compositor untuk sesuatu yang tidak lagi ia lihat.
+ *
+ * DIAMATI DUA BAGIAN, bukan satu. Wadah atmosfernya sendiri `fixed inset-0`,
+ * sehingga bagi IntersectionObserver ia selamanya terlihat dan tidak bisa jadi
+ * penanda. Yang benar-benar tergulir adalah hero dan panggungnya; selama salah
+ * satunya masih di layar, atmosfer tetap hidup. Di bawah itu, seksi daftar
+ * destinasi menutupinya dengan latar 80% pekat — geraknya tidak akan terbaca
+ * di sana sekalipun diteruskan.
+ *
+ * `layarLebar` menahan lapisan yang paling mahal per piksel agar hanya
+ * DIPASANG di layar lebar. Jangkauannya sempit tapi tepat sasaran: di bawah
+ * 768px `MobileRedirect` biasanya sudah melempar pembaca ke layar PWA, jadi
+ * yang tersisa di sini hanyalah mereka yang memaksa mode desktop di layar
+ * sempit — persis perangkat yang paling sedikit punya ruang GPU.
+ *
+ * DUA GERBANG INI SENGAJA DIPISAH. `layarLebar` menentukan apa yang DIPASANG,
+ * `bergerak` menentukan apa yang BERGERAK. Bokeh dan kerucut cahaya karena itu
+ * tetap terpasang saat panggungnya terlewat — keduanya masih rupawan dalam
+ * keadaan diam, dan membiarkannya terpasang berarti tidak ada yang perlu
+ * dirakit ulang saat pembaca menggulir kembali.
+ *
+ * Partikel dan kilas cahaya tetap dilepas saat diam: keduanya hanya terbaca
+ * lewat geraknya, dan dibekukan justru menyisakan titik-titik menggantung.
+ * Konsekuensinya, menggulir kembali ke atas memunculkannya bertahap selama
+ * beberapa detik pertama — jeda mulai tiap butir memang sampai 9 detik. Itu
+ * terbaca sebagai atmosfer yang menyala pelan, bukan sebagai cacat.
+ */
+function useAtmosfer(
+  heroRef: React.RefObject<HTMLElement | null>,
+  panggungRef: React.RefObject<HTMLElement | null>,
+  diam: boolean,
+) {
+  const [terlihat, setTerlihat] = useState(true);
+  const layarLebar = useMediaQuery('(min-width: 768px)', true);
+
+  useEffect(() => {
+    const dipantau = [heroRef.current, panggungRef.current]
+      .filter((el): el is HTMLElement => el !== null);
+
+    if (dipantau.length === 0) return;
+
+    const tampak = new Set<Element>();
+
+    /* Ambang longgar: geraknya dihidupkan sedikit sebelum babaknya benar-benar
+       masuk layar, supaya tidak terlihat "menyala" mendadak. */
+    const io = new IntersectionObserver(
+      (masuk) => {
+        for (const m of masuk) {
+          if (m.isIntersecting) tampak.add(m.target);
+          else tampak.delete(m.target);
+        }
+        setTerlihat(tampak.size > 0);
+      },
+      { rootMargin: '160px' },
+    );
+
+    dipantau.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, [heroRef, panggungRef]);
+
+  return { bergerak: !diam && terlihat, layarLebar };
+}
+
+/* ================================================================
    Lapisan atmosfer — seluruhnya prosedural
    ================================================================ */
 
@@ -144,24 +257,29 @@ const GRAIN_URI =
       "<rect width='180' height='180' filter='url(#g)' opacity='0.5'/></svg>",
   );
 
-/** Delapan langkah geser grain — nilai tetap agar getarnya terlihat acak tapi stabil. */
-const GRAIN_X = [0, -14, 9, -6, 17, -11, 5, -16, 0];
-const GRAIN_Y = [0, 11, -17, 7, -9, 15, -5, 12, 0];
-
-function Grain({ diam }: { diam: boolean }) {
+/**
+ * Butiran film 35mm — statis.
+ *
+ * DULU LAPISAN INI BERGETAR delapan langkah tiap 0,9 detik. Terlihat bagus,
+ * tetapi ia lapisan `fixed` seluas layar ber-`mix-blend-overlay`: setiap
+ * langkah memaksa peramban memadukan ulang seluruh viewport terhadap semua
+ * yang ada di bawahnya, sembilan kali sedetik, tanpa henti selama halaman
+ * dibuka. Itu biaya tetap terbesar di halaman ini.
+ *
+ * Teksturnya sendiri tidak berubah: butirannya tetap terbaca sebagai grain
+ * karena kerapatan noise-nya, bukan karena getarnya. Yang hilang hanya kesan
+ * "film sedang berjalan" — dan itu ditukar dengan satu lapisan compositor
+ * yang tidak pernah lagi perlu digambar ulang.
+ *
+ * Tanpa `will-change`: lapisan yang tidak bergerak tidak perlu dipromosikan,
+ * dan mempertahankannya hanya menahan memori GPU tanpa guna.
+ */
+function Grain() {
   return (
-    <motion.div
+    <div
       aria-hidden
-      className="pointer-events-none fixed inset-[-20%] z-[2] opacity-[0.16] mix-blend-overlay"
-      style={{ backgroundImage: `url("${GRAIN_URI}")`, willChange: 'transform' }}
-      animate={diam ? undefined : { x: GRAIN_X, y: GRAIN_Y }}
-      transition={{
-        duration: 0.9,
-        repeat: Infinity,
-        /* Getar bertingkat, bukan geser mulus — inilah yang membuatnya
-           terbaca sebagai butiran film alih-alih tekstur yang melayang. */
-        ease: (t: number) => Math.floor(t * 8) / 8,
-      }}
+      className="pointer-events-none fixed inset-0 z-[2] opacity-[0.16] mix-blend-overlay"
+      style={{ backgroundImage: `url("${GRAIN_URI}")` }}
     />
   );
 }
@@ -175,22 +293,33 @@ function Grain({ diam }: { diam: boolean }) {
  * Itu penyebab utama gerak yang tersendat. Tepian kerucutnya sudah dilandaikan
  * di dalam gradasi lewat perhentian warna, jadi blur-nya memang tidak
  * dibutuhkan.
+ *
+ * UKURANNYA DITURUNKAN dari 150vmax ke 100vmax. Pada layar 1280px itu bukan
+ * penghematan sepertiga melainkan lebih dari separuh — luas tumbuh kuadratik,
+ * jadi 1920×1920 (3,7 MP) menjadi 1280×1280 (1,6 MP) per kerucut. Kerucutnya
+ * berpusat di tengah dan tepiannya sudah transparan jauh sebelum sudut layar,
+ * sehingga pengecilan ini tidak menyingkap tepi mana pun.
+ *
+ * Kerucut kedua hanya dipasang pada layar lebar (`penuh`). Persilangan dua
+ * berkas itu yang memberi kesan sinematik, tetapi di ponsel ia menggandakan
+ * beban raster pada perangkat yang paling sedikit sanggup menanggungnya.
  */
-function BerkasCahaya({ glow, diam }: { glow: string; diam: boolean }) {
+function BerkasCahaya({ glow, diam, penuh }: { glow: string; diam: boolean; penuh: boolean }) {
   const kerucut = (dari: number) =>
     `conic-gradient(from ${dari}deg at 50% 42%, transparent 0deg, ${glow}08 6deg, ${glow}20 15deg, ` +
     `${glow}08 24deg, transparent 34deg, transparent 148deg, ${glow}06 158deg, ${glow}18 168deg, ` +
     `${glow}06 178deg, transparent 190deg, transparent 360deg)`;
 
+  const berkas = penuh
+    ? [{ dur: 84, arah: 360, op: 0.6 }, { dur: 127, arah: -360, op: 0.4 }]
+    : [{ dur: 84, arah: 360, op: 0.6 }];
+
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-      {[
-        { dur: 84, arah: 360, op: 0.6 },
-        { dur: 127, arah: -360, op: 0.4 },
-      ].map((b, i) => (
+      {berkas.map((b, i) => (
         <motion.div
           key={i}
-          className="absolute left-1/2 top-1/2 h-[150vmax] w-[150vmax]"
+          className="absolute left-1/2 top-1/2 h-[100vmax] w-[100vmax]"
           style={{
             background: kerucut(i * 90),
             opacity: b.op,
@@ -208,11 +337,19 @@ function BerkasCahaya({ glow, diam }: { glow: string; diam: boolean }) {
   );
 }
 
-/** Bokeh melayang — posisi dan ritme ditetapkan, bukan diacak saat render. */
-const BOKEH = Array.from({ length: 18 }).map((_, i) => ({
+/**
+ * Bokeh melayang — posisi dan ritme ditetapkan, bukan diacak saat render.
+ *
+ * DELAPAN, sebelumnya delapan belas. Bokeh berukuran 40–170px dan beropasitas
+ * 0,05–0,13; pada kerapatan itu selisih sepuluh butir hampir tidak terbaca
+ * mata, sementara tiap butir menahan satu lapisan compositor sendiri selama
+ * halaman dibuka. Pengalinya diubah agar delapan yang tersisa tetap tersebar
+ * merata, bukan menumpuk di sudut yang sama seperti bila daftarnya dipotong.
+ */
+const BOKEH = Array.from({ length: 8 }).map((_, i) => ({
   id: i,
-  left: (i * 53) % 100,
-  top: (i * 29) % 100,
+  left: (i * 37) % 100,
+  top: (i * 61) % 100,
   size: 40 + ((i * 37) % 130),
   dur: 18 + ((i * 7) % 16),
   delay: (i * 1.9) % 11,
@@ -238,7 +375,10 @@ function Bokeh({ glow, diam }: { glow: string; diam: boolean }) {
                perhentian warna. */
             background: `radial-gradient(circle, ${glow} 0%, ${glow}80 34%, transparent 72%)`,
             opacity: b.op,
-            willChange: 'transform, opacity',
+            /* Tanpa `will-change`: peramban sudah mempromosikan elemen yang
+               transform-nya sedang beranimasi, dan menyatakannya sendiri di
+               sini justru menahan lapisannya hidup terus — termasuk saat
+               panggungnya sudah tidak terlihat dan geraknya dihentikan. */
           }}
           animate={diam ? undefined : { y: [0, -70, 0], x: [0, b.drift, 0], opacity: [b.op, b.op * 2.4, b.op] }}
           transition={{ duration: b.dur, delay: b.delay, repeat: Infinity, ease: 'easeInOut' }}
@@ -252,11 +392,17 @@ function Bokeh({ glow, diam }: { glow: string; diam: boolean }) {
    Partikel per destinasi
    --------------------------------------------------------------- */
 
-/** Butir partikel — posisi dan ritme ditetapkan, bukan diacak saat render. */
-const BUTIR = Array.from({ length: 16 }).map((_, i) => ({
+/**
+ * Butir partikel — posisi dan ritme ditetapkan, bukan diacak saat render.
+ *
+ * SEMBILAN, sebelumnya enam belas. Butirnya berukuran 5–17px dan sebagian
+ * besar waktunya beropasitas rendah atau nol; yang membuat lapisan ini terbaca
+ * adalah ritme dan arah geraknya, bukan cacahnya.
+ */
+const BUTIR = Array.from({ length: 9 }).map((_, i) => ({
   id: i,
-  left: (i * 61) % 100,
-  top: (i * 37) % 100,
+  left: (i * 43) % 100,
+  top: (i * 71) % 100,
   size: 5 + ((i * 11) % 13),
   delay: (i * 1.3) % 9,
   dur: 9 + ((i * 5) % 11),
@@ -344,7 +490,7 @@ function Partikel({ jenis, glow, diam }: { jenis: JenisPartikel; glow: string; d
               ...(sprite
                 ? { backgroundImage: `url(${sprite})`, backgroundSize: 'cover', mixBlendMode: 'screen' as const }
                 : { background: `radial-gradient(circle, ${glow} 0%, ${glow}77 42%, transparent 72%)` }),
-              willChange: 'transform, opacity',
+              /* Tanpa `will-change` — lihat catatan pada Bokeh. */
             }}
             animate={g.animate}
             transition={{ duration: g.dur, delay: b.delay, repeat: Infinity, ease: g.ease }}
@@ -503,6 +649,11 @@ export default function TourismView() {
 
   const judulRef = useRef<HTMLElement | null>(null);
   const kisiRef = useRef<HTMLDivElement | null>(null);
+  const panggungRef = useRef<HTMLElement | null>(null);
+
+  /* Atmosfer hanya bergerak selama hero atau panggungnya masih di layar. */
+  const atmosfer = useAtmosfer(judulRef, panggungRef, diam);
+  const diamAtmosfer = !atmosfer.bergerak;
 
   /* Data API menggantikan cadangan statis begitu tersedia. */
   useEffect(() => {
@@ -613,7 +764,7 @@ export default function TourismView() {
   return (
     <div className="relative overflow-hidden bg-[#03060f]">
       <Letterbox />
-      <Grain diam={diam} />
+      <Grain />
 
       {/* ============ CHROME SENDIRI ============
           Halaman ini terdaftar di `OWN_CHROME_ROUTES`, jadi navbar dan footer
@@ -680,7 +831,7 @@ export default function TourismView() {
             key={i}
             className="absolute inset-[-15%]"
             style={{ background: l.g, willChange: 'transform' }}
-            animate={diam ? undefined : { x: l.x, y: l.y }}
+            animate={diamAtmosfer ? undefined : { x: l.x, y: l.y }}
             transition={{ duration: l.dur, repeat: Infinity, ease: 'easeInOut' }}
           />
         ))}
@@ -707,12 +858,15 @@ export default function TourismView() {
           );
         })}
 
-        <BerkasCahaya glow={meta.glow} diam={diam} />
-        <Bokeh glow={meta.glow} diam={diam} />
-        <KilasCahaya glow={meta.glow} diam={diam} />
+        <BerkasCahaya glow={meta.glow} diam={diamAtmosfer} penuh={atmosfer.layarLebar} />
+        {/* Bokeh dan kilas cahaya hanya dipasang di layar lebar: keduanya
+            lapisan besar yang di layar sempit nyaris tak terbaca di balik
+            vignette, sementara biayanya justru paling terasa di sana. */}
+        {atmosfer.layarLebar && <Bokeh glow={meta.glow} diam={diamAtmosfer} />}
+        {atmosfer.layarLebar && <KilasCahaya glow={meta.glow} diam={diamAtmosfer} />}
         {/* Watak geraknya mengikuti destinasi yang sedang tampil: percik air di
             Air Terjun Tanah Merah, bara di Citra Niaga, kunang di masjid. */}
-        <Partikel jenis={jenisPartikel} glow={meta.glow} diam={diam} />
+        <Partikel jenis={jenisPartikel} glow={meta.glow} diam={diamAtmosfer} />
 
         {/* Vignette penutup — menjaga teks tetap terbaca di seluruh babak. */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_18%,rgba(3,6,15,0.82)_72%,#03060f)]" />
@@ -802,7 +956,7 @@ export default function TourismView() {
       {/* ================================================================
           BABAK II — PANGGUNG
           ================================================================ */}
-      <section id="panggung" className="relative z-10 scroll-mt-6 px-3 pb-14 sm:px-6">
+      <section ref={panggungRef} id="panggung" className="relative z-10 scroll-mt-6 px-3 pb-14 sm:px-6">
         <div
           className="mx-auto w-full max-w-[1460px]"
           onPointerEnter={() => setTertahan(true)}

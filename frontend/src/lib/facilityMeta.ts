@@ -36,6 +36,21 @@ export const FACILITY_CAT_META: Record<string, { color: string; bg: string; icon
   'Komersial': { color: '#7c3aed', bg: '#f5f3ff', icon: Store },
 };
 
+/**
+ * Kategori yang ditawarkan panel admin.
+ *
+ * Hanya ketiga inilah yang benar-benar dipakai fasilitas terdaftar. Daftar yang
+ * sebelumnya tertulis di halaman admin ("Ibadah", "Konektivitas", "Disabilitas",
+ * …) tidak cocok dengan satu baris pun, sehingga setiap fasilitas yang disunting
+ * lewat panel berpindah kategori tanpa disadari petugas.
+ *
+ * Backend sengaja tetap menerima kategori bebas — `CLAUDE.md` melarang kolom
+ * enum supaya menambah kategori tidak menuntut migrasi. Daftar ini tinggal di
+ * sini, bukan di model backend, karena berkas inilah satu-satunya tempat
+ * frontend mengenali kategori: yang memberinya warna dan ikon.
+ */
+export const FACILITY_CATEGORIES = ['Sisi Udara', 'Sisi Darat', 'Umum'] as const;
+
 const FALLBACK_META = { color: '#64748b', bg: '#f1f5f9', icon: Building2 };
 
 export function facilityCatMeta(category: string) {

@@ -376,8 +376,14 @@ Route::prefix(config('api.version'))->group(function () {
             Route::delete('/announcements/{id}', [AnnouncementController::class, 'destroy']);
 
             // Facilities Management
+            //
+            // `POST /facilities/{id}` mendampingi `PUT` karena form fasilitas
+            // mengirim foto lewat multipart, dan multipart tidak dapat dikirim
+            // lewat PUT dari browser. `PUT` tetap dipertahankan: sakelar status
+            // pada tabel admin masih memakainya dengan badan JSON parsial.
             Route::get('/facilities', [FacilityController::class, 'adminIndex']);
             Route::post('/facilities', [FacilityController::class, 'store']);
+            Route::post('/facilities/{id}', [FacilityController::class, 'update']);
             Route::put('/facilities/{id}', [FacilityController::class, 'update']);
             Route::delete('/facilities/{id}', [FacilityController::class, 'destroy']);
 
