@@ -237,6 +237,11 @@ const id = {
     putarVideo: 'Putar video profil',
     lihatProfil: 'Lihat Profil Bandara',
 
+    pengumumanKicker: 'Papan Pengumuman',
+    pengumumanJudul: 'Informasi Terkini Bandara',
+    pengumumanAktif: 'pengumuman berlaku',
+    pengumumanSampai: 'Berlaku sampai',
+
     beritaKicker: 'Kabar Terkini',
     beritaJudul: 'Berita & Pengumuman',
     fasilitasKicker: 'Kenyamanan',
@@ -262,7 +267,7 @@ const id = {
     aksesJudul: 'Akses Menuju Bandara',
     akses: {
       pribadi: { nama: 'Kendaraan Pribadi', desc: 'Tersedia area parkir yang luas' },
-      taksi: { nama: 'Taksi & Rideshare', desc: 'Layanan tersedia 24 jam' },
+      taksi: { nama: 'Taksi & Rideshare', desc: 'Konter koperasi taksi di luar area kedatangan' },
       bus: { nama: 'Bus & Shuttle', desc: 'Tersedia layanan bus dari berbagai titik kota' },
       rental: { nama: 'Rental Mobil', desc: 'Berbagai pilihan rental mobil di area bandara' },
     },

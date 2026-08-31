@@ -26,12 +26,15 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import PpidHero, { FlightArc } from '@/components/ppid/PpidHero';
+import { useSetting } from '@/lib/settings';
 import {
-  SP_PENGANTAR, SP_DASAR_HUKUM, formatTanggal,
+  SP_PENGANTAR, SP_DASAR_HUKUM,
   type ServiceDoc, type ServiceDocGroup,
 } from '@/lib/serviceStandardData';
 import type { SkmKey } from '@/lib/settingsShared';
 import { slugify } from '@/lib/ppidGroups';
+import { useBahasa } from '@/lib/bahasa';
+import { formatTanggal } from '@/lib/kamus';
 import { fetchApi } from '@/lib/api';
 import type { ServiceStandard as ServiceStandardData } from '@/types';
 import {
@@ -50,6 +53,7 @@ const container = { hidden: {}, show: { transition: { staggerChildren: 0.08 } } 
    ================================================================ */
 
 function DocRow({ doc }: { doc: ServiceDoc }) {
+  const bahasa = useBahasa();
   const tersedia = !!doc.url;
 
   return (
@@ -77,7 +81,7 @@ function DocRow({ doc }: { doc: ServiceDoc }) {
             )}
             <span className="inline-flex items-center gap-1">
               <CalendarDays className="w-3 h-3" />
-              {formatTanggal(doc.published)}
+              {formatTanggal(doc.published, bahasa)}
             </span>
           </div>
 
@@ -226,6 +230,7 @@ const GROUP_LEAD: Record<string, string> = {
 };
 
 export default function StandarPelayananView({ skm }: { skm: Record<SkmKey, string> }) {
+  const heroBg = useSetting('bg_ppid');
   // Blok SKM datang sebagai prop dari Server Component, BUKAN lewat
   // `useSetting` — lihat alasannya di ../page.tsx.
   const skmAktif = skm.skm_is_active !== '0';
@@ -296,6 +301,7 @@ export default function StandarPelayananView({ skm }: { skm: Record<SkmKey, stri
         accent="Pelayanan"
         subtitle="Bandar Udara APT Pranoto Samarinda"
         lead={SP_PENGANTAR}
+        bg={heroBg}
       />
 
       {/* ============================================================ */}
@@ -385,11 +391,27 @@ export default function StandarPelayananView({ skm }: { skm: Record<SkmKey, stri
             Klik salah satu kelompok untuk melihat daftar dokumennya.
           </motion.p>
 
-          <motion.div variants={container} className="mt-8 space-y-4">
+          {/* Daftar kelompok memakai `animate`, bukan `whileInView`.
+
+              Pembungkus di atas menyalakan variannya lewat `whileInView`, dan
+              pengamat itu sudah selesai menyala saat bagian ini masuk layar —
+              yaitu ketika isinya masih berupa rangka pemuatan. Panel yang baru
+              menyusul setelah data tiba tidak lagi kebagian varian "show",
+              sehingga ketiganya berhenti di varian "hidden": ada di DOM,
+              ruangnya terpakai, tapi beropasitas nol. Itulah halaman kosong
+              yang terlihat meski kartu statistik menyebut "3 dokumen".
+
+              `animate` menyala begitu elemennya lahir, tanpa bergantung pada
+              perpotongan viewport — dan elemen ini memang baru lahir setelah
+              datanya tiba. Pola yang sama dipakai daftar dokumen di dalam
+              `DocAccordion`. */}
+          <div className="mt-8">
             {loading ? (
-              [0, 1, 2].map((i) => (
-                <div key={i} className="h-[84px] rounded-3xl bg-white ring-1 ring-slate-200/70 animate-pulse" />
-              ))
+              <div className="space-y-4" aria-busy="true" aria-label="Memuat dokumen">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="h-[84px] rounded-3xl bg-white ring-1 ring-slate-200/70 animate-pulse" />
+                ))}
+              </div>
             ) : groups.length === 0 ? (
               <div className="rounded-3xl bg-white ring-1 ring-slate-200/70 px-6 py-10 text-center">
                 <p className="text-[13.5px] font-bold text-slate-700">Belum ada dokumen yang terdaftar.</p>
@@ -398,17 +420,24 @@ export default function StandarPelayananView({ skm }: { skm: Record<SkmKey, stri
                 </p>
               </div>
             ) : (
-              groups.map((g, i) => (
-                <GroupPanel
-                  key={g.slug}
-                  group={g}
-                  index={i}
-                  open={terbukaKini.includes(g.slug)}
-                  onToggle={() => toggle(g.slug)}
-                />
-              ))
+              <motion.div
+                variants={container}
+                initial="hidden"
+                animate="show"
+                className="space-y-4"
+              >
+                {groups.map((g, i) => (
+                  <GroupPanel
+                    key={g.slug}
+                    group={g}
+                    index={i}
+                    open={terbukaKini.includes(g.slug)}
+                    onToggle={() => toggle(g.slug)}
+                  />
+                ))}
+              </motion.div>
             )}
-          </motion.div>
+          </div>
 
           {/* Keterangan jujur soal ketersediaan berkas */}
           {tersedia < total && (

@@ -4,9 +4,10 @@
  * Manajemen Informasi Setiap Saat — dokumen yang tersedia kapan pun diminta.
  *
  * Bentuknya sama dengan Informasi Berkala: `adminFetch` biasa karena
- * dokumennya berupa tautan luar, kategori bebas teks karena petugas yang
- * menentukan kelompoknya, dan dokumen bertautan kosong tetap ditampilkan
- * dengan penanda karena halaman publik menyaringnya.
+ * dokumennya berupa tautan luar, kategori dipilih dari daftar berikut chip
+ * "Kategori lain…" karena halaman publik mengelompokkan dokumen persis dari
+ * string kategori, dan dokumen bertautan kosong tetap ditampilkan dengan
+ * penanda karena halaman publik menyaringnya.
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
@@ -16,6 +17,8 @@ import {
   PageHeader, Panel, Btn, Badge, Field, Modal, ConfirmDialog, Toast, ToastMsg,
   Loading, EmptyState, Table, Row, Cell, SearchBox, StatCard, stagger,
 } from '@/components/admin/ui';
+import { Galat, IsianTautan, PilihKategori, tautanSah } from '@/components/admin/isian';
+import { KATEGORI_SETIAP_SAAT, gabungKategori } from '@/lib/ppidKategori';
 import { DoorOpen, Plus, Pencil, Trash2, RefreshCw, FolderOpen, FileText, AlertTriangle, Link as LinkIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -34,6 +37,7 @@ export default function AdminEvergreenInformationPage() {
   const [q, setQ] = useState('');
 
   const [form, setForm] = useState<FormState>(EMPTY);
+  const [galat, setGalat] = useState<Record<string, string>>({});
   const [editId, setEditId] = useState<number | null>(null);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -70,6 +74,19 @@ export default function AdminEvergreenInformationPage() {
     [items],
   );
 
+  /* Kategori resmi portal v1 lebih dulu, disusul kategori tak terduga yang
+     benar-benar ada di basis data — supaya tidak satu pun kelompok lama
+     kehilangan tempatnya di daftar pilihan. */
+  const pilihanKategori = useMemo(
+    () => gabungKategori(KATEGORI_SETIAP_SAAT, kategoriAda),
+    [kategoriAda],
+  );
+
+  const isi = (k: keyof FormState, v: string) => {
+    setForm((s) => ({ ...s, [k]: v }));
+    setGalat((g) => (g[k] ? { ...g, [k]: '' } : g));
+  };
+
   const stats = useMemo(() => ({
     total: items.length,
     kategori: kategoriAda.length,
@@ -77,7 +94,9 @@ export default function AdminEvergreenInformationPage() {
     tahunIni: items.filter((d) => String(d.published_date ?? '').startsWith(String(new Date().getFullYear()))).length,
   }), [items, kategoriAda]);
 
-  const openCreate = () => { setForm({ ...EMPTY, category: kategoriAda[0] ?? '' }); setEditId(null); setOpen(true); };
+  // Kategori tidak lagi ditebak dari data: memilihnya kini satu klik, dan
+  // isian yang terisi sendiri justru kerap ikut tersimpan tanpa diperiksa.
+  const openCreate = () => { setForm(EMPTY); setGalat({}); setEditId(null); setOpen(true); };
   const openEdit = (d: EvergreenInformation) => {
     setForm({
       category: d.category,
@@ -85,11 +104,29 @@ export default function AdminEvergreenInformationPage() {
       document_link: d.document_link,
       published_date: d.published_date ? String(d.published_date).slice(0, 10) : '',
     });
+    setGalat({});
     setEditId(d.id);
     setOpen(true);
   };
 
+  const periksa = () => {
+    const g: Record<string, string> = {};
+    if (!form.category.trim()) g.category = 'Kategori wajib dipilih.';
+    if (!form.title.trim()) g.title = 'Judul dokumen wajib diisi.';
+    if (!form.document_link.trim()) g.document_link = 'Tautan dokumen wajib diisi.';
+    else if (!tautanSah(form.document_link.trim())) g.document_link = 'Tautan harus diawali http:// atau https://';
+    if (!form.published_date) g.published_date = 'Tanggal terbit wajib diisi.';
+
+    setGalat(g);
+    return Object.keys(g).length === 0;
+  };
+
   const save = async () => {
+    if (!periksa()) {
+      setToast({ text: 'Ada isian yang belum lengkap.', kind: 'error' });
+      return;
+    }
+
     setSaving(true);
     const res = editId
       ? await adminFetch(`/evergreen-information/${editId}`, { method: 'PUT', body: form })
@@ -188,15 +225,35 @@ export default function AdminEvergreenInformationPage() {
         }
       >
         <div className="space-y-4">
-          <Field label="Kategori" required value={form.category} onChange={(v) => setForm({ ...form, category: v })} placeholder="Profil Bandara" />
-          {kategoriAda.length > 0 && (
-            <p className="-mt-2 text-[11.5px] text-[var(--adm-muted)]">
-              Kategori yang sudah dipakai: {kategoriAda.join(' · ')}
-            </p>
-          )}
-          <Field label="Judul Dokumen" required type="textarea" rows={2} value={form.title} onChange={(v) => setForm({ ...form, title: v })} />
-          <Field label="Tautan Dokumen" required value={form.document_link} onChange={(v) => setForm({ ...form, document_link: v })} placeholder="https://drive.google.com/file/d/.../view" />
-          <Field label="Tanggal Terbit" required type="date" value={form.published_date} onChange={(v) => setForm({ ...form, published_date: v })} />
+          <PilihKategori
+            nilai={form.category}
+            pilihan={pilihanKategori}
+            onChange={(v) => isi('category', v)}
+            galat={galat.category}
+          />
+
+          <div>
+            <Field
+              label="Judul Dokumen" required type="textarea" rows={2}
+              value={form.title} onChange={(v) => isi('title', v)}
+              placeholder="Standar Operasional Prosedur Pelayanan Informasi"
+            />
+            <Galat pesan={galat.title} />
+          </div>
+
+          <IsianTautan
+            label="Tautan Dokumen" wajib
+            nilai={form.document_link}
+            onChange={(v) => isi('document_link', v)}
+            placeholder="https://drive.google.com/file/d/.../view"
+            hint="Tempel alamat berbagi Google Drive dokumennya."
+            galat={galat.document_link}
+          />
+
+          <div>
+            <Field label="Tanggal Terbit" required type="date" value={form.published_date} onChange={(v) => isi('published_date', v)} />
+            <Galat pesan={galat.published_date} />
+          </div>
         </div>
       </Modal>
 

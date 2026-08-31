@@ -13,7 +13,7 @@ import { APP_VERSION, VERSION_LABEL, IS_PRERELEASE, RELEASE_CHANNEL } from '@/li
 import InstagramGlyph from '@/components/icons/InstagramGlyph';
 import LonengNotifikasi from '@/components/admin/LonengNotifikasi';
 import {
-  LayoutDashboard, Plane, Newspaper, Megaphone, Building2, Store, FileText, MessageSquareWarning,
+  LayoutDashboard, Newspaper, Megaphone, Building2, Store, FileText, MessageSquareWarning,
   LogOut, ExternalLink, ShieldCheck, Menu, Radar, ChevronRight, ImageIcon, ScrollText, Scale, Landmark,
   Search, SearchX, Sun, Moon,
   CalendarClock, DoorOpen, Radio, FileBarChart, Globe, ClipboardList, Users, UserCircle, UserRound, HelpCircle, MapPin, BarChart3, Gauge, MessageSquare, CalendarRange, Wallet, School, BadgeCheck, Gavel, HardHat, PartyPopper,
@@ -39,7 +39,6 @@ const NAV: { section: string; items: NavItem[] }[] = [
   {
     section: 'Operasional',
     items: [
-      { name: 'Penerbangan (FIDS)', href: '/admin/flights', icon: Plane },
       { name: 'Lalu Lintas Udara', href: '/admin/air-traffic', icon: BarChart3 },
       { name: 'Posko Nataru', href: '/admin/nataru', icon: CalendarRange },
       { name: 'Kinerja Keuangan', href: '/admin/keuangan', icon: Wallet },
@@ -50,6 +49,7 @@ const NAV: { section: string; items: NavItem[] }[] = [
     items: [
       { name: 'Berita & Artikel', href: '/admin/news', icon: Newspaper },
       { name: 'Pengumuman', href: '/admin/announcements', icon: Megaphone },
+      { name: 'Slide Informasi', href: '/admin/info-slides', icon: ImageIcon },
       { name: 'Dokumen', href: '/admin/documents', icon: FileText },
       { name: 'Regulasi', href: '/admin/regulasi', icon: Scale },
       { name: 'Pejabat Bandara', href: '/admin/pejabat', icon: UserRound },
@@ -63,6 +63,7 @@ const NAV: { section: string; items: NavItem[] }[] = [
     // tunduk pada kewajiban UU 14/2008, bukan sekadar materi promosi.
     section: 'Informasi Publik (PPID)',
     items: [
+      { name: 'Profil PPID', href: '/admin/profil-ppid', icon: ShieldCheck },
       { name: 'Regulasi PPID', href: '/admin/ppid-regulations', icon: Landmark },
       { name: 'Informasi Berkala', href: '/admin/periodic-documents', icon: CalendarClock },
       { name: 'Informasi Setiap Saat', href: '/admin/evergreen-information', icon: DoorOpen },

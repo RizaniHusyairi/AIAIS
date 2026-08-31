@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { fetchApi } from '@/lib/api';
 import { useSetting } from '@/lib/settings';
-import { TOURISM_SPOTS, TOURISM_CAT_META } from '@/lib/tourismData';
+import { TOURISM_SPOTS, TOURISM_CAT_META, type TourismCategory } from '@/lib/tourismData';
 import { ORG_NAME } from '@/lib/airportProfile';
 import { PEJABAT_PHOTO_FIT } from '@/lib/pejabatFoto';
 import { usePejabat } from '@/lib/pejabatLive';
@@ -15,7 +15,8 @@ import { usePerayaanAktif } from '@/lib/perayaanAktif';
 import NamaBandaraHero from '@/components/home/NamaBandaraHero';
 import HeroBoardingPass from '@/components/home/HeroBoardingPass';
 import { LampuLandasan, JudulBagian } from '@/components/home/AviasiDekor';
-import { NewsItem, InstagramPost } from '@/types';
+import { NewsItem, InstagramPost, Facility, TourismItem, InfoSlide } from '@/types';
+import { facilityCatMeta, facilityIcon } from '@/lib/facilityMeta';
 import GambarBerita from '@/components/GambarBerita';
 import PetaSematanGoogle from '@/components/map/PetaSematanGoogle';
 import { AIRPORTS, HOME_IATA } from '@/lib/airports';
@@ -26,7 +27,7 @@ import { useTentang } from '@/lib/tentang';
 import VideoProfil from '@/components/home/VideoProfil';
 import {
   Plane, ArrowRight, Building2, ChevronRight, ChevronLeft, MapPin, Car,
-  ParkingSquare, Headphones, Wifi, Sofa, UtensilsCrossed, MoonStar, Baby, Accessibility,
+  ParkingSquare, Headphones,
   CarFront, Bus, Mail, Share2, Send, Navigation, Calendar, Palmtree, Clock,
 } from 'lucide-react';
 
@@ -67,20 +68,54 @@ const quickAccess = (t: Kamus) => [
   { kunci: 'peta', ...t.beranda.cepat.peta, icon: MapPin, color: '#059669', bg: '#ecfdf5', href: '/facilities#peta' },
 ];
 
-const fasilitasUnggulan = (t: Kamus) => [
-  { kunci: 'wifi', ...t.beranda.fasilitas.wifi, icon: Wifi, color: '#2563eb', bg: '#eff6ff' },
-  { kunci: 'ruang-tunggu', ...t.beranda.fasilitas.ruangTunggu, icon: Sofa, color: '#0d9488', bg: '#f0fdfa' },
-  { kunci: 'restoran', ...t.beranda.fasilitas.restoran, icon: UtensilsCrossed, color: '#e11d48', bg: '#fff1f2' },
-  { kunci: 'musala', ...t.beranda.fasilitas.musala, icon: MoonStar, color: '#059669', bg: '#ecfdf5' },
-  { kunci: 'anak', ...t.beranda.fasilitas.bermainAnak, icon: Baby, color: '#d97706', bg: '#fffbeb' },
-  { kunci: 'disabilitas', ...t.beranda.fasilitas.disabilitas, icon: Accessibility, color: '#7c3aed', bg: '#f5f3ff' },
-];
+/*
+ * Kartu-kartu ini dulu sepenuhnya dekoratif — tidak satu pun menuju ke mana
+ * pun, termasuk kartu taksi, padahal daftar mitranya ada di
+ * `/tenants#transportasi`. Kini ketiga moda yang benar-benar terdaftar di sana
+ * bertaut ke sana. Kendaraan pribadi tidak: itu soal parkir, bukan mitra.
+ */
+/**
+ * Satu kartu wisata pada beranda.
+ *
+ * Bentuk perantara, sama seperti `Spot` di halaman /tourism: data API dan
+ * arsip statis punya nama medan yang berbeda, dan kartunya tidak perlu tahu
+ * mana yang sedang dipakai.
+ */
+type WisataKartu = {
+  slug: string;
+  name: string;
+  category: string;
+  distanceKm: number | null;
+  duration: string | null;
+  city: string | null;
+  ringkas: string;
+};
+
+const wisataDariApi = (t: TourismItem): WisataKartu => ({
+  slug: t.slug,
+  name: t.name,
+  category: t.category,
+  distanceKm: t.distance_km,
+  duration: t.duration,
+  city: t.city,
+  ringkas: t.short_desc || t.description,
+});
+
+const wisataDariArsip = (t: (typeof TOURISM_SPOTS)[number]): WisataKartu => ({
+  slug: t.slug,
+  name: t.name,
+  category: t.category,
+  distanceKm: t.distanceKm,
+  duration: t.duration,
+  city: t.city,
+  ringkas: t.description,
+});
 
 const aksesBandara = (t: Kamus) => [
-  { kunci: 'pribadi', ...t.beranda.akses.pribadi, icon: Car },
-  { kunci: 'taksi', ...t.beranda.akses.taksi, icon: CarFront },
-  { kunci: 'bus', ...t.beranda.akses.bus, icon: Bus },
-  { kunci: 'rental', ...t.beranda.akses.rental, icon: Navigation },
+  { kunci: 'pribadi', ...t.beranda.akses.pribadi, icon: Car, href: undefined as string | undefined },
+  { kunci: 'taksi', ...t.beranda.akses.taksi, icon: CarFront, href: '/tenants#transportasi' },
+  { kunci: 'bus', ...t.beranda.akses.bus, icon: Bus, href: '/tenants#transportasi' },
+  { kunci: 'rental', ...t.beranda.akses.rental, icon: Navigation, href: '/tenants#transportasi' },
 ];
 
 /*
@@ -127,7 +162,6 @@ export default function HomePage() {
   const tentang = useTentang();
   const semuaAngka = useStatistikBandara();
   const ABOUT_STATS = semuaAngka.filter((s) => s.diTentang);
-  const FASILITAS = fasilitasUnggulan(t);
   const AKSES = aksesBandara(t);
   const ANGKA = semuaAngka.filter((s) => s.diAngka);
 
@@ -140,6 +174,12 @@ export default function HomePage() {
      tahu bedanya — keduanya baris yang sama di tabel yang sama. */
   const [igPosts, setIgPosts] = useState<InstagramPost[]>([]);
   const [news, setNews] = useState<NewsItem[]>([]);
+  const [facilities, setFacilities] = useState<Facility[]>([]);
+  const [slides, setSlides] = useState<InfoSlide[]>([]);
+  const [slideAktif, setSlideAktif] = useState(0);
+  const [slideOtomatis, setSlideOtomatis] = useState(true);
+  const [slideTertahan, setSlideTertahan] = useState(false);
+  const [wisata, setWisata] = useState<WisataKartu[]>(() => TOURISM_SPOTS.map(wisataDariArsip));
   const [exec, setExec] = useState(0);
   const [auto, setAuto] = useState(true);
 
@@ -163,7 +203,26 @@ export default function HomePage() {
     fetchApi<InstagramPost[]>('/instagram-posts').then((res) => {
       if (res.success && Array.isArray(res.data)) setIgPosts(res.data);
     });
+    // Endpoint publiknya sudah menyaring yang tidak beroperasi.
+    fetchApi<Facility[]>('/facilities').then((res) => {
+      if (res.success && Array.isArray(res.data)) setFacilities(res.data);
+    });
+    /* Destinasi wisata. Daftar kosong dari API TIDAK menggantikan arsip:
+       endpoint yang sedang gagal tidak boleh membuat bagian ini lenyap —
+       perlakuan yang sama dengan halaman /tourism. */
+    /* Papan pengumuman bergambar. Endpoint publiknya sudah menyaring slide
+       yang disembunyikan maupun yang gambarnya hilang — lihat
+       InfoSlideController::index(). */
+    fetchApi<InfoSlide[]>('/info-slides').then((res) => {
+      if (res.success && Array.isArray(res.data)) setSlides(res.data);
+    });
+    fetchApi<TourismItem[]>('/tourisms').then((res) => {
+      if (res.success && Array.isArray(res.data) && res.data.length > 0) {
+        setWisata(res.data.map(wisataDariApi));
+      }
+    });
   }, []);
+
 
   useEffect(() => {
     if (!auto || EXECUTIVES.length === 0) return;
@@ -177,6 +236,52 @@ export default function HomePage() {
   const current = EXECUTIVES[aman];
   const others = EXECUTIVES.filter((_, i) => i !== aman).slice(0, 4);
   const latestNews = news.slice(0, 3);
+
+  /* Enam fasilitas untuk beranda.
+
+     Kategori "Umum" didahulukan: itulah yang benar-benar dapat dipakai
+     penumpang. Daftar basis data didominasi fasilitas teknis — Runway,
+     Apron, Power Station — yang tidak berarti apa-apa bagi pengunjung yang
+     sedang mencari mushola. Yang berfoto didahulukan di antara sesamanya,
+     supaya barisan kartunya tidak seluruhnya berupa bidang gradien.
+
+     Delapan, bukan enam: kisinya empat kolom, dan enam kartu menyisakan dua
+     lubang pada baris kedua. */
+  const FASILITAS = useMemo(() => {
+    const nilai = (f: Facility) => (f.category === 'Umum' ? 0 : 2) + (f.image_url ? 0 : 1);
+
+    return [...facilities].sort((a, b) => nilai(a) - nilai(b)).slice(0, 8);
+  }, [facilities]);
+
+  /* Empat destinasi terdekat. Jaraknya boleh kosong — tabel warisan v1 tidak
+     mengisi `distance_km` untuk seluruh barisnya — dan yang tanpa jarak
+     ditaruh di belakang, bukan dianggap berjarak nol. */
+  /* Slide beranda. Urutannya sudah ditentukan backend (terbaru lebih dulu);
+     beranda tidak mengurutkannya ulang. */
+  const SLIDES = useMemo(() => slides.slice(0, 8), [slides]);
+
+  /* Indeks dijaga tetap sah: daftarnya dapat menyusut saat data API tiba,
+     sementara `slideAktif` masih menunjuk posisi lama. */
+  const slideIdx = SLIDES.length === 0 ? 0 : slideAktif % SLIDES.length;
+
+  const geserSlide = (arah: number) => {
+    setSlideOtomatis(false);
+    setSlideAktif((v) => (SLIDES.length ? (v + arah + SLIDES.length) % SLIDES.length : 0));
+  };
+
+  /* Putar otomatis berhenti begitu pengunjung menyentuh papannya atau
+     menggeser sendiri — papan yang berpindah saat sedang dibaca lebih
+     mengganggu daripada papan diam. */
+  useEffect(() => {
+    if (!slideOtomatis || slideTertahan || SLIDES.length < 2) return;
+    const t = setInterval(() => setSlideAktif((v) => (v + 1) % SLIDES.length), 6000);
+    return () => clearInterval(t);
+  }, [slideOtomatis, slideTertahan, SLIDES.length]);
+
+  const WISATA = useMemo(
+    () => [...wisata].sort((a, b) => (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999)).slice(0, 4),
+    [wisata],
+  );
 
   const pickExec = (i: number) => { setExec(i); setAuto(false); };
 
@@ -291,105 +396,422 @@ export default function HomePage() {
         </motion.div>
       </section>
 
-      {/* ================= 3. TENTANG ================= */}
-      <section className="max-w-[1400px] mx-auto px-4 sm:px-6 mt-8">
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 sm:p-7 grid grid-cols-1 lg:grid-cols-12 gap-7 items-center">
-          <motion.div initial={{ opacity: 0, x: -24 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="lg:col-span-7">
-            <JudulBagian kicker={tentang.kicker}>{tentang.judul}</JudulBagian>
-            <p className="mt-3 text-slate-500 text-[13.5px] leading-relaxed max-w-xl">
-              {tentang.teks}
-            </p>
+      {/* ================= 3. PAPAN PENGUMUMAN ================= */}
+      {/*
+        Papan pengumuman bergambar, seperti portal v1: satu slide adalah
+        selembar gambar yang boleh ditautkan, tanpa judul dan tanpa teks di
+        atasnya. Isinya datang dari modul Slide Informasi (`/admin/info-slides`)
+        yang memakai tabel warisan `info_slides` apa adanya.
 
-            <motion.div variants={container} initial="hidden" whileInView="show" viewport={{ once: true }} className="mt-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        Slide yang gambarnya tidak dapat dibuka sudah disaring backend — lihat
+        `InfoSlideController::index()`. Seluruh bagian TIDAK dirender bila tidak
+        ada slide sama sekali: papan kosong di beranda bandara membuat
+        pengunjung mengira ada yang gagal dimuat.
+      */}
+      {SLIDES.length > 0 && (
+        <section className="max-w-[1400px] mx-auto px-4 sm:px-6 mt-8">
+          <div
+            className="relative overflow-hidden rounded-3xl bg-[#0b1e5b] shadow-xl shadow-blue-950/15 ring-1 ring-slate-200/70"
+            onMouseEnter={() => setSlideTertahan(true)}
+            onMouseLeave={() => setSlideTertahan(false)}
+            role="region"
+            aria-roledescription="carousel"
+            aria-label={t.beranda.pengumumanJudul}
+          >
+            <div className="relative aspect-[21/9] sm:aspect-[16/6]">
+              <AnimatePresence initial={false} mode="wait">
+                <motion.div
+                  key={SLIDES[slideIdx]?.id}
+                  initial={{ opacity: 0, scale: 1.02 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.5, ease: 'easeOut' }}
+                  className="absolute inset-0"
+                >
+                  {/* Slide bertautan dapat diklik; yang tanpa tautan tetap
+                      gambar biasa — bukan tombol mati. */}
+                  {SLIDES[slideIdx]?.link_url ? (
+                    <a
+                      href={SLIDES[slideIdx].link_url as string}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block w-full h-full"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={SLIDES[slideIdx].image_url as string}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                    </a>
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={SLIDES[slideIdx]?.image_url as string}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                  )}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+
+            {/* Kendali hanya muncul bila memang ada yang bisa digeser. */}
+            {SLIDES.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => geserSlide(-1)}
+                  aria-label={t.beranda.sebelumnya}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/35 hover:bg-black/60 backdrop-blur text-white flex items-center justify-center transition-colors cursor-pointer"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => geserSlide(1)}
+                  aria-label={t.beranda.selanjutnya}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/35 hover:bg-black/60 backdrop-blur text-white flex items-center justify-center transition-colors cursor-pointer"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+
+                <div className="absolute bottom-3.5 left-1/2 -translate-x-1/2 flex items-center gap-2">
+                  {SLIDES.map((s, i) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => { setSlideAktif(i); setSlideOtomatis(false); }}
+                      aria-label={`${t.beranda.pengumumanKicker} ${i + 1}`}
+                      aria-current={i === slideIdx}
+                      className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                        i === slideIdx ? 'w-7 bg-white' : 'w-1.5 bg-white/50 hover:bg-white/80'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* ================= 4. TENTANG ================= */}
+      {/*
+        Dulu bagian ini satu kartu putih berisi teks, LIMA kotak angka, dan
+        video 220px — semuanya diperas ke dalam satu baris tujuh kolom. Kini
+        angkanya turun menjadi bilah selebar kartu dengan pemisah, dan videonya
+        memakai rasio 16:9. Kartunya diberi pita gradien di kepalanya supaya
+        tidak terbaca sebagai kotak putih kesekian.
+      */}
+      <section className="max-w-[1400px] mx-auto px-4 sm:px-6 mt-10">
+        <div className="relative overflow-hidden bg-white rounded-3xl shadow-sm shadow-slate-200/60 border border-slate-100">
+          <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-600 via-sky-400 to-transparent" aria-hidden="true" />
+
+          <div className="grid grid-cols-1 lg:grid-cols-2">
+            <motion.div
+              initial={{ opacity: 0, y: 18 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+              className="p-7 sm:p-9 lg:p-12 flex flex-col justify-center"
+            >
+              <JudulBagian kicker={tentang.kicker}>{tentang.judul}</JudulBagian>
+
+              <p className="mt-4 text-slate-500 text-[14px] leading-[1.85] max-w-xl">
+                {tentang.teks}
+              </p>
+
+              <Link
+                href="/profile"
+                className="mt-7 self-start inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[13px] px-5 py-3 rounded-full shadow-lg shadow-blue-600/20 transition-colors"
+              >
+                {t.beranda.profilLengkap}
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 18 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.08 }}
+              className="p-7 sm:p-9 lg:p-12 lg:pl-0 flex items-center"
+            >
+              <div className="w-full rounded-2xl overflow-hidden ring-1 ring-slate-200/70 shadow-xl shadow-slate-300/30">
+                <VideoProfil
+                  gambar={tentang.gambar}
+                  videoUrl={tentang.videoUrl}
+                  caption={tentang.caption}
+                  tinggiKelas="aspect-video h-auto"
+                />
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Bilah angka selebar kartu. Lima kolom di sini punya ruang; lima
+              kolom di dalam separuh kartu tidak. */}
+          {ABOUT_STATS.length > 0 && (
+            <motion.div
+              variants={container}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true }}
+              /* `divide-y` sampai lg: di bawah itu kelimanya membungkus ke baris
+                 kedua, dan pemisah tegak saja membuat baris keduanya tampak
+                 seperti garis nyasar alih-alih lanjutan bilah yang sama. */
+              className="border-t border-slate-100 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 divide-x divide-y lg:divide-y-0 divide-slate-100"
+            >
               {ABOUT_STATS.map((s) => {
                 const Icon = s.icon;
                 return (
-                  <motion.div key={s.slug} variants={rise} whileHover={{ y: -4 }} className="rounded-xl border border-slate-100 bg-slate-50/60 p-3.5">
-                    <Icon className="w-5 h-5 text-blue-600" />
-                    <p className="mt-2.5 text-[17px] font-black text-slate-900 leading-none">{s.value}</p>
-                    <p className="mt-1 text-[10.5px] text-slate-500 leading-tight">{s.label}</p>
+                  <motion.div
+                    key={s.slug}
+                    variants={rise}
+                    className="group px-5 py-6 hover:bg-slate-50/70 transition-colors"
+                  >
+                    <span className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+                      <Icon className="w-[18px] h-[18px] text-blue-600" />
+                    </span>
+                    <p className="mt-3 text-[22px] font-black text-slate-900 leading-none tabular-nums">{s.value}</p>
+                    <p className="mt-1.5 text-[11.5px] text-slate-500 leading-snug">{s.label}</p>
                   </motion.div>
                 );
               })}
             </motion.div>
-          </motion.div>
-
-          <motion.div initial={{ opacity: 0, x: 24 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className="lg:col-span-5">
-            <VideoProfil
-              gambar={tentang.gambar}
-              videoUrl={tentang.videoUrl}
-              caption={tentang.caption}
-            />
-          </motion.div>
+          )}
         </div>
       </section>
 
-      {/* ================= 4. BERITA + FASILITAS ================= */}
-      <section className="max-w-[1400px] mx-auto px-4 sm:px-6 mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Berita */}
-        <div className="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-          <div className="flex items-start justify-between gap-3 mb-5">
-            <JudulBagian kicker={t.beranda.beritaKicker}>{t.beranda.beritaJudul}</JudulBagian>
-            <Link href="/news" className="text-[13px] font-semibold text-blue-600 flex items-center gap-1.5 hover:gap-2.5 transition-all">
-              {t.umum.lihatSemua} <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
+      {/* ================= 5. BERITA ================= */}
+      {/*
+        Berita dan Fasilitas dulu berbagi satu baris — tujuh kolom untuk tiga
+        kartu berita, lima untuk enam baris fasilitas. Keduanya jadi sempit
+        tanpa alasan, dan gambar beritanya tinggal 112px. Kini masing-masing
+        memiliki barisnya sendiri, dan kartunya kembali seukuran kartu.
+      */}
+      <section className="max-w-[1400px] mx-auto px-4 sm:px-6 mt-12">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <JudulBagian kicker={t.beranda.beritaKicker}>{t.beranda.beritaJudul}</JudulBagian>
+          <Link href="/news" className="text-[13px] font-semibold text-blue-600 flex items-center gap-1.5 hover:gap-2.5 transition-all">
+            {t.umum.lihatSemua} <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
 
-          <motion.div variants={container} initial="hidden" whileInView="show" viewport={{ once: true }} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {(latestNews.length > 0 ? latestNews : []).map((n) => (
-              <motion.article key={n.id} variants={rise} whileHover={{ y: -5 }} className="group">
-                <Link href={`/news/${n.slug}`} className="block">
-                  <div className="relative h-28 rounded-xl overflow-hidden">
-                    <GambarBerita berita={n} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent" />
-                    <span className="absolute top-2 left-2 bg-blue-600 text-white text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wide">
+        {latestNews.length === 0 ? (
+          /* Bagian berita kini selebar halaman, jadi daftar kosong meninggalkan
+             lubang yang kentara. Dikatakan apa adanya lewat kamus, bukan
+             dibiarkan kosong. */
+          <div className="mt-6 rounded-2xl bg-white border border-slate-100 px-6 py-12 text-center">
+            <p className="text-[13.5px] font-bold text-slate-700">{t.umum.tidakAdaData}</p>
+          </div>
+        ) : (
+          <motion.div
+            variants={container}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true }}
+            className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+          >
+            {latestNews.map((n) => (
+              <motion.article key={n.id} variants={rise} whileHover={{ y: -6 }} className="group">
+                <Link
+                  href={'/news/' + n.slug}
+                  className="block h-full bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm shadow-slate-200/60 hover:shadow-xl hover:shadow-blue-900/10 transition-shadow"
+                >
+                  <div className="relative aspect-[16/10] overflow-hidden">
+                    <GambarBerita berita={n} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                    <span className="absolute top-3 left-3 bg-blue-600 text-white text-[9.5px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide">
                       {n.category}
                     </span>
                   </div>
-                  <p className="mt-2.5 flex items-center gap-1.5 text-[11px] text-slate-400">
-                    <Calendar className="w-3 h-3" /> {formatTanggal(n.published_at, bahasa)}
-                  </p>
-                  <h3 className="mt-1 font-bold text-slate-900 text-[13px] leading-snug line-clamp-2 group-hover:text-blue-600 transition-colors">
-                    {n.title}
-                  </h3>
-                  <span className="mt-2.5 inline-flex items-center gap-1.5 text-blue-600 text-[12px] font-bold">
-                    {t.umum.selengkapnya} <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                  </span>
+
+                  <div className="p-5">
+                    <p className="flex items-center gap-1.5 text-[11.5px] text-slate-400">
+                      <Calendar className="w-3.5 h-3.5" /> {formatTanggal(n.published_at, bahasa)}
+                    </p>
+                    <h3 className="mt-2 font-black text-slate-900 text-[15px] leading-snug line-clamp-2 group-hover:text-blue-600 transition-colors">
+                      {n.title}
+                    </h3>
+                    <span className="mt-4 inline-flex items-center gap-1.5 text-blue-600 text-[12.5px] font-bold">
+                      {t.umum.selengkapnya} <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                    </span>
+                  </div>
                 </Link>
               </motion.article>
             ))}
           </motion.div>
-        </div>
+        )}
+      </section>
 
-        {/* Fasilitas Unggulan */}
-        <div className="lg:col-span-5 bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-          <div className="flex items-start justify-between gap-3 mb-5">
+      {/* ================= 6. FASILITAS UNGGULAN ================= */}
+      {/*
+        Berdata, bukan lagi enam kartu tetap dari kamus.
+
+        Sebelum ini beranda menjanjikan Wi-Fi, Ruang Tunggu, Restoran, Musala,
+        Area Bermain Anak, dan Layanan Disabilitas — enam nama yang ditulis di
+        kamus dan tidak satu pun cocok dengan 22 fasilitas yang benar-benar
+        terdaftar di `/facilities`. Menyunting fasilitas dari panel tidak
+        mengubah beranda sedikit pun, dan pengunjung yang menekan "Lihat semua"
+        mendarat di daftar yang isinya berbeda.
+
+        Kategori "Umum" didahulukan karena itulah fasilitas yang benar-benar
+        dapat dipakai penumpang; sisi udara dan sisi darat menyusul hanya untuk
+        menggenapi kartunya.
+
+        BENTUK KARTU. Foto di atas, lencana ikon bundar menumpang di batas foto
+        dan kertas, judul dengan tombol panah bundar di kanannya, satu baris
+        keterangan, lalu deretan cip spesifikasi.
+
+        Cip itu BUKAN hiasan: isinya `details` warisan v1 — "Ukuran: 2.250 m x
+        45 m", "8 Parking Stand" — data sungguhan yang selama ini hanya terbaca
+        di halaman /facilities. Butir pertama naik menjadi baris keterangan dan
+        tidak diulang sebagai cip, sebab `description` pada tabel ini memang
+        gabungan butir-butir itu sendiri; menampilkan keduanya utuh membuat satu
+        kalimat tercetak dua kali.
+      */}
+      <section className="mt-12 border-y border-slate-200/70 bg-gradient-to-b from-white via-slate-100/60 to-slate-50 py-14">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6">
+          <div className="flex flex-wrap items-end justify-between gap-3">
             <JudulBagian kicker={t.beranda.fasilitasKicker}>{t.beranda.fasilitasJudul}</JudulBagian>
             <Link href="/facilities" className="text-[13px] font-semibold text-blue-600 flex items-center gap-1.5 hover:gap-2.5 transition-all">
               {t.umum.lihatSemua} <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
 
-          <motion.div variants={container} initial="hidden" whileInView="show" viewport={{ once: true }} className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4">
-            {FASILITAS.map((f) => {
-              const Icon = f.icon;
-              return (
-                <motion.div key={f.kunci} variants={rise} className="flex items-center gap-3 group">
-                  <span className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105" style={{ backgroundColor: f.bg }}>
-                    <Icon className="w-[18px] h-[18px]" style={{ color: f.color }} />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="font-bold text-slate-900 text-[13px] truncate">{f.nama}</p>
-                    <p className="text-[11px] text-slate-500 truncate">{f.sub}</p>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </motion.div>
+          {FASILITAS.length === 0 ? (
+            <div className="mt-7 rounded-2xl bg-white border border-slate-100 px-6 py-12 text-center">
+              <p className="text-[13.5px] font-bold text-slate-700">{t.umum.tidakAdaData}</p>
+            </div>
+          ) : (
+            <motion.div
+              variants={container}
+              initial="hidden"
+              animate="show"
+              className="mt-7 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5"
+            >
+              {FASILITAS.map((f) => {
+                const meta = facilityCatMeta(f.category);
+                const Icon = facilityIcon(f);
+
+                /* Butir `details` warisan v1 bercampur dua jenis: spesifikasi berformat
+                   "Label: nilai" dan kalimat penjelas. Yang berlabel jadi cip — pendek
+                   dan terbaca sebagai data — sedangkan yang berupa kalimat naik menjadi
+                   baris keterangan. Memasang kalimat utuh ke dalam cip hanya membuatnya
+                   terpotong di tengah. */
+                const butir = (f.details ?? []).filter(Boolean);
+                const spesifikasi = butir.filter((d) => d.includes(':'));
+                const kalimat = butir.filter((d) => !d.includes(':'));
+
+                const ringkas = kalimat[0] ?? (f.location_description || '');
+                const cip = spesifikasi.slice(0, 3);
+
+                return (
+                  <motion.article key={f.id} variants={rise} whileHover={{ y: -6 }} className="group h-full">
+                    <Link
+                      href="/facilities"
+                      className="relative flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-[0_2px_14px_rgba(15,23,42,0.07)] hover:shadow-[0_14px_36px_rgba(15,23,42,0.14)] transition-shadow"
+                    >
+                      {/* ---------- foto ---------- */}
+                      <div className="relative aspect-[16/10] overflow-hidden bg-slate-100">
+                        {f.image_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={f.image_url}
+                            alt={f.name}
+                            className="w-full h-full object-cover group-hover:scale-[1.06] transition-transform duration-[900ms] ease-out"
+                          />
+                        ) : (
+                          /* Fasilitas tanpa foto tidak boleh tampil sebagai kotak
+                             rusak. Bidang gradien berwarna kategori dengan ikon
+                             besar dan busur rute terbaca sebagai rancangan, dan
+                             kartunya tetap sebaris dengan yang berfoto. */
+                          <div
+                            className="w-full h-full flex items-center justify-center"
+                            style={{ background: `linear-gradient(135deg, ${meta.color} 0%, #0b1e5b 130%)` }}
+                          >
+                            <Icon className="w-12 h-12 text-white/30" strokeWidth={1.4} />
+                            <svg
+                              className="absolute inset-0 w-full h-full text-white/15 pointer-events-none"
+                              viewBox="0 0 400 250"
+                              fill="none"
+                              preserveAspectRatio="none"
+                              aria-hidden="true"
+                            >
+                              <path d="M-20 180 Q 160 70 420 140" stroke="currentColor" strokeWidth="2" strokeDasharray="7 10" />
+                            </svg>
+                          </div>
+                        )}
+
+                        {/* Lencana kategori di sudut kanan atas. */}
+                        <span
+                          className="absolute top-3 right-3 inline-flex items-center gap-1 text-white text-[9.5px] font-bold uppercase tracking-[0.1em] px-2.5 py-1 rounded-full shadow-md"
+                          style={{ backgroundColor: meta.color }}
+                        >
+                          {f.category}
+                        </span>
+                      </div>
+
+                      {/* ---------- badan kartu ---------- */}
+                      <div className="relative flex flex-1 flex-col px-4 pb-4">
+                        {/* Lencana ikon menumpang di batas foto dan kertas —
+                            cincin putihnya yang memisahkannya dari foto apa pun
+                            yang ada di belakangnya. */}
+                        <span
+                          className="absolute -top-6 left-4 w-12 h-12 rounded-full flex items-center justify-center shadow-lg ring-4 ring-white"
+                          style={{ backgroundColor: meta.color }}
+                          aria-hidden="true"
+                        >
+                          <Icon className="w-5 h-5 text-white" strokeWidth={2.2} />
+                        </span>
+
+                        <div className="pt-8 flex items-start justify-between gap-2">
+                          <h3 className="text-[15px] font-black text-slate-900 leading-snug group-hover:text-blue-700 transition-colors">
+                            {f.name}
+                          </h3>
+
+                          <span
+                            className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors"
+                            style={{ backgroundColor: `${meta.color}1a`, color: meta.color }}
+                            aria-hidden="true"
+                          >
+                            <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                          </span>
+                        </div>
+
+                        {ringkas && (
+                          <p className="mt-1 text-[11.5px] text-slate-500 leading-relaxed line-clamp-2">
+                            {ringkas}
+                          </p>
+                        )}
+
+                        {cip.length > 0 && (
+                          <div className="mt-auto pt-3 flex flex-wrap gap-1.5">
+                            {cip.map((c) => (
+                              <span
+                                key={c}
+                                title={c}
+                                className="max-w-full truncate text-[10px] font-semibold px-2.5 py-1 rounded-full"
+                                style={{ backgroundColor: meta.bg, color: meta.color }}
+                              >
+                                {c}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </Link>
+                  </motion.article>
+                );
+              })}
+            </motion.div>
+          )}
         </div>
       </section>
 
-      {/* ================= 5. PEJABAT BANDARA ================= */}
+      {/* ================= 7. PEJABAT BANDARA ================= */}
       <section className="max-w-[1400px] mx-auto px-4 sm:px-6 mt-6">
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
           <JudulBagian kicker={t.beranda.pejabatKicker} className="mb-5">{t.beranda.pejabatJudul}</JudulBagian>
@@ -514,7 +936,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ================= 6. AKSES MENUJU BANDARA ================= */}
+      {/* ================= 8. AKSES MENUJU BANDARA ================= */}
       <section className="max-w-[1400px] mx-auto px-4 sm:px-6 mt-6 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
         {/* moda transportasi */}
         <div className="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
@@ -522,13 +944,18 @@ export default function HomePage() {
           <motion.div variants={container} initial="hidden" whileInView="show" viewport={{ once: true }} className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {AKSES.map((a) => {
               const Icon = a.icon;
-              return (
-                <motion.div key={a.kunci} variants={rise} whileHover={{ y: -4 }} className="group">
+              const isi = (
+                <>
                   <span className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center group-hover:bg-blue-50 group-hover:border-blue-100 transition-colors">
                     <Icon className="w-5 h-5 text-slate-600 group-hover:text-blue-600 transition-colors" />
                   </span>
                   <p className="mt-2.5 font-bold text-slate-900 text-[12.5px] leading-snug">{a.nama}</p>
                   <p className="mt-1 text-[10.5px] text-slate-500 leading-snug">{a.desc}</p>
+                </>
+              );
+              return (
+                <motion.div key={a.kunci} variants={rise} whileHover={{ y: -4 }} className="group">
+                  {a.href ? <Link href={a.href} className="block">{isi}</Link> : isi}
                 </motion.div>
               );
             })}
@@ -579,7 +1006,7 @@ export default function HomePage() {
 
       </section>
 
-      {/* ================= 7. PARIWISATA TERDEKAT ================= */}
+      {/* ================= 9. PARIWISATA TERDEKAT ================= */}
       <section className="max-w-[1400px] mx-auto px-4 sm:px-6 mt-6">
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
           <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
@@ -597,47 +1024,72 @@ export default function HomePage() {
             </Link>
           </div>
 
-          <motion.div variants={container} initial="hidden" whileInView="show" viewport={{ once: true }} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {TOURISM_SPOTS.slice()
-              .sort((a, b) => a.distanceKm - b.distanceKm)
-              .slice(0, 4)
-              .map((spot) => {
-                const meta = TOURISM_CAT_META[spot.category];
-                return (
-                  <motion.div key={spot.slug} variants={rise} whileHover={{ y: -4 }}>
-                    <Link
-                      href="/tourism#destinasi"
-                      className="group block h-full rounded-2xl border border-slate-100 hover:border-slate-200 hover:shadow-lg hover:shadow-slate-200/60 transition-all overflow-hidden"
-                    >
-                      <div className="flex items-center justify-between px-4 py-2.5" style={{ backgroundColor: meta.bg }}>
-                        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: meta.color }}>
-                          {spot.category}
-                        </span>
-                        <span className="flex items-center gap-1 text-[10.5px] font-bold tabular-nums" style={{ color: meta.color }}>
+          {/* Isinya datang dari API, jadi pemicunya `animate` — bukan
+              `whileInView` milik pembungkus yang sudah selesai menyala saat
+              datanya baru tiba. */}
+          {/* Jumlah kolom mengikuti jumlah destinasi yang benar-benar ada.
+              Tabel warisan v1 memuat tiga; kisi empat kolom akan menyisakan
+              satu lubang yang terbaca sebagai kartu yang gagal dimuat. */}
+          <motion.div
+            variants={container}
+            initial="hidden"
+            animate="show"
+            className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${WISATA.length >= 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}
+          >
+            {WISATA.map((spot) => {
+              /* Kategori dari basis data adalah teks bebas; yang tak dikenali
+                 jatuh ke warna netral alih-alih membuat kartunya gagal. */
+              const meta = TOURISM_CAT_META[spot.category as TourismCategory]
+                ?? { color: '#475569', bg: '#f1f5f9' };
+
+              return (
+                <motion.div key={spot.slug} variants={rise} whileHover={{ y: -4 }}>
+                  <Link
+                    href="/tourism#destinasi"
+                    className="group block h-full rounded-2xl border border-slate-100 hover:border-slate-200 hover:shadow-lg hover:shadow-slate-200/60 transition-all overflow-hidden"
+                  >
+                    <div className="flex items-center justify-between gap-2 px-4 py-2.5" style={{ backgroundColor: meta.bg }}>
+                      <span className="text-[10px] font-bold uppercase tracking-wider truncate" style={{ color: meta.color }}>
+                        {spot.category}
+                      </span>
+
+                      {/* Jarak hanya ditulis bila memang tercatat. Tabel
+                          warisan v1 mengosongkan `distance_km` pada seluruh
+                          barisnya, dan "0 km" adalah angka yang tidak pernah
+                          dikatakan siapa pun. */}
+                      {typeof spot.distanceKm === 'number' && (
+                        <span className="flex items-center gap-1 text-[10.5px] font-bold tabular-nums flex-shrink-0" style={{ color: meta.color }}>
                           <Car className="w-3 h-3" /> {spot.distanceKm} km
                         </span>
-                      </div>
-                      <div className="p-4">
-                        <h4 className="font-bold text-slate-900 text-[13.5px] leading-snug group-hover:text-emerald-700 transition-colors">
-                          {spot.name}
-                        </h4>
-                        <p className="mt-1 text-[11px] text-slate-500">{spot.city}</p>
-                        <p className="mt-2 text-[11.5px] text-slate-500 leading-relaxed line-clamp-3">
-                          {spot.description}
-                        </p>
+                      )}
+                    </div>
+
+                    <div className="p-4">
+                      <h4 className="font-bold text-slate-900 text-[13.5px] leading-snug group-hover:text-emerald-700 transition-colors">
+                        {spot.name}
+                      </h4>
+
+                      {spot.city && <p className="mt-1 text-[11px] text-slate-500">{spot.city}</p>}
+
+                      <p className="mt-2 text-[11.5px] text-slate-500 leading-relaxed line-clamp-3">
+                        {spot.ringkas}
+                      </p>
+
+                      {spot.duration && (
                         <p className="mt-3 flex items-center gap-1.5 text-[11px] font-semibold text-slate-600">
                           <Clock className="w-3.5 h-3.5" style={{ color: meta.color }} /> {spot.duration} {t.beranda.dariBandara}
                         </p>
-                      </div>
-                    </Link>
-                  </motion.div>
-                );
-              })}
+                      )}
+                    </div>
+                  </Link>
+                </motion.div>
+              );
+            })}
           </motion.div>
         </div>
       </section>
 
-      {/* ================= 8. DALAM ANGKA ================= */}
+      {/* ================= 10. DALAM ANGKA ================= */}
       <section className="max-w-[1400px] mx-auto px-4 sm:px-6 mt-6">
         <motion.div
           initial={{ opacity: 0, y: 22 }}
@@ -671,7 +1123,7 @@ export default function HomePage() {
         </motion.div>
       </section>
 
-      {/* ================= 9. NEWSLETTER ================= */}
+      {/* ================= 11. NEWSLETTER ================= */}
       <section className="max-w-[1400px] mx-auto px-4 sm:px-6 mt-6 mb-14">
         <motion.div
           initial={{ opacity: 0, y: 18 }}

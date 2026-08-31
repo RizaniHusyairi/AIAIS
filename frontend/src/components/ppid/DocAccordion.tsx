@@ -15,7 +15,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, FileText, ExternalLink, CalendarDays, UserRound } from 'lucide-react';
-import { formatTanggalPanjang, type InfoDoc, type InfoGroup } from '@/lib/publicInfoData';
+import { useBahasa } from '@/lib/bahasa';
+import { formatTanggal } from '@/lib/kamus';
+import type { InfoDoc, InfoGroup } from '@/lib/publicInfoData';
 
 const rise = {
   hidden: { opacity: 0, y: 18 },
@@ -24,6 +26,8 @@ const rise = {
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
 
 function DocRow({ doc }: { doc: InfoDoc }) {
+  const bahasa = useBahasa();
+
   return (
     <motion.li
       variants={rise}
@@ -43,7 +47,7 @@ function DocRow({ doc }: { doc: InfoDoc }) {
             {doc.published && (
               <span className="inline-flex items-center gap-1">
                 <CalendarDays className="w-3 h-3 flex-shrink-0" />
-                {formatTanggalPanjang(doc.published)}
+                {formatTanggal(doc.published, bahasa)}
               </span>
             )}
             {doc.pejabat && (

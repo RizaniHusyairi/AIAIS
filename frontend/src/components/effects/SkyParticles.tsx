@@ -349,6 +349,12 @@ export default function SkyParticles({
 
     /** Menggambar satu bingkai. Dipakai loop rAF maupun panggilan langsung. */
     const render = (now: number, dt: number, advance = true) => {
+      // Jaring pengaman: keadaan yang telanjur tercemar dipulihkan, bukan
+      // dibiarkan mematikan latar sampai halaman dimuat ulang.
+      if (![par.x, par.y, par.tx, par.ty].every(Number.isFinite)) {
+        par.x = 0; par.y = 0; par.tx = 0; par.ty = 0;
+      }
+
       par.x += (par.tx - par.x) * 0.045;
       par.y += (par.ty - par.y) * 0.045;
 
@@ -399,10 +405,26 @@ export default function SkyParticles({
 
     /* ---------------- event ---------------- */
 
+    /**
+     * Paralaks mengikuti penunjuk di SELURUH halaman, jadi peristiwa ini juga
+     * tiba saat kanvasnya sendiri sedang berukuran nol — bagian yang belum
+     * ditata, wadah yang tersembunyi, atau tinggi yang sedang menyusut.
+     *
+     * Pembagian dengan nol di sana menghasilkan Infinity (atau NaN, ketika
+     * penunjuknya kebetulan tepat di tepi), dan nilai itu MENULAR: `par.x`
+     * dihitung dari dirinya sendiri tiap bingkai, sehingga sekali tercemar ia
+     * tidak pernah pulih. Akibatnya `createRadialGradient` melempar
+     * "The provided double value is non-finite" pada setiap bingkai berikutnya
+     * dan seluruh latar berhenti tergambar.
+     */
     const onPointer = (e: PointerEvent) => {
       const rect = canvas.getBoundingClientRect();
+      if (rect.width < 1 || rect.height < 1) return;
+
       const nx = (e.clientX - rect.left) / rect.width - 0.5;
       const ny = (e.clientY - rect.top) / rect.height - 0.5;
+      if (!Number.isFinite(nx) || !Number.isFinite(ny)) return;
+
       par.tx = -nx * 14;
       par.ty = -ny * 9;
     };

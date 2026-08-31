@@ -500,13 +500,6 @@ export const REGULASI_PPID: InfoGroup[] = [
 /* ------------------------------------------------------------------ */
 
 /** "2025-04-24" -> "24 April 2025". */
-export function formatTanggalPanjang(iso?: string): string {
-  if (!iso) return '';
-  const d = new Date(`${iso}T00:00:00`);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-}
-
 /** Jumlah dokumen dalam sekumpulan kelompok. */
 export const hitungDokumen = (groups: InfoGroup[]): number =>
   groups.reduce((n, g) => n + g.docs.length, 0);

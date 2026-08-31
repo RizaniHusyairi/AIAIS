@@ -3,8 +3,13 @@
 /**
  * Profil PPID — Pejabat Pengelola Informasi dan Dokumentasi.
  *
- * Seluruh teks berasal dari `lib/ppidData.ts`; lihat provenans di sana.
- * Berkas ini hanya presentasi.
+ * Teks tetapnya berasal dari `lib/ppidData.ts`; lihat provenans di sana.
+ *
+ * Tiga bagian TIDAK statis dan datang dari panel admin: SK Tim PPID, Video
+ * Profil, dan Laporan Bulanan. SK dulu sebuah konstanta berisi tautan Google
+ * Drive — menggantinya berarti menyunting kode dan merilis ulang portal,
+ * padahal SK diperbarui tiap kali susunan tim berubah. Ketiganya dirakit di
+ * `components/ppid/ProfilPpidSeksi`.
  *
  * Nuansa penerbangan dipakai sebagai bahasa visual, bukan hiasan acak:
  *   - Hero memakai `SkyParticles` yang sama dengan /flights.
@@ -14,18 +19,22 @@
  *   - Kartu dokumen memakai takik perforasi seperti boarding pass.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import PpidHero, { FlightArc } from '@/components/ppid/PpidHero';
 import ImageLightbox, { LightboxThumb, type LightboxImage } from '@/components/ui/ImageLightbox';
+import { SeksiSkPpid, SeksiVideoPpid, PapanLaporanBulanan } from '@/components/ppid/ProfilPpidSeksi';
 import {
   PPID_ORG, PPID_LATAR, PPID_VISI, PPID_VISI_PILAR, PPID_MISI, PPID_TUGAS,
-  PPID_SK, PPID_DOKUMEN, PPID_DASAR_HUKUM,
+  PPID_DOKUMEN, PPID_DASAR_HUKUM,
 } from '@/lib/ppidData';
+import { fetchApi } from '@/lib/api';
+import { useSetting } from '@/lib/settings';
+import type { PpidProfileDocument } from '@/types';
 import { CONTACT } from '@/lib/airportProfile';
 import {
-  ShieldCheck, Quote, Target, ListChecks, FileText, ExternalLink, Scale,
+  Quote, Target, ListChecks, FileText, ExternalLink,
   Eye, Users, Sparkles, ArrowRight, Radio, Mail, Phone, MapPin, Plane,
 } from 'lucide-react';
 import { useBahasa } from '@/lib/bahasa';
@@ -48,6 +57,38 @@ export default function ProfilPpidView() {
   const bahasa = useBahasa();
   const [lightbox, setLightbox] = useState<LightboxImage | null>(null);
 
+  const [dokumen, setDokumen] = useState<PpidProfileDocument[]>([]);
+  const heroBg = useSetting('bg_ppid');
+  const videoUrl = useSetting('ppid_video_url');
+  const videoGambar = useSetting('ppid_video_gambar');
+
+  useEffect(() => {
+    let batal = false;
+
+    fetchApi<PpidProfileDocument[]>('/ppid-profile-documents').then((res) => {
+      if (batal) return;
+      setDokumen(res.success && Array.isArray(res.data) ? res.data : []);
+    });
+
+    return () => { batal = true; };
+  }, []);
+
+  /* Satu permintaan, dua daftar. Penyaringannya di sisi klien seperti seluruh
+     halaman publik portal ini. */
+  const { skBerlaku, skRiwayat, laporanBulanan } = useMemo(() => {
+    const sk = dokumen.filter((d) => d.type === 'SK PPID');
+
+    // SK yang ditandai berlaku; bila belum ada yang ditandai, SK terbaru
+    // dipakai sebagai cadangan supaya bagian ini tidak kosong tanpa sebab.
+    const utama = sk.find((d) => d.is_current) ?? sk[0] ?? null;
+
+    return {
+      skBerlaku: utama,
+      skRiwayat: sk.filter((d) => d.id !== utama?.id),
+      laporanBulanan: dokumen.filter((d) => d.type === 'Laporan Bulanan'),
+    };
+  }, [dokumen]);
+
   return (
     <div className="bg-slate-50">
       <PpidHero
@@ -56,6 +97,7 @@ export default function ProfilPpidView() {
         accent={t.ppid.aksen}
         subtitle={PPID_ORG}
         lead={`${t.ppid.leadAwal} ${PPID_DASAR_HUKUM}.`}
+        bg={heroBg}
       >
         <div className="mt-7 flex flex-wrap items-center gap-3">
           <Link
@@ -66,16 +108,20 @@ export default function ProfilPpidView() {
             {t.ppid.lihatSop}
             <ArrowRight className="w-4 h-4" />
           </Link>
-          <a
-            href={PPID_SK.url}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-2 bg-white/12 border border-white/25 text-white hover:bg-white/20 font-bold text-[13.5px] px-5 py-3 rounded-full transition-colors"
-          >
-            <FileText className="w-4 h-4" />
-            {t.ppid.skTim}
-            <ExternalLink className="w-3.5 h-3.5" />
-          </a>
+          {/* Tombol SK mengikuti SK yang berlaku, dan HILANG bila belum ada
+              satu pun — tombol mati lebih buruk daripada tidak ada tombol. */}
+          {skBerlaku?.has_document && skBerlaku.document_url && (
+            <a
+              href={skBerlaku.document_url}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 bg-white/12 border border-white/25 text-white hover:bg-white/20 font-bold text-[13.5px] px-5 py-3 rounded-full transition-colors"
+            >
+              <FileText className="w-4 h-4" />
+              {t.ppid.skTim}
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          )}
         </div>
 
         {/* Dokumen PPID adalah dokumen hukum berbahasa Indonesia; tidak
@@ -105,6 +151,11 @@ export default function ProfilPpidView() {
           ))}
         </motion.div>
       </section>
+
+      {/* ============================================================ */}
+      {/*  VIDEO PROFIL PPID                                           */}
+      {/* ============================================================ */}
+      <SeksiVideoPpid url={videoUrl} gambar={videoGambar} />
 
       {/* ============================================================ */}
       {/*  VISI — digambarkan sebagai rencana terbang                  */}
@@ -225,48 +276,14 @@ export default function ProfilPpidView() {
       </section>
 
       {/* ============================================================ */}
-      {/*  SK TIM PPID — kartu bergaya boarding pass                   */}
+      {/*  SK TIM PPID — kartu boarding pass, kini berdata               */}
       {/* ============================================================ */}
-      <section className="max-w-[1400px] mx-auto px-4 sm:px-6 pb-16">
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ type: 'spring', stiffness: 260, damping: 28 }}
-          className="relative bg-white rounded-3xl ring-1 ring-slate-200/70 shadow-lg shadow-slate-300/25 overflow-hidden"
-        >
-          {/* pita aksen */}
-          <span className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-blue-600 to-sky-400" />
+      <SeksiSkPpid berlaku={skBerlaku} riwayat={skRiwayat} />
 
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 pl-7 pr-6 py-7">
-            <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-              <Scale className="w-6 h-6 text-blue-600" />
-            </div>
-
-            <div className="min-w-0 flex-1">
-              <p className="text-[10.5px] font-bold uppercase tracking-[0.16em] text-blue-600">Dokumen Penetapan</p>
-              <h3 className="mt-1 text-[16px] font-black text-slate-900 leading-snug">{PPID_SK.title}</h3>
-              <p className="mt-1.5 text-[13px] text-slate-500 leading-relaxed max-w-2xl">{PPID_SK.desc}</p>
-            </div>
-
-            {/* takik perforasi seperti boarding pass */}
-            <span className="hidden sm:block self-stretch border-l-2 border-dashed border-slate-200 relative">
-              <span className="absolute -top-3 -left-[7px] w-3 h-3 rounded-full bg-slate-50" />
-              <span className="absolute -bottom-3 -left-[7px] w-3 h-3 rounded-full bg-slate-50" />
-            </span>
-
-            <a
-              href={PPID_SK.url}
-              target="_blank"
-              rel="noreferrer"
-              className="flex-shrink-0 inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[13px] px-5 py-3 rounded-full shadow-lg shadow-blue-600/25 transition-colors"
-            >
-              Lihat Dokumen
-              <ExternalLink className="w-3.5 h-3.5" />
-            </a>
-          </div>
-        </motion.div>
-      </section>
+      {/* ============================================================ */}
+      {/*  LAPORAN BULANAN                                             */}
+      {/* ============================================================ */}
+      <PapanLaporanBulanan laporan={laporanBulanan} />
 
       {/* ============================================================ */}
       {/*  DOKUMEN BERGAMBAR                                           */}

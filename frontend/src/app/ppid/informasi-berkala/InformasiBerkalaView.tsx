@@ -11,6 +11,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import PpidHero, { FlightArc } from '@/components/ppid/PpidHero';
+import { useSetting } from '@/lib/settings';
 import DocAccordion from '@/components/ppid/DocAccordion';
 import { BERKALA_PENGANTAR } from '@/lib/publicInfoData';
 import { kelompokkanDokumen } from '@/lib/ppidGroups';
@@ -25,6 +26,7 @@ const rise = {
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.08 } } };
 
 export default function InformasiBerkalaView() {
+  const heroBg = useSetting('bg_ppid');
   const [items, setItems] = useState<PeriodicDocument[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -61,6 +63,7 @@ export default function InformasiBerkalaView() {
         accent="Berkala"
         subtitle="Bandar Udara APT Pranoto Samarinda"
         lead={BERKALA_PENGANTAR}
+        bg={heroBg}
       />
 
       {/* Ringkasan angka */}

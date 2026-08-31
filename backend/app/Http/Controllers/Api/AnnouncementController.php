@@ -9,11 +9,32 @@ use Illuminate\Http\Request;
 
 class AnnouncementController extends Controller
 {
+    /**
+     * Pengumuman yang sedang berlaku.
+     *
+     * DUA HAL YANG DULU KELIRU DI SINI, dan keduanya baru terlihat ketika
+     * papan pengumuman beranda mulai memakainya:
+     *
+     *   1. `orderBy('priority', 'desc')` mengurutkan KOLOM TEKS menurut abjad,
+     *      bukan menurut kegentingannya. Urutannya jadi urgent, medium, low,
+     *      high — sehingga pengumuman "high" justru mendarat paling bawah,
+     *      persis kebalikan dari maksudnya.
+     *   2. `valid_until` diabaikan, sehingga pengumuman yang masa berlakunya
+     *      sudah lewat tetap terkirim. Pada papan pengumuman bandara itu
+     *      bukan kekeliruan kecil: imbauan yang kedaluwarsa menyesatkan.
+     */
     public function index()
     {
+        $urutan = "FIELD(priority, 'urgent', 'high', 'medium', 'low')";
+
         $announcements = Announcement::where('is_active', true)
-            ->orderBy('priority', 'desc')
-            ->orderBy('created_at', 'desc')
+            ->where(function ($q) {
+                // Tanpa tanggal berarti berlaku sampai dicabut petugas.
+                $q->whereNull('valid_until')
+                    ->orWhereDate('valid_until', '>=', now()->toDateString());
+            })
+            ->orderByRaw($urutan)
+            ->orderByDesc('created_at')
             ->get();
 
         return ApiResponse::success($announcements, 'Pengumuman aktif');

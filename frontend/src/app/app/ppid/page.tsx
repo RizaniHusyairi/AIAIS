@@ -9,15 +9,34 @@
  * adanya. Kini tiap cabang punya layarnya, dan halaman ini yang menautkannya.
  */
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { PPID_ORG, PPID_VISI, PPID_MISI, PPID_SK, PPID_DASAR_HUKUM } from '@/lib/ppidData';
+import { PPID_ORG, PPID_VISI, PPID_MISI, PPID_DASAR_HUKUM } from '@/lib/ppidData';
+import { fetchApi } from '@/lib/api';
+import { useSetting } from '@/lib/settings';
+import VideoProfil from '@/components/home/VideoProfil';
+import { formatTanggal } from '@/lib/kamus';
+import { useBahasa } from '@/lib/bahasa';
+import type { PpidProfileDocument } from '@/types';
 import { StatusBar, AppHeader, listContainer, listItem } from '@/components/pwa/ui';
 import {
   ShieldCheck, FileText, ClipboardList, Scale, FolderOpen, Send,
   ChevronRight, ExternalLink, Megaphone, BookOpen, Archive,
+  PlayCircle, CalendarRange,
 } from 'lucide-react';
+
+const BULAN = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+];
+
+/** "2026-08-01" → "Agustus 2026"; kosong bila kolomnya tidak terisi. */
+function namaBulan(iso: string | null): string {
+  const cocok = String(iso ?? '').match(/^(\d{4})-(\d{2})/);
+
+  return cocok ? BULAN[Number(cocok[2]) - 1] + ' ' + cocok[1] : '';
+}
 
 const CABANG = [
   { href: '/app/ppid/sop', nama: 'SOP PPID', desc: 'Prosedur permohonan, keberatan, dan sengketa', icon: ClipboardList, warna: '#2563eb', latar: '#eff6ff' },
@@ -31,6 +50,35 @@ const CABANG = [
 ];
 
 export default function PpidScreen() {
+  /* SK Tim PPID kini dikelola dari panel admin, bukan konstanta di kode.
+     Kartunya tidak dirender bila belum ada SK yang berlaku dan berberkas —
+     kartu yang menuju ke mana-mana lebih buruk daripada tidak ada kartu. */
+  const [sk, setSk] = useState<PpidProfileDocument | null>(null);
+  const [laporan, setLaporan] = useState<PpidProfileDocument[]>([]);
+
+  const bahasa = useBahasa();
+  const videoUrl = useSetting('ppid_video_url');
+  const videoGambar = useSetting('ppid_video_gambar');
+
+  useEffect(() => {
+    let batal = false;
+
+    fetchApi<PpidProfileDocument[]>('/ppid-profile-documents').then((res) => {
+      if (batal) return;
+      const daftar = res.success && Array.isArray(res.data) ? res.data : [];
+      const skPpid = daftar.filter((d) => d.type === 'SK PPID');
+      setSk(skPpid.find((d) => d.is_current) ?? skPpid[0] ?? null);
+
+      /* Hanya bulan yang laporannya benar-benar terbit. Papan 12 bulan versi
+         desktop sengaja menampilkan bulan kosong sebagai penanda kejujuran;
+         di layar selebar ponsel deretan itu jadi gangguan, dan tidak ada yang
+         diklaim dengan menghilangkannya. */
+      setLaporan(daftar.filter((d) => d.type === 'Laporan Bulanan' && d.has_document));
+    });
+
+    return () => { batal = true; };
+  }, []);
+
   return (
     <div className="min-h-full bg-slate-50">
       <div className="relative overflow-hidden bg-gradient-to-br from-[#0b1e5b] to-[#2563eb] text-white rounded-b-[2rem]">
@@ -67,6 +115,31 @@ export default function PpidScreen() {
           </ul>
         </motion.div>
 
+        {/* Video Profil PPID. Tidak dirender bila belum ada tautannya —
+            pemutar kosong hanya menjanjikan sesuatu yang tidak ada. Pemutar
+            YouTube sendiri baru lahir setelah tombol putar ditekan; lihat
+            catatan privasi di VideoProfil.tsx. */}
+        {videoUrl.trim() && (
+          <motion.div variants={listItem} className="bg-white rounded-2xl shadow-sm shadow-slate-200/60 overflow-hidden">
+            <div className="px-4 pt-4">
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400 inline-flex items-center gap-1.5">
+                <PlayCircle className="w-3.5 h-3.5 text-blue-600" /> Video Profil
+              </p>
+              <p className="mt-1 text-[13.5px] font-bold text-slate-900 leading-snug">Mengenal PPID Bandara</p>
+            </div>
+
+            <div className="mt-3">
+              <VideoProfil
+                gambar={videoGambar.trim() || '/ppid/struktur-ppid.jpg'}
+                videoUrl={videoUrl}
+                caption="Profil Bandara"
+                tinggiKelas="aspect-video h-auto"
+                captionHref="/app/profil"
+              />
+            </div>
+          </motion.div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
           {CABANG.map((c) => {
             const Icon = c.icon;
@@ -93,28 +166,67 @@ export default function PpidScreen() {
           })}
         </div>
 
-        <motion.a
-          variants={listItem}
-          href={PPID_SK.url}
-          target="_blank"
-          rel="noreferrer"
-          className="flex items-start gap-3.5 bg-white rounded-2xl p-4 shadow-sm shadow-slate-200/60"
-        >
-          <span className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
-            <FileText className="w-5 h-5 text-amber-600" strokeWidth={2.1} />
-          </span>
-          <span className="flex-1 min-w-0">
-            <span className="block text-[13.5px] font-bold text-slate-900 leading-snug">
-              {PPID_SK.title}
+        {/* Laporan Bulanan PPID. Hanya bulan yang laporannya sudah terbit. */}
+        {laporan.length > 0 && (
+          <motion.div variants={listItem} className="bg-white rounded-2xl shadow-sm shadow-slate-200/60 p-4">
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400 inline-flex items-center gap-1.5">
+              <CalendarRange className="w-3.5 h-3.5 text-blue-600" /> Laporan Bulanan
+            </p>
+
+            <ul className="mt-2.5 space-y-2">
+              {laporan.map((l) => (
+                <li key={l.id}>
+                  <a
+                    href={l.document_url as string}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2.5 active:bg-slate-100 transition-colors"
+                  >
+                    <span className="w-9 h-9 rounded-lg bg-white flex items-center justify-center flex-shrink-0 shadow-sm">
+                      <FileText className="w-4 h-4 text-blue-600" strokeWidth={2.1} />
+                    </span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-[12.5px] font-bold text-slate-900 leading-snug">
+                        {namaBulan(l.period_date) || l.title}
+                      </span>
+                      <span className="block text-[11px] text-slate-500 mt-0.5">
+                        Terbit {formatTanggal(l.published_date, bahasa)}
+                      </span>
+                    </span>
+                    <ExternalLink className="w-4 h-4 text-slate-300 flex-shrink-0" />
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+        )}
+
+        {sk?.has_document && sk.document_url && (
+          <motion.a
+            variants={listItem}
+            href={sk.document_url}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-start gap-3.5 bg-white rounded-2xl p-4 shadow-sm shadow-slate-200/60"
+          >
+            <span className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
+              <FileText className="w-5 h-5 text-amber-600" strokeWidth={2.1} />
             </span>
-            <span className="block text-[11.5px] text-slate-500 mt-0.5 leading-relaxed">
-              {PPID_SK.desc}
+            <span className="flex-1 min-w-0">
+              <span className="block text-[13.5px] font-bold text-slate-900 leading-snug">
+                {sk.title}
+              </span>
+              {sk.description && (
+                <span className="block text-[11.5px] text-slate-500 mt-0.5 leading-relaxed">
+                  {sk.description}
+                </span>
+              )}
+              <span className="mt-1.5 inline-flex items-center gap-1 text-[11.5px] font-bold text-blue-600">
+                Buka dokumen <ExternalLink className="w-3 h-3" />
+              </span>
             </span>
-            <span className="mt-1.5 inline-flex items-center gap-1 text-[11.5px] font-bold text-blue-600">
-              Buka dokumen <ExternalLink className="w-3 h-3" />
-            </span>
-          </span>
-        </motion.a>
+          </motion.a>
+        )}
       </motion.div>
     </div>
   );

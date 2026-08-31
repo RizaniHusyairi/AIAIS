@@ -168,7 +168,7 @@ class AirportDatabaseSeeder extends Seeder
                 'location' => 'Lantai 1 Lobby Keberangkatan',
                 'operating_hours' => '05:30 - 20:00 WITA',
                 'contact_phone' => '0812-3456-7890',
-                'image' => 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=600&auto=format&fit=crop',
+                'image_path' => 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=600&auto=format&fit=crop',
                 'description' => 'Coffee bun hangat dan sajian kopi spesial khas bandara.',
                 'is_active' => true,
             ],
@@ -178,7 +178,7 @@ class AirportDatabaseSeeder extends Seeder
                 'location' => 'Lantai 2 Food Court',
                 'operating_hours' => '06:00 - 20:30 WITA',
                 'contact_phone' => '0811-9876-5432',
-                'image' => 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600&auto=format&fit=crop',
+                'image_path' => 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600&auto=format&fit=crop',
                 'description' => 'Menu masakan Nusantara dan oriental favorit penumpang.',
                 'is_active' => true,
             ],
@@ -188,20 +188,20 @@ class AirportDatabaseSeeder extends Seeder
                 'location' => 'Lantai 2 Commercial Area',
                 'operating_hours' => '06:00 - 19:30 WITA',
                 'contact_phone' => '0852-1122-3344',
-                'image' => 'https://images.unsplash.com/photo-1528698827591-e19ccd7bc23d?w=600&auto=format&fit=crop',
+                'image_path' => 'https://images.unsplash.com/photo-1528698827591-e19ccd7bc23d?w=600&auto=format&fit=crop',
                 'description' => 'Pusat amplang, kain sarung samarinda, dan cinderamata khas Kaltim.',
                 'is_active' => true,
             ],
-            [
-                'name' => 'DAMRI Bus Bandara - Samarinda Kota & Balikpapan',
-                'category' => 'transportation',
-                'location' => 'Shelter Bus Halte Depan Kedatangan',
-                'operating_hours' => '06:00 - 18:00 WITA',
-                'contact_phone' => '0813-4455-6677',
-                'image' => 'https://images.unsplash.com/photo-1570125909232-eb263c188f7e?w=600&auto=format&fit=crop',
-                'description' => 'Layanan pemadu moda resmi menuju Pusat Kota Samarinda dan IKN.',
-                'is_active' => true,
-            ],
+            // Tidak ada mitra kategori `transportation` di sini.
+            //
+            // Sebelumnya ada satu: "DAMRI Bus Bandara - Samarinda Kota &
+            // Balikpapan", lengkap dengan nomor telepon 0813-4455-6677 dan foto
+            // Unsplash. Ketiganya dikarang. Daftar transportasi bandara —
+            // termasuk konter taksi koperasi di area kedatangan — didaftarkan
+            // petugas dari panel admin, karena nama koperasi, jam layanan, dan
+            // nomor kontaknya berubah dari waktu ke waktu. Sampai itu diisi,
+            // `/tenants#transportasi` dan `/app/transportasi` menampilkan
+            // keadaan kosong apa adanya.
         ];
 
         foreach ($tenants as $t) {

@@ -21,6 +21,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import PpidHero, { FlightArc } from '@/components/ppid/PpidHero';
+import { useSetting } from '@/lib/settings';
 import DocAccordion from '@/components/ppid/DocAccordion';
 import { REGULASI_PENGANTAR } from '@/lib/publicInfoData';
 import { kelompokkanDokumen, rentangTahun } from '@/lib/ppidGroups';
@@ -35,6 +36,7 @@ const rise = {
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.08 } } };
 
 export default function RegulasiPpidView() {
+  const heroBg = useSetting('bg_ppid');
   const [items, setItems] = useState<PpidRegulation[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -73,6 +75,7 @@ export default function RegulasiPpidView() {
         accent="PPID"
         subtitle="Keterbukaan Informasi Publik"
         lead={REGULASI_PENGANTAR}
+        bg={heroBg}
       />
 
       <section className="max-w-[1400px] mx-auto px-4 sm:px-6 pt-14">

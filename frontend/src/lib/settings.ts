@@ -14,11 +14,13 @@ export {
   BACKGROUND_KEYS,
   SKM_KEYS,
   TENTANG_KEYS,
+  PPID_VIDEO_KEYS,
   WA_KEYS,
   DEFAULT_SETTINGS,
   type BackgroundKey,
   type SkmKey,
   type TentangKey,
+  type PpidVideoKey,
   type WaKey,
 } from './settingsShared';
 
@@ -32,6 +34,7 @@ export const BACKGROUND_META: { key: BackgroundKey; label: string; page: string;
   { key: 'bg_tenants', label: 'Tenant & Transportasi', page: 'Portal Desktop', href: '/tenants', note: 'Latar hero direktori tenant' },
   { key: 'bg_facilities', label: 'Fasilitas Terminal', page: 'Portal Desktop', href: '/facilities', note: 'Latar hero direktori fasilitas' },
   { key: 'bg_tourism', label: 'Pariwisata Terdekat', page: 'Portal Desktop', href: '/tourism', note: 'Latar hero destinasi wisata sekitar bandara' },
+  { key: 'bg_ppid', label: 'Halaman PPID', page: 'Portal Desktop', href: '/ppid', note: 'Latar hero seluruh halaman PPID — kosongkan untuk memakai gradien langit' },
   { key: 'bg_app_home', label: 'Beranda Aplikasi', page: 'Aplikasi Mobile', href: '/app', note: 'Latar hero beranda PWA' },
   { key: 'bg_app_news', label: 'Berita Aplikasi', page: 'Aplikasi Mobile', href: '/app/berita', note: 'Latar hero berita pada PWA' },
 ];

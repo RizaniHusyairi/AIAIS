@@ -62,6 +62,14 @@ export default function PpidHero({
   backHref = '/ppid',
   backLabel = 'Profil PPID',
   showBack = true,
+  /**
+   * Gambar latar, bila halamannya menyediakan satu.
+   *
+   * Opsional dan berbawaan kosong: seluruh halaman PPID lain tetap memakai
+   * gradien langitnya saja, dan hanya halaman yang benar-benar meneruskan
+   * nilai dari panel manajemen yang berubah tampilannya.
+   */
+  bg,
   /** Tombol atau elemen apa pun di bawah teks. */
   children,
 }: {
@@ -73,10 +81,32 @@ export default function PpidHero({
   backHref?: string;
   backLabel?: string;
   showBack?: boolean;
+  bg?: string;
   children?: React.ReactNode;
 }) {
+  const latar = (bg ?? '').trim();
+
   return (
     <section className="relative overflow-hidden bg-gradient-to-br from-[#0b1e5b] via-blue-700 to-sky-500">
+      {/* Gambar latar dipasang di bawah partikel dan tirai gelap, bukan di
+          atasnya: judul hero berwarna putih, dan foto terang tanpa tirai
+          membuatnya tidak terbaca. Gradien di bawah gambar itulah yang
+          menjamin kontrasnya, apa pun foto yang dipilih petugas. */}
+      {latar && (
+        <>
+          <motion.img
+            initial={{ scale: 1.12, opacity: 0 }}
+            animate={{ scale: 1, opacity: 0.35 }}
+            transition={{ duration: 1.6, ease: [0.22, 1, 0.36, 1] }}
+            src={latar}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0b1e5b] via-[#0b1e5b]/55 to-[#0b1e5b]/25 pointer-events-none" />
+        </>
+      )}
+
       <SkyParticles tone="sky" />
       <div className="absolute -top-28 -right-20 w-[30rem] h-[30rem] rounded-full bg-sky-300/20 blur-3xl pointer-events-none" />
 

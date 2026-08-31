@@ -17,10 +17,19 @@ import type {
   InformationServiceReport, ServiceStandard, DocumentItem, Letter,
 } from '@/types';
 
-/** Tanggal ISO → "12 Agustus 2026". String kosong bila tidak ada tanggalnya. */
+/**
+ * Tanggal ISO → "12 Agustus 2026". String kosong bila tidak ada tanggalnya.
+ *
+ * Bagian tanggalnya diambil lebih dulu: kolom `date` tiba dari backend sebagai
+ * tengah malam UTC, yang di zona waktu barat jatuh pada tanggal sebelumnya.
+ * Alasan lengkapnya ada pada `uraiNilai` di `lib/kamus` — modul ini tidak
+ * dapat memakai pemformat itu karena ia berjalan di luar komponen React,
+ * sementara pemformat pusatnya menuntut bahasa aktif.
+ */
 export function tanggalPanjang(iso?: string | null): string {
   if (!iso) return '';
-  const d = new Date(iso);
+  const tanggalSaja = String(iso).slice(0, 10);
+  const d = new Date(`${tanggalSaja}T00:00:00`);
   if (Number.isNaN(d.getTime())) return '';
   return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 }

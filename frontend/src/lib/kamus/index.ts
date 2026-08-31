@@ -40,6 +40,33 @@ export function useTeks(): Kamus {
 }
 
 /**
+ * Kolom tanggal (bukan waktu) diurai sebagai tanggal kalender.
+ *
+ * Backend mengirim kolom bertipe `date` sebagai ISO penuh — `published_date`
+ * sebuah dokumen tiba sebagai "2025-02-03T00:00:00.000000Z", bukan
+ * "2025-02-03". Dua hal keliru bila string itu diteruskan apa adanya:
+ *
+ *  1. Pemformat yang menambahkan sendiri "T00:00:00" (pola yang dipakai
+ *     beberapa berkas di portal ini) menghasilkan "…000000ZT00:00:00" yang
+ *     tidak dapat diurai, lalu memuntahkan ISO mentahnya ke muka halaman.
+ *  2. Tengah malam UTC jatuh pada tanggal SEBELUMNYA di zona waktu barat,
+ *     sehingga dokumen bertanggal 3 Februari tampil sebagai 2 Februari bagi
+ *     sebagian pembaca.
+ *
+ * Keduanya hilang bila bagian tanggalnya diambil lalu dibangun sebagai tengah
+ * malam waktu setempat. Nilai yang memang membawa waktu bermakna — misalnya
+ * `published_at` sebuah berita — tidak cocok dengan pola ini dan diteruskan
+ * apa adanya beserta zona waktunya.
+ */
+function uraiNilai(nilai: string | number | Date): string | number | Date {
+  if (typeof nilai !== 'string') return nilai;
+
+  const cocok = nilai.match(/^(\d{4}-\d{2}-\d{2})(?:[T ]00:00:00(?:\.0+)?Z?)?$/);
+
+  return cocok ? `${cocok[1]}T00:00:00` : nilai;
+}
+
+/**
  * Pemformat tanggal yang mengikuti bahasa aktif.
  *
  * Sebelum ini `toLocaleDateString('id-ID', …)` tersebar di belasan berkas.
@@ -54,7 +81,7 @@ export function formatTanggal(
 ): string {
   if (nilai === null || nilai === undefined || nilai === '') return '';
 
-  const tanggal = nilai instanceof Date ? nilai : new Date(nilai);
+  const tanggal = nilai instanceof Date ? nilai : new Date(uraiNilai(nilai));
   // Tanggal rusak dari API tidak boleh muncul sebagai "Invalid Date" di muka
   // halaman; lebih baik tidak ada tulisan sama sekali.
   if (Number.isNaN(tanggal.getTime())) return '';

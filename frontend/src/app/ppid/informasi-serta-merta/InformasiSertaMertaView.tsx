@@ -20,6 +20,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import PpidHero, { FlightArc } from '@/components/ppid/PpidHero';
+import { useSetting } from '@/lib/settings';
 import { SERTA_MERTA_PENGANTAR } from '@/lib/publicInfoData';
 import { slugify } from '@/lib/ppidGroups';
 import { fetchApi } from '@/lib/api';
@@ -40,6 +41,7 @@ function serial(index: number): string {
 }
 
 export default function InformasiSertaMertaView() {
+  const heroBg = useSetting('bg_ppid');
   const [q, setQ] = useState('');
   const [items, setItems] = useState<ImmediateInformation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,6 +86,7 @@ export default function InformasiSertaMertaView() {
         accent="Serta Merta"
         subtitle="Bandar Udara APT Pranoto Samarinda"
         lead={SERTA_MERTA_PENGANTAR}
+        bg={heroBg}
       />
 
       {/* Penjelasan istilah + pencarian */}

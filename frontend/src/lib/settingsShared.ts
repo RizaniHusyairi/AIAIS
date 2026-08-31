@@ -20,6 +20,7 @@ export const BACKGROUND_KEYS = [
   'bg_tenants',
   'bg_facilities',
   'bg_tourism',
+  'bg_ppid',
   'bg_app_home',
   'bg_app_news',
 ] as const;
@@ -57,6 +58,17 @@ export const TENTANG_KEYS = [
 export type TentangKey = (typeof TENTANG_KEYS)[number];
 
 /**
+ * Video Profil PPID pada halaman /ppid.
+ *
+ * Terpisah dari blok Tentang: yang satu memperkenalkan bandara, yang ini
+ * memperkenalkan layanan informasi publiknya. Keduanya dikelola dari panel
+ * yang berbeda pula — Tentang di /admin/appearance, PPID di /admin/profil-ppid.
+ */
+export const PPID_VIDEO_KEYS = ['ppid_video_url', 'ppid_video_gambar'] as const;
+
+export type PpidVideoKey = (typeof PPID_VIDEO_KEYS)[number];
+
+/**
  * Kunci notifikasi WhatsApp yang BUKAN rahasia.
  *
  * Kunci API gateway dan nomor ponsel petugas sengaja tidak ada di sini:
@@ -77,6 +89,10 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   bg_tourism: 'https://images.unsplash.com/photo-1502680390469-be75c86b636f?auto=format&fit=crop&w=1800&q=80',
   bg_app_home: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?auto=format&fit=crop&w=900&q=80',
   bg_app_news: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?auto=format&fit=crop&w=900&q=80',
+
+  // Kosong dengan sengaja: hero PPID memakai gradien langitnya sendiri sampai
+  // petugas memilih gambar. Lihat catatan pada SettingController::DEFAULTS.
+  bg_ppid: '',
   hero_video_url: 'https://assets.mixkit.co/videos/preview/mixkit-airplane-taking-off-at-sunset-41484-large.mp4',
 
   // Survei Kepuasan Masyarakat — lihat catatan pada SettingController::DEFAULTS.
@@ -98,6 +114,10 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   tentang_caption_en: '',
   tentang_gambar: '',
   tentang_video_url: '',
+
+  // Video Profil PPID — kosong berarti bagian videonya tidak dirender.
+  ppid_video_url: '',
+  ppid_video_gambar: '',
 
   // Notifikasi WhatsApp — kosong berarti "pakai nilai .env di server".
   wa_enabled: '',

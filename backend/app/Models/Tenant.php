@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\ResolvesFileUrl;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -14,7 +15,7 @@ use Illuminate\Database\Eloquent\Model;
  */
 class Tenant extends Model
 {
-    use HasFactory;
+    use HasFactory, ResolvesFileUrl;
 
     /** Kategori gerai; kolomnya string agar kategori baru tak perlu ALTER. */
     public const CATEGORIES = [
@@ -29,7 +30,7 @@ class Tenant extends Model
         'location',
         'operating_hours',
         'contact_phone',
-        'image',
+        'image_path',
         'description',
         'is_active',
     ];
@@ -37,4 +38,17 @@ class Tenant extends Model
     protected $casts = [
         'is_active' => 'boolean',
     ];
+
+    /**
+     * Foto gerai dapat berupa lintasan unggahan maupun URL penuh milik server
+     * lain, jadi tampilannya membaca `image_url` — bukan kolomnya langsung.
+     * Bernilai null bila berkasnya tidak ditemukan di cakram mana pun, dan
+     * itulah yang membuat panel admin bisa menandai foto yang hilang.
+     */
+    protected $appends = ['image_url'];
+
+    public function getImageUrlAttribute(): ?string
+    {
+        return $this->fileUrl($this->image_path);
+    }
 }

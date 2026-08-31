@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AirTrafficController;
 use App\Http\Controllers\Api\AnalyticsController;
 use App\Http\Controllers\Api\AnnouncementController;
+use App\Http\Controllers\Api\InfoSlideController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\ComplaintController;
@@ -33,6 +34,7 @@ use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\OjtController;
 use App\Http\Controllers\Api\PeriodicDocumentController;
 use App\Http\Controllers\Api\PersuratanController;
+use App\Http\Controllers\Api\PpidProfileDocumentController;
 use App\Http\Controllers\Api\PpidRegulationController;
 use App\Http\Controllers\Api\RatingController;
 use App\Http\Controllers\Api\ServiceController;
@@ -95,6 +97,10 @@ Route::prefix(config('api.version'))->group(function () {
     Route::get('/news', [NewsController::class, 'index']);
     Route::get('/news/{slug}', [NewsController::class, 'show']);
     Route::get('/announcements', [AnnouncementController::class, 'index']);
+
+    // Papan pengumuman bergambar pada beranda. Slide yang gambarnya tidak
+    // dapat dibuka DISARING di sini — slide tanpa gambar tidak punya isi.
+    Route::get('/info-slides', [InfoSlideController::class, 'index']);
 
     // Facilities & Tenants
     Route::get('/facilities', [FacilityController::class, 'index']);
@@ -162,6 +168,11 @@ Route::prefix(config('api.version'))->group(function () {
     // (`?category=`). Dokumennya berupa tautan luar, jadi yang disaring di
     // sini adalah peraturan yang tautannya belum diisi.
     Route::get('/ppid-regulations', [PpidRegulationController::class, 'index']);
+
+    // Dokumen halaman Profil PPID: SK Tim PPID dan Laporan Bulanan. Dokumen
+    // yang BELUM terbit tetap dikirim — keberadaannya wajib diumumkan menurut
+    // UU 14/2008; lihat controllernya.
+    Route::get('/ppid-profile-documents', [PpidProfileDocumentController::class, 'index']);
 
     // Isi PPID lainnya. Ketiganya menyaring baris yang tautannya kosong —
     // dokumennya berupa tautan luar, jadi tidak ada berkas yang diperiksa.
@@ -370,6 +381,15 @@ Route::prefix(config('api.version'))->group(function () {
             Route::delete('/news/{id}', [NewsController::class, 'destroy']);
 
             // Announcements Management
+            // Slide informasi. `POST /{id}` mendampingi `PUT` karena
+            // gambarnya diunggah lewat multipart, yang tidak dapat dikirim
+            // dengan PUT dari peramban.
+            Route::get('/info-slides', [InfoSlideController::class, 'adminIndex']);
+            Route::post('/info-slides', [InfoSlideController::class, 'store']);
+            Route::post('/info-slides/{id}', [InfoSlideController::class, 'update']);
+            Route::put('/info-slides/{id}', [InfoSlideController::class, 'update']);
+            Route::delete('/info-slides/{id}', [InfoSlideController::class, 'destroy']);
+
             Route::get('/announcements', [AnnouncementController::class, 'adminIndex']);
             Route::post('/announcements', [AnnouncementController::class, 'store']);
             Route::put('/announcements/{id}', [AnnouncementController::class, 'update']);
@@ -390,6 +410,9 @@ Route::prefix(config('api.version'))->group(function () {
             // Tenants Management
             Route::get('/tenants', [TenantController::class, 'adminIndex']);
             Route::post('/tenants', [TenantController::class, 'store']);
+            // Foto tenant diunggah lewat multipart, dan multipart tidak dapat
+            // dikirim dengan PUT dari peramban — lihat rute `letters`.
+            Route::post('/tenants/{id}', [TenantController::class, 'update']);
             Route::put('/tenants/{id}', [TenantController::class, 'update']);
             Route::delete('/tenants/{id}', [TenantController::class, 'destroy']);
 
@@ -474,6 +497,15 @@ Route::prefix(config('api.version'))->group(function () {
             // Standar Pelayanan. Menerima berkas PDF, jadi POST didaftarkan pula
             // untuk pengubahan — multipart tidak dapat dikirim lewat PUT dari
             // browser, sama seperti rute regulasi surat.
+            // Profil PPID. `POST /{id}` mendampingi `PUT` karena berkas SK
+            // dan laporan diunggah lewat multipart, yang tidak dapat dikirim
+            // dengan PUT dari peramban.
+            Route::get('/ppid-profile-documents', [PpidProfileDocumentController::class, 'adminIndex']);
+            Route::post('/ppid-profile-documents', [PpidProfileDocumentController::class, 'store']);
+            Route::post('/ppid-profile-documents/{id}', [PpidProfileDocumentController::class, 'update']);
+            Route::put('/ppid-profile-documents/{id}', [PpidProfileDocumentController::class, 'update']);
+            Route::delete('/ppid-profile-documents/{id}', [PpidProfileDocumentController::class, 'destroy']);
+
             Route::get('/service-standards', [ServiceStandardController::class, 'adminIndex']);
             Route::post('/service-standards', [ServiceStandardController::class, 'store']);
             Route::post('/service-standards/{id}', [ServiceStandardController::class, 'update']);

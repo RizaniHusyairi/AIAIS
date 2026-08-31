@@ -27,15 +27,29 @@ import { idYouTube } from '@/lib/tentang';
  *
  * Sematannya memakai `youtube-nocookie.com`, yang menunda penyimpanan cookie
  * penelusuran sampai video benar-benar diputar.
+ *
+ * Komponen ini juga melayani Video Profil PPID pada halaman /ppid — lewat prop
+ * ukuran dan tautan keterangan, BUKAN lewat salinan kedua. Menyalin iframe-nya
+ * ke berkas lain adalah persis cara jaminan di atas hilang tanpa gejala apa pun
+ * yang terlihat di layar.
  */
 export default function VideoProfil({
   gambar,
   videoUrl,
   caption,
+  tinggiKelas = 'h-[220px]',
+  captionHref = '/profile',
 }: {
   gambar: string;
   videoUrl: string;
   caption: string;
+  /**
+   * Kelas tinggi sampulnya. Halaman Profil PPID memakainya dalam rasio 16:9;
+   * beranda tetap pada tinggi tetap 220px seperti sebelumnya.
+   */
+  tinggiKelas?: string;
+  /** Tujuan tulisan keterangan di sudut sampul. */
+  captionHref?: string;
 }) {
   const t = useTeks();
   const kurangiGerak = useReducedMotion();
@@ -50,7 +64,7 @@ export default function VideoProfil({
         src={gambar}
         alt=""
         aria-hidden="true"
-        className="w-full h-[220px] object-cover group-hover:scale-105 transition-transform duration-700"
+        className={`w-full ${tinggiKelas} object-cover group-hover:scale-105 transition-transform duration-700`}
       />
       <div className="absolute inset-0 bg-gradient-to-t from-[#0b1e5b]/70 via-transparent to-transparent" />
 
@@ -83,7 +97,7 @@ export default function VideoProfil({
           `relative z-10` supaya ia tetap dapat dijangkau meskipun tombol putar
           di atas menutupi seluruh gambar. */}
       <Link
-        href="/profile"
+        href={captionHref}
         className="absolute bottom-4 right-4 z-10 text-white text-[12.5px] font-semibold drop-shadow hover:underline"
       >
         {caption}

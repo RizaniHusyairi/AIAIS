@@ -224,6 +224,11 @@ const en = {
     putarVideo: 'Play the profile video',
     lihatProfil: 'View Airport Profile',
 
+    pengumumanKicker: 'Notice Board',
+    pengumumanJudul: 'Current Airport Notices',
+    pengumumanAktif: 'active notices',
+    pengumumanSampai: 'Valid until',
+
     beritaKicker: 'Latest Updates',
     beritaJudul: 'News & Announcements',
     fasilitasKicker: 'Comfort',
@@ -249,7 +254,7 @@ const en = {
     aksesJudul: 'Getting to the Airport',
     akses: {
       pribadi: { nama: 'Private Vehicle', desc: 'Ample parking available' },
-      taksi: { nama: 'Taxi & Ride-hailing', desc: 'Available 24 hours' },
+      taksi: { nama: 'Taxi & Ride-hailing', desc: 'Taxi cooperative counters outside the arrivals hall' },
       bus: { nama: 'Bus & Shuttle', desc: 'Bus services from several points around the city' },
       rental: { nama: 'Car Rental', desc: 'A range of rental options at the airport' },
     },

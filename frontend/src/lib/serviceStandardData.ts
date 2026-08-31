@@ -128,13 +128,6 @@ export const SP_GROUPS: ServiceDocGroup[] = [
   },
 ];
 
-/** "2026-01-15" -> "15 Januari 2026". */
-export function formatTanggal(iso: string): string {
-  const d = new Date(`${iso}T00:00:00`);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-}
-
 /** Jumlah dokumen di seluruh kelompok. */
 export const SP_TOTAL_DOKUMEN = SP_GROUPS.reduce((n, g) => n + g.docs.length, 0);
 

@@ -18,6 +18,7 @@ import React, { useRef, useState } from 'react';
 import Link from 'next/link';
 import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion';
 import PpidHero from '@/components/ppid/PpidHero';
+import { useSetting } from '@/lib/settings';
 import ImageLightbox, { LightboxThumb, type LightboxImage } from '@/components/ui/ImageLightbox';
 import { SOP_PENGANTAR, SOP_PROSEDUR, PPID_DASAR_HUKUM, type SopProcedure } from '@/lib/ppidData';
 import {
@@ -215,11 +216,12 @@ function ProcedureCard({
    ================================================================ */
 
 export default function SopPpidView() {
+  const heroBg = useSetting('bg_ppid');
   const [lightbox, setLightbox] = useState<LightboxImage | null>(null);
 
   return (
     <div className="bg-slate-50">
-      <PpidHero title="SOP" accent="PPID" lead={SOP_PENGANTAR} />
+      <PpidHero title="SOP" accent="PPID" lead={SOP_PENGANTAR} bg={heroBg} />
 
       {/* ============================================================ */}
       {/*  PETA TAHAP — bergaya penerbangan lanjutan (connecting)      */}

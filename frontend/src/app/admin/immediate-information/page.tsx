@@ -21,6 +21,7 @@ import {
   PageHeader, Panel, Btn, Badge, Field, Modal, ConfirmDialog, Toast, ToastMsg,
   Loading, EmptyState, Table, Row, Cell, SearchBox, StatCard, stagger,
 } from '@/components/admin/ui';
+import { Galat, IsianTautan, tautanSah } from '@/components/admin/isian';
 import { Radio, Plus, Pencil, Trash2, RefreshCw, Megaphone, AlertTriangle, Link as LinkIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -33,12 +34,17 @@ type FormState = {
 
 const EMPTY: FormState = { uraian: '', keterangan: '', link_url: '', link_text: 'Lihat Detail' };
 
+/* Label tombol yang lazim dipakai. Hanya mengisi medannya — petugas tetap
+   bebas menulis sendiri untuk maklumat yang butuh ajakan berbeda. */
+const LABEL_CEPAT = ['Lihat Detail', 'Buka Instagram', 'Baca Selengkapnya'];
+
 export default function AdminImmediateInformationPage() {
   const [items, setItems] = useState<ImmediateInformation[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState('');
 
   const [form, setForm] = useState<FormState>(EMPTY);
+  const [galat, setGalat] = useState<Record<string, string>>({});
   const [editId, setEditId] = useState<number | null>(null);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -76,7 +82,12 @@ export default function AdminImmediateInformationPage() {
     terpotong: items.filter((it) => String(it.keterangan ?? '').trimEnd().endsWith('...')).length,
   }), [items]);
 
-  const openCreate = () => { setForm(EMPTY); setEditId(null); setOpen(true); };
+  const isi = (k: keyof FormState, v: string) => {
+    setForm((s) => ({ ...s, [k]: v }));
+    setGalat((g) => (g[k] ? { ...g, [k]: '' } : g));
+  };
+
+  const openCreate = () => { setForm(EMPTY); setGalat({}); setEditId(null); setOpen(true); };
   const openEdit = (it: ImmediateInformation) => {
     setForm({
       uraian: it.uraian,
@@ -84,11 +95,28 @@ export default function AdminImmediateInformationPage() {
       link_url: it.link_url,
       link_text: it.link_text || 'Lihat Detail',
     });
+    setGalat({});
     setEditId(it.id);
     setOpen(true);
   };
 
+  const periksa = () => {
+    const g: Record<string, string> = {};
+    if (!form.uraian.trim()) g.uraian = 'Judul maklumat wajib diisi.';
+    if (!form.keterangan.trim()) g.keterangan = 'Keterangan wajib diisi.';
+    if (!form.link_url.trim()) g.link_url = 'Tautan selengkapnya wajib diisi.';
+    else if (!tautanSah(form.link_url.trim())) g.link_url = 'Tautan harus diawali http:// atau https://';
+
+    setGalat(g);
+    return Object.keys(g).length === 0;
+  };
+
   const save = async () => {
+    if (!periksa()) {
+      setToast({ text: 'Ada isian yang belum lengkap.', kind: 'error' });
+      return;
+    }
+
     setSaving(true);
     const body = { ...form, link_text: form.link_text || 'Lihat Detail' };
 
@@ -188,14 +216,44 @@ export default function AdminImmediateInformationPage() {
         }
       >
         <div className="space-y-4">
-          <Field label="Judul Maklumat" required value={form.uraian} onChange={(v) => setForm({ ...form, uraian: v })} placeholder="Bahaya Bercanda Tentang Bom" />
-          <Field
-            label="Keterangan" required type="textarea" rows={4}
-            value={form.keterangan} onChange={(v) => setForm({ ...form, keterangan: v })}
-            placeholder="Ringkasan singkat yang tampil pada kartu di halaman publik."
+          <div>
+            <Field label="Judul Maklumat" required value={form.uraian} onChange={(v) => isi('uraian', v)} placeholder="Bahaya Bercanda Tentang Bom" />
+            <Galat pesan={galat.uraian} />
+          </div>
+
+          <div>
+            <Field
+              label="Keterangan" required type="textarea" rows={4}
+              value={form.keterangan} onChange={(v) => isi('keterangan', v)}
+              placeholder="Ringkasan singkat yang tampil pada kartu di halaman publik."
+            />
+            <Galat pesan={galat.keterangan} />
+          </div>
+
+          <IsianTautan
+            label="Tautan Selengkapnya" wajib
+            nilai={form.link_url}
+            onChange={(v) => isi('link_url', v)}
+            placeholder="https://www.instagram.com/p/..."
+            hint="Umumnya pos Instagram bandara yang memuat maklumat utuhnya."
+            galat={galat.link_url}
           />
-          <Field label="Tautan Selengkapnya" required value={form.link_url} onChange={(v) => setForm({ ...form, link_url: v })} placeholder="https://www.instagram.com/p/..." />
-          <Field label="Label Tombol" value={form.link_text} onChange={(v) => setForm({ ...form, link_text: v })} placeholder="Lihat Detail" />
+
+          <div>
+            <Field label="Label Tombol" value={form.link_text} onChange={(v) => isi('link_text', v)} placeholder="Lihat Detail" />
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {LABEL_CEPAT.map((l) => (
+                <button
+                  key={l}
+                  type="button"
+                  onClick={() => isi('link_text', l)}
+                  className="text-[10.5px] font-semibold px-2.5 py-1 rounded-full bg-[var(--adm-hover)] text-[var(--adm-body)] hover:text-[var(--adm-accent)] transition-colors cursor-pointer"
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </Modal>
 

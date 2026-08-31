@@ -21,6 +21,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import PpidHero, { FlightArc } from '@/components/ppid/PpidHero';
+import { useSetting } from '@/lib/settings';
 import { API_BASE_URL } from '@/lib/api';
 import {
   FileText, Upload, IdCard, ClipboardList, Check, ArrowRight, ArrowLeft,
@@ -274,6 +275,7 @@ function Stepper({ step }: { step: number }) {
    ================================================================ */
 
 export default function PengajuanInformasiView() {
+  const heroBg = useSetting('bg_ppid');
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<Form>(KOSONG);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -444,6 +446,7 @@ export default function PengajuanInformasiView() {
         accent="Informasi Publik"
         subtitle="Bandar Udara APT Pranoto Samarinda"
         lead="Setiap orang berhak memperoleh informasi publik. Ajukan permohonan Anda di halaman ini; PPID wajib menjawab dalam 10 hari kerja sejak permohonan diterima."
+        bg={heroBg}
       />
 
       {/* ============================================================ */}

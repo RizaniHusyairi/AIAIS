@@ -51,6 +51,13 @@ class DatabaseSeeder extends Seeder
          * angka-angka itu belum pernah diverifikasi terhadap dokumen resmi.
          */
         $this->call(AirportStatSeeder::class);
+
+        /*
+         * SK Tim PPID yang selama ini tayang — dipindahkan dari konstanta
+         * frontend ke basis data supaya petugas dapat menggantinya sendiri.
+         * Aman diulang: seedernya memakai firstOrCreate atas tautan SK-nya.
+         */
+        $this->call(PpidProfileDocumentSeeder::class);
     }
 
     /**

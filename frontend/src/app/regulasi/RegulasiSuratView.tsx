@@ -19,6 +19,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fetchApi } from '@/lib/api';
+import { useBahasa } from '@/lib/bahasa';
+import { formatTanggal } from '@/lib/kamus';
 import type { Letter } from '@/types';
 import SkyParticles from '@/components/effects/SkyParticles';
 import {
@@ -88,19 +90,12 @@ const rise = {
 };
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.07 } } };
 
-/** Tanggal terbit dalam bahasa Indonesia; v1 memakai `translatedFormat`. */
-function formatTanggal(iso?: string): string {
-  if (!iso) return '';
-  const d = new Date(`${String(iso).slice(0, 10)}T00:00:00`);
-  if (Number.isNaN(d.getTime())) return String(iso);
-  return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-}
-
 const tahunDari = (iso?: string): string => String(iso ?? '').slice(0, 4);
 
 /* ================================================================ */
 
 export default function RegulasiSuratView({ type }: { type: LetterType }) {
+  const bahasa = useBahasa();
   const meta = META[type];
   const Icon = meta.icon;
 
@@ -138,10 +133,12 @@ export default function RegulasiSuratView({ type }: { type: LetterType }) {
     const s = q.toLowerCase().trim();
     return letters.filter((l) => {
       const byTahun = tahun === 'all' || tahunDari(l.issue_date) === tahun;
-      const byQ = !s || [l.title, l.number, formatTanggal(l.issue_date)].some((v) => String(v ?? '').toLowerCase().includes(s));
+      const byQ = !s || [l.title, l.number, formatTanggal(l.issue_date, bahasa)].some((v) => String(v ?? '').toLowerCase().includes(s));
       return byTahun && byQ;
     });
-  }, [letters, q, tahun]);
+    // `bahasa` ikut: pencarian juga menjangkau tanggal terbit yang tampil,
+    // dan tulisan tanggal itu berubah saat bahasanya berganti.
+  }, [letters, q, tahun, bahasa]);
 
   const rentang = useMemo(() => {
     if (daftarTahun.length === 0) return '—';
@@ -349,7 +346,7 @@ export default function RegulasiSuratView({ type }: { type: LetterType }) {
                         </span>
                         <span className="inline-flex items-center gap-1.5">
                           <CalendarDays className="w-3.5 h-3.5 flex-shrink-0" />
-                          {formatTanggal(letter.issue_date)}
+                          {formatTanggal(letter.issue_date, bahasa)}
                         </span>
                       </div>
                     </div>

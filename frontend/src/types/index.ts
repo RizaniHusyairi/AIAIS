@@ -565,6 +565,24 @@ export interface NewsItem {
   published_at: string;
 }
 
+/**
+ * Slide informasi pada beranda — papan pengumuman bergambar.
+ *
+ * Bentuknya sengaja seminimal tabel warisan v1: satu slide adalah selembar
+ * gambar yang boleh ditautkan ke suatu alamat. Tidak ada judul dan tidak ada
+ * kolom urutan.
+ */
+export interface InfoSlide {
+  id: number;
+  /** Lintasan mentah; dapat menunjuk berkas warisan v1 yang sudah hilang. */
+  image_path: string;
+  link_url: string | null;
+  is_visible: boolean;
+  /** Turunan `$appends`; null bila berkasnya tidak ditemukan. */
+  image_url: string | null;
+  has_image: boolean;
+}
+
 export interface Announcement {
   id: number;
   title: string;
@@ -572,6 +590,8 @@ export interface Announcement {
   priority: 'low' | 'medium' | 'high' | 'urgent';
   is_active: boolean;
   target_audience: string;
+  /** Batas berlaku; null berarti berlaku sampai dicabut petugas. */
+  valid_until: string | null;
 }
 
 /**
@@ -587,6 +607,30 @@ export interface ServiceStandard {
   document_number: string | null;
   description: string | null;
   published_date: string;
+  is_active: boolean;
+  /** Turunan `$appends`; menyatukan berkas unggahan dan tautan luar. */
+  document_url: string | null;
+  has_document: boolean;
+}
+
+/**
+ * Dokumen halaman Profil PPID: SK Tim PPID dan Laporan Bulanan.
+ *
+ * Satu tabel dua jenis, seperti `ServiceStandard` — `type` yang membedakan
+ * di mana barisnya tampil dan medan mana yang bermakna baginya.
+ */
+export interface PpidProfileDocument {
+  id: number;
+  type: 'SK PPID' | 'Laporan Bulanan';
+  title: string;
+  document_number: string | null;
+  description: string | null;
+  /** Tanggal penetapan SK atau tanggal terbit laporan. */
+  published_date: string;
+  /** Bulan yang dilaporkan (selalu tanggal 1); null bagi SK. */
+  period_date: string | null;
+  /** SK yang sedang berlaku. Selalu false bagi Laporan Bulanan. */
+  is_current: boolean;
   is_active: boolean;
   /** Turunan `$appends`; menyatukan berkas unggahan dan tautan luar. */
   document_url: string | null;
@@ -682,8 +726,12 @@ export interface Tenant {
   location: string;
   operating_hours: string;
   contact_phone?: string;
-  image?: string;
+  /** Lintasan unggahan atau URL penuh. Yang ditampilkan `image_url`. */
+  image_path?: string | null;
+  /** Turunan `$appends`; null bila berkasnya tidak ditemukan. */
+  image_url?: string | null;
   description?: string;
+  is_active?: boolean;
 }
 
 export type ComplaintStatus = 'submitted' | 'in_progress' | 'resolved' | 'rejected';

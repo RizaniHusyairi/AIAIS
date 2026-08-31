@@ -24,6 +24,17 @@ class SettingController extends Controller
         'bg_app_home' => 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?auto=format&fit=crop&w=900&q=80',
         'bg_app_news' => 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?auto=format&fit=crop&w=900&q=80',
 
+        /**
+         * Latar hero halaman Profil PPID.
+         *
+         * Bawaannya KOSONG, tidak seperti latar lain. Hero PPID sudah punya
+         * gradien langit berpartikel sendiri, dan itu tampilan yang berlaku
+         * sampai petugas benar-benar memilih gambar. Bawaan berupa foto stok
+         * berarti halaman resmi PPID memajang gambar yang tidak dipilih
+         * siapa pun.
+         */
+        'bg_ppid' => '',
+
         // Video hero (dipertahankan agar kompatibel dengan pengaturan lama)
         'hero_video_url' => 'https://assets.mixkit.co/videos/preview/mixkit-airplane-taking-off-at-sunset-41484-large.mp4',
 
@@ -112,6 +123,21 @@ class SettingController extends Controller
          * — tombol mati lebih buruk daripada tidak ada tombol.
          */
         'tentang_video_url' => '',
+
+        /**
+         * Video Profil PPID pada halaman /ppid.
+         *
+         * Berdiri sendiri dari 'tentang_video_url': yang satu memperkenalkan
+         * bandara, yang ini memperkenalkan layanan informasi publiknya. Kosong
+         * berarti seluruh bagian videonya TIDAK dirender — bukan pemutar
+         * kosong, dan bukan tombol yang tidak melakukan apa pun.
+         *
+         * 'ppid_video_gambar' adalah sampulnya. Sampul itulah satu-satunya yang
+         * dimuat sebelum pengunjung menekan putar; iframe YouTube baru lahir
+         * sesudahnya. Lihat catatan privasi di VideoProfil.tsx.
+         */
+        'ppid_video_url' => '',
+        'ppid_video_gambar' => '',
 
         /*
          * Notifikasi WhatsApp ke petugas piket.

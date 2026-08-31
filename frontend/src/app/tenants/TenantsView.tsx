@@ -48,15 +48,23 @@ const CAT_META: Record<string, { label: string; color: string; bg: string; icon:
   services: { label: 'Layanan', color: '#059669', bg: '#ecfdf5', icon: Wrench },
 };
 
-/* Moda transportasi menuju / dari bandara */
-const TRANSPORT = [
-  { name: 'Bus DAMRI', desc: 'Rute reguler menuju pusat Kota Samarinda dan sekitarnya.', detail: 'Berangkat menyesuaikan kedatangan penerbangan', icon: Bus, color: '#2563eb', bg: '#eff6ff' },
-  { name: 'Taksi Resmi', desc: 'Konter taksi bandara tersedia di area kedatangan.', detail: 'Beroperasi 24 jam', icon: Car, color: '#ea580c', bg: '#fff7ed' },
-  { name: 'Rental Mobil', desc: 'Sewa kendaraan harian dengan atau tanpa pengemudi.', detail: 'Konter di terminal kedatangan', icon: CarFront, color: '#059669', bg: '#ecfdf5' },
-  { name: 'Ojek Online', desc: 'Titik penjemputan khusus di area yang telah ditentukan.', detail: 'Ikuti papan petunjuk area jemput', icon: Bike, color: '#16a34a', bg: '#f0fdf4' },
-  { name: 'Area Parkir', desc: 'Parkir kendaraan pribadi yang luas dan terpantau.', detail: 'Roda dua & roda empat', icon: ParkingSquare, color: '#7c3aed', bg: '#f5f3ff' },
-  { name: 'Layanan Bantuan', desc: 'Petugas informasi siap membantu kebutuhan transportasi Anda.', detail: 'Pusat informasi terminal', icon: Headphones, color: '#0891b2', bg: '#ecfeff' },
-];
+/* Ikon moda transportasi.
+
+   Daftar moda dulu ditulis tetap di sini — enam kartu lengkap dengan keterangan
+   seperti "Bus DAMRI" dan "Taksi Resmi, beroperasi 24 jam" yang tidak bersumber
+   dari mana pun. Kini isinya datang dari gerai kategori `transportation` yang
+   didaftarkan petugas, sama seperti layar PWA. Yang tersisa di berkas ini hanya
+   ikonnya, ditebak dari nama gerai karena data admin tidak menyimpan ikon. */
+function ikonModa(name: string) {
+  const n = name.toLowerCase();
+  if (/bus|damri|pemadu/.test(n)) return Bus;
+  if (/rental|sewa/.test(n)) return CarFront;
+  if (/ojek/.test(n)) return Bike;
+  if (/parkir/.test(n)) return ParkingSquare;
+  return Car;
+}
+
+const TRANS_META = CAT_META.transportation;
 
 const rise = {
   hidden: { opacity: 0, y: 26 },
@@ -93,6 +101,13 @@ export default function TenantsView() {
     retail: tenants.filter((t) => t.category === 'retail').length,
     trans: tenants.filter((t) => t.category === 'transportation').length,
   }), [tenants]);
+
+  /* Moda transportasi menuju/dari bandara — termasuk konter taksi koperasi di
+     area kedatangan. Bersumber data yang sama dengan daftar gerai di atas. */
+  const moda = useMemo(
+    () => tenants.filter((t) => t.category === 'transportation'),
+    [tenants],
+  );
 
   return (
     <div className="bg-slate-50 overflow-hidden">
@@ -172,7 +187,7 @@ export default function TenantsView() {
             { label: 'Total Tenant', value: counts.total, icon: Store, color: '#2563eb' },
             { label: 'Kuliner', value: counts.fnb, icon: Coffee, color: '#e11d48' },
             { label: 'Retail & Oleh-oleh', value: counts.retail, icon: ShoppingBag, color: '#7c3aed' },
-            { label: 'Moda Transportasi', value: TRANSPORT.length, icon: Bus, color: '#0891b2' },
+            { label: 'Moda Transportasi', value: counts.trans, icon: Bus, color: '#0891b2' },
           ].map((s) => {
             const Icon = s.icon;
             return (
@@ -277,8 +292,8 @@ export default function TenantsView() {
                 >
                   {/* image / placeholder */}
                   <div className="relative h-40 overflow-hidden" style={{ backgroundColor: meta.bg }}>
-                    {t.image ? (
-                      <img src={t.image} alt={t.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    {t.image_url ? (
+                      <img src={t.image_url} alt={t.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <Icon className="w-14 h-14" style={{ color: meta.color, opacity: 0.35 }} />
@@ -338,37 +353,78 @@ export default function TenantsView() {
             </span>
             <h2 className="mt-4 text-3xl sm:text-4xl font-black text-white tracking-tight">Layanan Transportasi</h2>
             <p className="mt-3 text-blue-100/80 text-[14px] leading-relaxed">
-              Beragam pilihan moda transportasi resmi untuk menuju maupun meninggalkan Bandara APT Pranoto Samarinda.
+              Konter taksi milik beberapa koperasi berada di luar area kedatangan, siap
+              mengantar ke Kota Samarinda maupun kota lain dengan biaya ditanggung penumpang.
+              Berikut mitra transportasi yang terdaftar di Bandara APT Pranoto Samarinda.
             </p>
           </motion.div>
 
-          <motion.div variants={container} initial="hidden" whileInView="show" viewport={{ once: true }} className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {TRANSPORT.map((tr) => {
-              const Icon = tr.icon;
-              return (
-                <motion.div
-                  key={tr.name}
-                  variants={rise}
-                  whileHover={{ y: -7 }}
-                  className="group relative overflow-hidden bg-white rounded-3xl p-6 shadow-xl"
-                >
-                  <span className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ backgroundColor: tr.bg }}>
-                    <Icon className="w-7 h-7" style={{ color: tr.color }} />
-                  </span>
+          {moda.length === 0 ? (
+            /* Kosong dikatakan apa adanya — jangan diisi daftar bawaan. */
+            <motion.div
+              initial={{ opacity: 0, y: 18 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="mt-10 mx-auto max-w-xl rounded-3xl bg-white/[0.07] backdrop-blur border border-white/15 p-8 text-center"
+            >
+              <span className="mx-auto w-14 h-14 rounded-2xl bg-cyan-400/20 border border-cyan-300/30 flex items-center justify-center">
+                <Car className="w-7 h-7 text-cyan-300" />
+              </span>
+              <h3 className="mt-4 text-white font-black text-[18px]">Belum ada mitra transportasi terdaftar</h3>
+              <p className="mt-2 text-blue-100/80 text-[13px] leading-relaxed">
+                Hubungi pusat informasi bandara untuk menanyakan pilihan yang tersedia hari ini.
+              </p>
+            </motion.div>
+          ) : (
+            <motion.div variants={container} initial="hidden" whileInView="show" viewport={{ once: true }} className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {moda.map((m) => {
+                const Icon = ikonModa(m.name);
+                return (
+                  <motion.div
+                    key={m.id}
+                    variants={rise}
+                    whileHover={{ y: -7 }}
+                    className="group relative overflow-hidden bg-white rounded-3xl p-6 shadow-xl"
+                  >
+                    <span className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ backgroundColor: TRANS_META.bg }}>
+                      <Icon className="w-7 h-7" style={{ color: TRANS_META.color }} />
+                    </span>
 
-                  <h3 className="mt-4 text-[17px] font-black text-slate-900">{tr.name}</h3>
-                  <p className="mt-1.5 text-slate-500 text-[12.5px] leading-relaxed">{tr.desc}</p>
+                    <h3 className="mt-4 text-[17px] font-black text-slate-900">{m.name}</h3>
+                    {m.description && (
+                      <p className="mt-1.5 text-slate-500 text-[12.5px] leading-relaxed">{m.description}</p>
+                    )}
 
-                  <div className="mt-4 pt-3.5 border-t border-dashed border-slate-200 flex items-center gap-2">
-                    <Clock className="w-3.5 h-3.5 flex-shrink-0" style={{ color: tr.color }} />
-                    <span className="text-[11.5px] text-slate-600">{tr.detail}</span>
-                  </div>
+                    <div className="mt-4 pt-3.5 border-t border-dashed border-slate-200 space-y-2">
+                      {m.location && (
+                        <p className="flex items-start gap-2 text-[11.5px] text-slate-600">
+                          <MapPin className="w-3.5 h-3.5 flex-shrink-0 mt-px" style={{ color: TRANS_META.color }} />
+                          {m.location}
+                        </p>
+                      )}
+                      {m.operating_hours && (
+                        <p className="flex items-start gap-2 text-[11.5px] text-slate-600">
+                          <Clock className="w-3.5 h-3.5 flex-shrink-0 mt-px" style={{ color: TRANS_META.color }} />
+                          {m.operating_hours}
+                        </p>
+                      )}
+                      {m.contact_phone && (
+                        <a
+                          href={`tel:${m.contact_phone.replace(/\s+/g, '')}`}
+                          className="flex items-start gap-2 text-[11.5px] font-bold text-blue-600"
+                        >
+                          <Phone className="w-3.5 h-3.5 flex-shrink-0 mt-px" />
+                          {m.contact_phone}
+                        </a>
+                      )}
+                    </div>
 
-                  <span className="absolute bottom-0 left-0 h-1 w-0 group-hover:w-full transition-all duration-500" style={{ backgroundColor: tr.color }} />
-                </motion.div>
-              );
-            })}
-          </motion.div>
+                    <span className="absolute bottom-0 left-0 h-1 w-0 group-hover:w-full transition-all duration-500" style={{ backgroundColor: TRANS_META.color }} />
+                  </motion.div>
+                );
+              })}
+            </motion.div>
+          )}
 
           {/* help banner */}
           <motion.div

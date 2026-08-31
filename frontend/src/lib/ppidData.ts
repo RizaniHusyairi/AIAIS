@@ -70,18 +70,15 @@ export const PPID_TUGAS: string[] = [
   'Menyediakan Sarana dan Prasarana dalam pelaksanaan pelayanan informasi.',
 ];
 
-/**
- * SK Tim PPID.
+/*
+ * SK Tim PPID TIDAK lagi di sini.
  *
- * Tautannya masih menunjuk ke Google Drive milik bandara, sama seperti v1 —
- * berkasnya belum ada di repo ini. Jangan diganti tautan internal sebelum
- * PDF-nya benar-benar diunggah.
+ * Ia kini satu baris di tabel `ppid_profile_documents` yang dikelola dari
+ * /admin/profil-ppid, karena SK diperbarui tiap kali susunan tim berubah dan
+ * itu tidak boleh menuntut rilis kode. SK yang selama ini tayang — beserta
+ * tautan Drive-nya — dipindahkan ke `PpidProfileDocumentSeeder`, lengkap
+ * dengan provenansnya.
  */
-export const PPID_SK = {
-  title: 'SK Tim Pejabat Pengelola Informasi dan Dokumentasi (PPID)',
-  desc: 'Surat Keputusan resmi yang menetapkan tim dan struktur PPID di lingkungan BLU Kantor UPBU Kelas I A.P.T. Pranoto Samarinda.',
-  url: 'https://drive.google.com/file/d/1OPPKzeAyWu1J53CO0CG8Cbhhte-dFYLr/view',
-};
 
 export type PpidDoc = {
   slug: string;

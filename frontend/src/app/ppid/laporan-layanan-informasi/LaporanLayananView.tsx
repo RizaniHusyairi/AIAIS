@@ -17,6 +17,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion';
 import PpidHero, { FlightArc } from '@/components/ppid/PpidHero';
+import { useSetting } from '@/lib/settings';
 import { LAPORAN_PENGANTAR, LAPORAN_TAHUNAN } from '@/lib/publicInfoData';
 import {
   Search, SearchX, ExternalLink, FileText, Plane, CalendarRange, ArrowRight, Info,
@@ -29,6 +30,7 @@ const rise = {
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.08 } } };
 
 export default function LaporanLayananView() {
+  const heroBg = useSetting('bg_ppid');
   const [q, setQ] = useState('');
   const trackRef = useRef<HTMLOListElement>(null);
   const reduceMotion = useReducedMotion();
@@ -57,6 +59,7 @@ export default function LaporanLayananView() {
         accent="Layanan Informasi"
         subtitle="Bandar Udara APT Pranoto Samarinda"
         lead={LAPORAN_PENGANTAR}
+        bg={heroBg}
       />
 
       {/* Ringkasan + pencarian */}

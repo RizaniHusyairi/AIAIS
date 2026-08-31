@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
@@ -12,7 +11,7 @@ import { PageHeader, Panel, StatCard, Loading, Badge, stagger, RadarDecor, JumpC
 import { useAdminTheme } from '@/components/admin/theme';
 import {
   LayoutDashboard, Users, Plane, Newspaper, MessageSquareWarning, TrendingUp,
-  Smartphone, ArrowRight, Building2, Store, Megaphone, CheckCircle2, Clock, AlertTriangle, FileText,
+  Smartphone, Building2, Store, Megaphone, CheckCircle2, Clock, AlertTriangle, FileText,
 } from 'lucide-react';
 
 type Analytics = {
@@ -105,20 +104,6 @@ export default function AdminDashboardPage() {
         icon={LayoutDashboard}
         title="Dasbor Manajemen"
         subtitle="Semua yang terjadi di portal dan di apron hari ini, dalam satu layar."
-        action={
-          <Link href="/admin/flights">
-            <motion.span
-              whileHover={{ y: -2 }}
-              whileTap={{ scale: 0.96 }}
-              className="group relative overflow-hidden inline-flex items-center gap-2 bg-gradient-to-r from-[var(--adm-btn-from)] to-[var(--adm-btn-to)] hover:brightness-110 text-[var(--adm-btn-fg)] font-bold text-[12.5px] px-4 py-2.5 rounded-xl shadow-md transition-all cursor-pointer"
-            >
-              <span className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/35 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-              <span className="relative inline-flex items-center gap-2">
-                Kelola Penerbangan <ArrowRight className="w-4 h-4" />
-              </span>
-            </motion.span>
-          </Link>
-        }
       />
 
       {/* ---- KPI ---- */}

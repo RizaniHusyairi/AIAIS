@@ -70,6 +70,15 @@ export type PetaRute = {
    * menjadi tujuan baliknya.
    */
   bukanBalikan?: boolean;
+  /**
+   * Hanya untuk arah balik (PWA → desktop). Kebalikan `bukanBalikan`: dipakai
+   * layar PWA yang tidak punya alamat publik sendiri, sehingga tanpa baris ini
+   * `toDesktopRoute` menjatuhkannya ke `/`. Baris seperti ini TIDAK BOLEH ikut
+   * dalam pencocokan maju maupun `AWALAN_PUBLIK` — awalan publiknya sudah
+   * dipegang baris lain, dan `config.matcher` di `proxy.ts` tidak berubah
+   * karenanya.
+   */
+  hanyaBalikan?: boolean;
 };
 
 /**
@@ -82,6 +91,11 @@ const TABEL: PetaRute[] = [
   { publik: '/news', app: '/app/berita', simpanSegmen: true },
   { publik: '/tourism', app: '/app/wisata' },
   { publik: '/tenants', app: '/app/tenant' },
+
+  // Transportasi tidak punya halaman publik sendiri; isinya satu section di
+  // `/tenants`. Arah balik saja, supaya pembaca yang melebarkan jendela dari
+  // layar ini mendarat di daftar transportasi, bukan di beranda.
+  { publik: '/tenants', app: '/app/transportasi', hanyaBalikan: true },
   { publik: '/downloads', app: '/app/unduhan' },
   { publik: '/faq', app: '/app/faq' },
   { publik: '/tautan-terkait', app: '/app/tautan' },
@@ -150,7 +164,9 @@ export function keepResponsive(pathname: string | null | undefined): boolean {
 
 /** Cocokkan lintasan publik dengan satu baris tabel. */
 function cocokPublik(pathname: string): PetaRute | undefined {
-  return TERURUT.find((r) => pathname === r.publik || pathname.startsWith(`${r.publik}/`));
+  return TERURUT.find(
+    (r) => !r.hanyaBalikan && (pathname === r.publik || pathname.startsWith(`${r.publik}/`)),
+  );
 }
 
 /**
@@ -206,4 +222,4 @@ export function toDesktopRoute(pathname: string): string {
  * di sana. Ia ada untuk diuji: skrip verifikasi membandingkannya dengan
  * matcher supaya rute baru di tabel tidak diam-diam kehilangan pengalihannya.
  */
-export const AWALAN_PUBLIK = TABEL.map((r) => r.publik);
+export const AWALAN_PUBLIK = TABEL.filter((r) => !r.hanyaBalikan).map((r) => r.publik);

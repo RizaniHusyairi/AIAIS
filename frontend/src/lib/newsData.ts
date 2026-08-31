@@ -146,9 +146,9 @@ export const NEWS_FALLBACK: NewsItem[] = [
 ];
 
 export const ANNOUNCEMENTS_FALLBACK: Announcement[] = [
-  { id: 1, title: 'Penyesuaian Jadwal Penerbangan Periode Juni 2024', content: 'Terdapat perubahan jadwal pada sejumlah rute keberangkatan dan kedatangan.', priority: 'high', is_active: true, target_audience: 'Penumpang' },
-  { id: 2, title: 'Aturan Bagasi Kabin Terbaru', content: 'Cairan maksimal 100 ml per kemasan. Power bank di atas 100 Wh wajib persetujuan maskapai.', priority: 'medium', is_active: true, target_audience: 'Penumpang' },
-  { id: 3, title: 'Pemeliharaan Area Parkir Terminal', content: 'Sebagian area parkir P2 ditutup sementara untuk pemeliharaan.', priority: 'low', is_active: true, target_audience: 'Umum' },
+  { id: 1, title: 'Penyesuaian Jadwal Penerbangan Periode Juni 2024', content: 'Terdapat perubahan jadwal pada sejumlah rute keberangkatan dan kedatangan.', priority: 'high', is_active: true, target_audience: 'Penumpang', valid_until: null },
+  { id: 2, title: 'Aturan Bagasi Kabin Terbaru', content: 'Cairan maksimal 100 ml per kemasan. Power bank di atas 100 Wh wajib persetujuan maskapai.', priority: 'medium', is_active: true, target_audience: 'Penumpang', valid_until: null },
+  { id: 3, title: 'Pemeliharaan Area Parkir Terminal', content: 'Sebagian area parkir P2 ditutup sementara untuk pemeliharaan.', priority: 'low', is_active: true, target_audience: 'Umum', valid_until: null },
 ];
 
 /** Kategori filter portal berita */

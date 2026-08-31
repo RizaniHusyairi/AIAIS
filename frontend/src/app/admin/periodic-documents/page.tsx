@@ -7,11 +7,12 @@
  * bandara melainkan ditautkan ke Google Drive, jadi tidak ada berkas yang
  * dikirim.
  *
- * Kategori sengaja berupa isian bebas, bukan pilihan tertutup — di v1 petugas
- * menambah kelompok sendiri (Survey Kepuasan, LHKPN, Rencana Kinerja Anggaran,
- * ...) dan mengunci daftarnya di kode berarti mengembalikan kebebasan itu ke
- * tangan pengembang. Daftar kategori yang sudah ada disarankan lewat `datalist`
- * pada Field agar ejaannya tetap seragam.
+ * Kategori DIPILIH, tidak diketik. Halaman publik mengelompokkan dokumen
+ * persis dari string kategori, jadi satu salah ketik memunculkan dua akordeon
+ * terpisah bagi pengunjung — dan dulu daftar kategori terpakai hanya dicetak
+ * sebagai kalimat di bawah medannya, untuk dibaca lalu diketik ulang. Chip
+ * "Kategori lain…" tetap membuka jalan menambah kelompok baru: daftarnya
+ * menyeragamkan ejaan, bukan mengunci kelompok ke tangan pengembang.
  *
  * Dokumen yang tautannya kosong tetap ditampilkan dengan penanda: halaman
  * publik menyaringnya, jadi di sinilah satu-satunya tempat petugas bisa tahu.
@@ -24,6 +25,8 @@ import {
   PageHeader, Panel, Btn, Badge, Field, Modal, ConfirmDialog, Toast, ToastMsg,
   Loading, EmptyState, Table, Row, Cell, SearchBox, StatCard, stagger,
 } from '@/components/admin/ui';
+import { Galat, IsianTautan, PilihKategori, tautanSah } from '@/components/admin/isian';
+import { KATEGORI_BERKALA, gabungKategori } from '@/lib/ppidKategori';
 import { CalendarClock, Plus, Pencil, Trash2, RefreshCw, FolderOpen, FileText, AlertTriangle, Link as LinkIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -45,6 +48,7 @@ export default function AdminPeriodicDocumentsPage() {
   const [q, setQ] = useState('');
 
   const [form, setForm] = useState<FormState>(EMPTY);
+  const [galat, setGalat] = useState<Record<string, string>>({});
   const [editId, setEditId] = useState<number | null>(null);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -83,6 +87,19 @@ export default function AdminPeriodicDocumentsPage() {
     [items],
   );
 
+  /* Kategori resmi portal v1 lebih dulu, disusul kategori tak terduga yang
+     benar-benar ada di basis data — supaya tidak satu pun kelompok lama
+     kehilangan tempatnya di daftar pilihan. */
+  const pilihanKategori = useMemo(
+    () => gabungKategori(KATEGORI_BERKALA, kategoriAda),
+    [kategoriAda],
+  );
+
+  const isi = (k: keyof FormState, v: string) => {
+    setForm((s) => ({ ...s, [k]: v }));
+    setGalat((g) => (g[k] ? { ...g, [k]: '' } : g));
+  };
+
   const stats = useMemo(() => ({
     total: items.length,
     kategori: kategoriAda.length,
@@ -90,7 +107,9 @@ export default function AdminPeriodicDocumentsPage() {
     lhkpn: items.filter((d) => d.pejabat_name).length,
   }), [items, kategoriAda]);
 
-  const openCreate = () => { setForm({ ...EMPTY, category: kategoriAda[0] ?? '' }); setEditId(null); setOpen(true); };
+  // Kategori tidak lagi ditebak dari data: memilihnya kini satu klik, dan
+  // isian yang terisi sendiri justru kerap ikut tersimpan tanpa diperiksa.
+  const openCreate = () => { setForm(EMPTY); setGalat({}); setEditId(null); setOpen(true); };
   const openEdit = (d: PeriodicDocument) => {
     setForm({
       category: d.category,
@@ -99,11 +118,29 @@ export default function AdminPeriodicDocumentsPage() {
       published_date: d.published_date ? String(d.published_date).slice(0, 10) : '',
       pejabat_name: d.pejabat_name ?? '',
     });
+    setGalat({});
     setEditId(d.id);
     setOpen(true);
   };
 
+  const periksa = () => {
+    const g: Record<string, string> = {};
+    if (!form.category.trim()) g.category = 'Kategori wajib dipilih.';
+    if (!form.title.trim()) g.title = 'Judul dokumen wajib diisi.';
+    if (!form.document_path.trim()) g.document_path = 'Tautan dokumen wajib diisi.';
+    else if (!tautanSah(form.document_path.trim())) g.document_path = 'Tautan harus diawali http:// atau https://';
+    if (!form.published_date) g.published_date = 'Tanggal terbit wajib diisi.';
+
+    setGalat(g);
+    return Object.keys(g).length === 0;
+  };
+
   const save = async () => {
+    if (!periksa()) {
+      setToast({ text: 'Ada isian yang belum lengkap.', kind: 'error' });
+      return;
+    }
+
     setSaving(true);
     const body = {
       category: form.category,
@@ -211,29 +248,37 @@ export default function AdminPeriodicDocumentsPage() {
         }
       >
         <div className="space-y-4">
-          <Field
-            label="Kategori" required
-            value={form.category} onChange={(v) => setForm({ ...form, category: v })}
-            placeholder="Laporan Keuangan"
+          <PilihKategori
+            nilai={form.category}
+            pilihan={pilihanKategori}
+            onChange={(v) => isi('category', v)}
+            galat={galat.category}
           />
-          {kategoriAda.length > 0 && (
-            <p className="-mt-2 text-[11.5px] text-[var(--adm-muted)]">
-              Kategori yang sudah dipakai: {kategoriAda.join(' · ')}
-            </p>
-          )}
-          <Field
-            label="Judul Dokumen" required type="textarea" rows={2}
-            value={form.title} onChange={(v) => setForm({ ...form, title: v })}
-            placeholder="Laporan Keuangan 2024"
-          />
-          <Field
-            label="Tautan Dokumen" required
-            value={form.document_path} onChange={(v) => setForm({ ...form, document_path: v })}
+
+          <div>
+            <Field
+              label="Judul Dokumen" required type="textarea" rows={2}
+              value={form.title} onChange={(v) => isi('title', v)}
+              placeholder="Laporan Keuangan 2024"
+            />
+            <Galat pesan={galat.title} />
+          </div>
+
+          <IsianTautan
+            label="Tautan Dokumen" wajib
+            nilai={form.document_path}
+            onChange={(v) => isi('document_path', v)}
             placeholder="https://drive.google.com/file/d/.../view"
+            hint="Tempel alamat berbagi Google Drive dokumennya."
+            galat={galat.document_path}
           />
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Tanggal Terbit" required type="date" value={form.published_date} onChange={(v) => setForm({ ...form, published_date: v })} />
-            <Field label="Nama Pejabat (khusus LHKPN)" value={form.pejabat_name} onChange={(v) => setForm({ ...form, pejabat_name: v })} />
+            <div>
+              <Field label="Tanggal Terbit" required type="date" value={form.published_date} onChange={(v) => isi('published_date', v)} />
+              <Galat pesan={galat.published_date} />
+            </div>
+            <Field label="Nama Pejabat (khusus LHKPN)" value={form.pejabat_name} onChange={(v) => isi('pejabat_name', v)} />
           </div>
         </div>
       </Modal>
