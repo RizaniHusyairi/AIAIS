@@ -9,6 +9,7 @@ use App\Notifications\AktivitasPusatBantuan;
 use App\Services\Notifikasi\WhatsAppGateway;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 /**
  * Lonceng panel, langganan push, dan keadaan kanal notifikasi.
@@ -19,16 +20,68 @@ use Illuminate\Support\Str;
  */
 class NotificationController extends Controller
 {
-    /** Daftar terbaru beserta jumlah yang belum dibaca. */
+    /**
+     * Riwayat notifikasi, tersaring dan berhalaman.
+     *
+     * Dipakai dua pemanggil dengan kebutuhan yang berbeda: lonceng pada kepala
+     * panel memanggilnya TANPA parameter apa pun dan hanya membaca `items`
+     * serta `belum_dibaca`, sementara kotak masuk `/admin/notifikasi`
+     * menyaring, mencari, dan menyusuri halaman berikutnya. Karena itu kedua
+     * kunci lama itu tidak boleh berpindah tempat — bawaan tanpa parameter
+     * harus tetap berupa 30 terbaru, persis seperti sebelumnya.
+     *
+     * Penyaringan dikerjakan di basis data, bukan di peramban. Riwayat
+     * notifikasi tumbuh seumur portal dan tidak ada batas atasnya; mengangkut
+     * seluruhnya ke klien sekadar untuk disaring adalah beban yang bertambah
+     * tiap hari tanpa pernah surut.
+     */
     public function index(Request $request)
     {
         $user = $request->user();
 
-        $daftar = $user->notifications()
-            ->latest()
-            ->limit(30)
-            ->get()
-            ->map(fn ($n) => [
+        $saring = $request->validate([
+            'jenis' => ['nullable', 'string', Rule::in(array_keys(AktivitasPusatBantuan::JENIS))],
+            'status' => ['nullable', 'in:belum,sudah'],
+            'q' => ['nullable', 'string', 'max:60'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+        ], [
+            'jenis.in' => 'Jenis notifikasi tidak dikenali.',
+            'status.in' => 'Penyaring status hanya menerima "belum" atau "sudah".',
+        ]);
+
+        $kueri = $user->notifications()->latest();
+
+        if (filled($saring['jenis'] ?? null)) {
+            $kueri->where('data->jenis', $saring['jenis']);
+        }
+
+        if (($saring['status'] ?? null) === 'belum') {
+            $kueri->whereNull('read_at');
+        } elseif (($saring['status'] ?? null) === 'sudah') {
+            $kueri->whereNotNull('read_at');
+        }
+
+        /*
+         * Pencarian hanya menyentuh nomor tiket. Muatan notifikasi memang tidak
+         * memuat apa pun selain itu yang layak dicari — tidak ada nama maupun
+         * isi laporan di dalamnya, dan memang tidak boleh ada.
+         *
+         * Kata kuncinya dibesarkan hurufnya lebih dulu. MySQL mengembalikan
+         * hasil `json_extract` dengan kolasi biner, sehingga `LIKE` di atasnya
+         * peka huruf besar-kecil: mengetik "tkt" tidak menemukan "TKT-2026..."
+         * dan kotak pencarian tampak rusak. Nomor tiket sendiri selalu huruf
+         * besar sejak dibuat — lihat `ComplaintController::store()` — jadi
+         * membesarkan kata kunci aman, dan lebih murah daripada `UPPER()` di
+         * sisi kolom yang penulisannya berbeda antara MySQL dan SQLite.
+         */
+        if (filled($saring['q'] ?? null)) {
+            $kueri->where('data->ticket', 'like', '%'.Str::upper($saring['q']).'%');
+        }
+
+        $halaman = $kueri->paginate((int) ($saring['per_page'] ?? 30));
+
+        return ApiResponse::success([
+            'items' => collect($halaman->items())->map(fn ($n) => [
                 'id' => $n->id,
                 'jenis' => $n->data['jenis'] ?? null,
                 'judul' => $n->data['judul'] ?? 'Notifikasi',
@@ -36,12 +89,57 @@ class NotificationController extends Controller
                 'path' => $n->data['path'] ?? '/admin/dashboard',
                 'dibaca' => $n->read_at !== null,
                 'created_at' => $n->created_at,
-            ]);
-
-        return ApiResponse::success([
-            'items' => $daftar,
+            ])->all(),
             'belum_dibaca' => $user->unreadNotifications()->count(),
+            'rekap' => $this->rekap($request),
+            'jenis_tersedia' => collect(AktivitasPusatBantuan::JENIS)
+                ->map(fn ($j, $kunci) => ['kunci' => $kunci, 'judul' => $j['judul']])
+                ->values(),
+            /*
+             * Keterangan halaman ditaruh DI DALAM `data`, bukan pada blok
+             * `pagination` di sisi respons.
+             *
+             * Bukan penyimpangan tanpa sebab: `adminFetch` di frontend hanya
+             * meneruskan `json.data` kepada pemanggilnya dan membuang kunci
+             * lain apa pun di tingkat atas, sehingga blok `pagination` yang
+             * benar sekalipun tidak akan pernah sampai ke tombol "muat lebih
+             * banyak" yang membutuhkannya.
+             */
+            'halaman' => [
+                'saat_ini' => $halaman->currentPage(),
+                'terakhir' => $halaman->lastPage(),
+                'total' => $halaman->total(),
+            ],
         ], 'Notifikasi panel');
+    }
+
+    /**
+     * Jumlah per jenis dan jumlah yang masuk hari ini.
+     *
+     * Dihitung dengan `COUNT` terpisah per jenis, bukan satu `GROUP BY` atas
+     * `json_extract`. Kueri agregat di atas lintasan JSON ditulis berbeda pada
+     * MySQL dan SQLite, dan berkas uji berjalan di atas SQLite sementara
+     * produksi memakai MySQL — angka yang benar di satu tempat dan diam-diam
+     * kosong di tempat lain adalah cara terburuk fitur ini bisa gagal.
+     *
+     * Kueri ini SENGAJA tidak ikut disaring: rekapnya adalah keadaan seluruh
+     * kotak masuk, dan justru dipakai untuk memutuskan saringan mana yang
+     * hendak dibuka.
+     */
+    private function rekap(Request $request): array
+    {
+        $user = $request->user();
+
+        return [
+            'total' => $user->notifications()->count(),
+            'belum_dibaca' => $user->unreadNotifications()->count(),
+            'hari_ini' => $user->notifications()->whereDate('created_at', today())->count(),
+            'per_jenis' => collect(array_keys(AktivitasPusatBantuan::JENIS))
+                ->mapWithKeys(fn ($kunci) => [
+                    $kunci => $user->notifications()->where('data->jenis', $kunci)->count(),
+                ])
+                ->all(),
+        ];
     }
 
     public function markRead(Request $request, string $id)

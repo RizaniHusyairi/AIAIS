@@ -11,8 +11,8 @@
  * medan lain di modal yang sama.
  */
 
-import React, { useMemo, useState } from 'react';
-import { AlertCircle, ExternalLink, FileText, HardDrive, Images, Link as LinkIcon, Pencil } from 'lucide-react';
+import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { AlertCircle, ExternalLink, FileText, HardDrive, Images, Link as LinkIcon, Pencil, Sparkles } from 'lucide-react';
 
 /* Disalin dari konstanta `base` pada `ui.tsx`. Bila gaya isian kit berubah,
    keduanya harus berubah bersama — itulah harga merakit medan sendiri. */
@@ -268,6 +268,233 @@ export function IsianTautan({
           <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" /> Tautan harus diawali http:// atau https://
         </p>
       )}
+
+      {!isi && hint && <p className="mt-1.5 text-[11px] text-[var(--adm-dim)]">{hint}</p>}
+
+      <Galat pesan={galat} />
+    </div>
+  );
+}
+
+/* ================================================================
+   Keterangan panjang
+   ================================================================ */
+
+/**
+ * Rapikan teks yang baru ditempel dari caption Instagram.
+ *
+ * Isi maklumat serta-merta praktis selalu berasal dari pos Instagram bandara
+ * yang disalin-tempel, dan caption membawa serta hal-hal yang tidak terlihat
+ * saat menyalin: baris kosong berlipat, spasi tak-putus, penanda ragam emoji
+ * yang tertinggal sendirian setelah emojinya terpotong, dan spasi menggantung
+ * di ujung baris.
+ *
+ * Yang SENGAJA tidak disentuh: tagar, mention, dan emoji. Di maklumat bandara
+ * tagar dipakai di tengah kalimat sebagai sapaan — "Siapa di antara
+ * #SobatAviasi yang..." — jadi membuangnya otomatis merusak kalimatnya, bukan
+ * merapikannya. Panjang teks juga tidak dipotong; itu urusan penghitung dan
+ * validasi, yang keduanya terlihat oleh petugas.
+ */
+export function rapikanTempelan(teks: string): string {
+  return teks
+    /* Akhir baris Windows dan Mac klasik disamakan lebih dulu, supaya aturan
+       di bawahnya cukup mengenal satu bentuk baris baru saja. */
+    .replace(/\r\n?/g, '\n')
+    // Nol-lebar dan sejenisnya: tak terlihat, tetapi ikut terhitung panjang.
+    .replace(/[​-‍⁠﻿⁣]/g, '')
+    /* Penanda ragam emoji yang berdiri sendiri di awal baris atau setelah
+       spasi. Emoji sungguhan selalu punya karakter dasar tepat di depannya,
+       jadi pola ini hanya menyapu yang yatim. */
+    .replace(/(^|\s)️+/gm, '$1')
+    .replace(/ /g, ' ')
+    .replace(/[ \t]+$/gm, '')
+    /* Spasi di awal baris. Caption Instagram tidak pernah memakai indentasi
+       yang berarti, dan setelah penanda emoji yatim di atas dibuang, spasi
+       yang dulu mengikutinya justru tertinggal sendirian di depan baris. */
+    .replace(/^[ \t]+/gm, '')
+    .replace(/[ \t]{2,}/g, ' ')
+    // Satu baris kosong sebagai pemisah paragraf sudah cukup; sisanya kosong belaka.
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+/**
+ * Medan keterangan panjang.
+ *
+ * `Field` pada kit `ui.tsx` merender textarea bertinggi tetap tanpa slot untuk
+ * penghitung maupun tombol — sementara medan ini menerima caption sepanjang
+ * seribu karakter lebih, dan punya batas server 2000 yang selama ini tidak
+ * pernah terlihat dari layar sampai Simpan ditolak.
+ */
+export function IsianKeterangan({
+  label,
+  nilai,
+  onChange,
+  wajib,
+  placeholder,
+  galat,
+  hint,
+  batas = 2000,
+  ideal = 300,
+  tinggiMin = 120,
+  tinggiMaks = 340,
+}: {
+  label: string;
+  nilai: string;
+  onChange: (v: string) => void;
+  wajib?: boolean;
+  placeholder?: string;
+  galat?: string;
+  hint?: string;
+  /** Pagar keras; samakan dengan aturan validasi di controllernya. */
+  batas?: number;
+  /** Panjang lazim yang masih nyaman untuk kartu di halaman publik. */
+  ideal?: number;
+  tinggiMin?: number;
+  tinggiMaks?: number;
+}) {
+  const kotak = useRef<HTMLTextAreaElement>(null);
+  const [catatan, setCatatan] = useState('');
+
+  const isi = nilai ?? '';
+  const panjang = isi.length;
+  const perluRapi = useMemo(() => isi.trim() !== '' && rapikanTempelan(isi) !== isi, [isi]);
+  const terpotongV1 = isi.trimEnd().endsWith('...');
+
+  /*
+   * Tinggi mengikuti isi.
+   *
+   * `useLayoutEffect`, bukan `useEffect`: modal ubah kerap dibuka dengan
+   * keterangan yang sudah panjang, dan mengukur setelah cat pertama membuat
+   * kotaknya terlihat menyentak dari tinggi bawaan ke tinggi sebenarnya.
+   * Yang disentuh gaya DOM, bukan state, jadi tidak ada render beruntun.
+   */
+  useLayoutEffect(() => {
+    const el = kotak.current;
+    if (!el) return;
+
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(Math.max(el.scrollHeight, tinggiMin), tinggiMaks)}px`;
+  }, [isi, tinggiMin, tinggiMaks]);
+
+  /** Sisipkan teks di posisi kursor, lalu kembalikan kursor ke ujung sisipan. */
+  const sisipkan = (potongan: string) => {
+    const el = kotak.current;
+    if (!el) return;
+
+    const awal = el.selectionStart ?? isi.length;
+    const akhir = el.selectionEnd ?? isi.length;
+
+    onChange(isi.slice(0, awal) + potongan + isi.slice(akhir));
+
+    // Setelah React menulis ulang nilainya; tanpa ini kursor melompat ke ekor.
+    requestAnimationFrame(() => {
+      const pos = awal + potongan.length;
+      el.setSelectionRange(pos, pos);
+    });
+  };
+
+  const tempel = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const mentah = e.clipboardData.getData('text/plain');
+    if (!mentah) return;
+
+    e.preventDefault();
+    const bersih = rapikanTempelan(mentah);
+    sisipkan(bersih);
+
+    /*
+     * Pembersihan tempelan orang harus terlihat, bukan disembunyikan. Petugas
+     * yang tidak diberi tahu akan mengira caption yang ditempelnya memang
+     * begitu sejak awal.
+     */
+    setCatatan(
+      bersih === mentah
+        ? ''
+        : `Tempelan dirapikan — ${mentah.length - bersih.length} karakter tak terpakai dibuang.`,
+    );
+  };
+
+  /* Hanya potongan yang ditempel yang dirapikan otomatis. Merapikan seluruh
+     kotak adalah tindakan tersendiri, dan karena itu punya tombolnya sendiri. */
+  const rapikanSemua = () => {
+    const bersih = rapikanTempelan(isi);
+    onChange(bersih);
+    setCatatan(`Keterangan dirapikan — ${isi.length - bersih.length} karakter tak terpakai dibuang.`);
+  };
+
+  const pita =
+    panjang > batas
+      ? { warna: 'var(--adm-danger)', kelas: 'text-[var(--adm-danger)]' }
+      : panjang > ideal
+        ? { warna: '#fbbf24', kelas: 'text-amber-400' }
+        : { warna: 'var(--adm-accent)', kelas: 'text-[var(--adm-dim)]' };
+
+  return (
+    <div>
+      <div className="flex items-end justify-between gap-3">
+        <Label teks={label} wajib={wajib} />
+
+        {perluRapi && (
+          <button
+            type="button"
+            onClick={rapikanSemua}
+            className="mb-1.5 inline-flex items-center gap-1.5 text-[10.5px] font-bold text-[var(--adm-accent)] hover:brightness-125 cursor-pointer"
+          >
+            <Sparkles className="w-3 h-3" /> Rapikan
+          </button>
+        )}
+      </div>
+
+      <div className={`${KOTAK_BUNGKUS} flex-col items-stretch gap-0 !px-0 !py-0 overflow-hidden`}>
+        <textarea
+          ref={kotak}
+          value={isi}
+          onChange={(e) => { onChange(e.target.value); setCatatan(''); }}
+          onPaste={tempel}
+          placeholder={placeholder}
+          style={{ minHeight: tinggiMin, maxHeight: tinggiMaks }}
+          className="w-full resize-none bg-transparent px-3.5 pt-2.5 pb-1.5 text-[12.5px] leading-relaxed text-[var(--adm-fg)] placeholder:text-[var(--adm-dim)] focus:outline-none"
+        />
+
+        <div className="flex items-center justify-between gap-3 px-3.5 pb-2">
+          {/* Jeda paragraf di sini benar-benar tampil di kartu publik. */}
+          <span className="text-[10.5px] text-[var(--adm-dim)]">
+            Baris kosong menjadi jeda paragraf pada kartu.
+          </span>
+          <span className={`text-[10.5px] font-bold tabular-nums ${pita.kelas}`}>
+            {panjang} / {batas}
+          </span>
+        </div>
+
+        <div className="h-[2px] w-full bg-[var(--adm-line)]">
+          <div
+            className="h-full transition-all duration-300"
+            style={{ width: `${Math.min(100, (panjang / batas) * 100)}%`, backgroundColor: pita.warna }}
+          />
+        </div>
+      </div>
+
+      {panjang > batas && (
+        <p className="mt-1.5 flex items-center gap-1.5 text-[11px] font-medium text-rose-400">
+          <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+          Melebihi batas {batas} karakter — kurangi {panjang - batas} karakter agar dapat disimpan.
+        </p>
+      )}
+
+      {panjang <= batas && panjang > ideal && (
+        <p className="mt-1.5 text-[11px] text-amber-400/90">
+          Lebih panjang dari kebanyakan maklumat. Kartunya akan menjulang di antara kartu lain
+          pada halaman publik.
+        </p>
+      )}
+
+      {terpotongV1 && (
+        <p className="mt-1.5 text-[11px] text-[var(--adm-muted)]">
+          Berakhir dengan elipsis — kemungkinan terpotong sistem lama, dan layak dilengkapi.
+        </p>
+      )}
+
+      {catatan && <p className="mt-1.5 text-[11px] text-[var(--adm-accent)]">{catatan}</p>}
 
       {!isi && hint && <p className="mt-1.5 text-[11px] text-[var(--adm-dim)]">{hint}</p>}
 

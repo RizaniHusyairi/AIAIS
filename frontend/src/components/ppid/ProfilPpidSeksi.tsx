@@ -368,7 +368,14 @@ export function PapanLaporanBulanan({ laporan }: { laporan: PpidProfileDocument[
                   <motion.div
                     key={nama}
                     variants={rise}
-                    className="rounded-2xl border-2 border-dashed border-slate-200 bg-white/50 px-4 py-5 text-center"
+                    /* `bg-white/85`, bukan `/50`. Tema malam sengaja hanya memetakan
+                       putih beropasitas tinggi menjadi permukaan panel; yang di bawahnya
+                       dibiarkan karena hampir selalu berupa lapisan di atas hero gelap.
+                       Ubin ini justru kebalikannya — ia permukaan kertas — dan pada `/50`
+                       ia luput dari pemetaan lalu tampil sebagai kotak kelabu dengan
+                       tulisan yang tak terbaca di atasnya. Selisihnya tak kasatmata di
+                       tema siang: keduanya sama-sama putih di atas latar `slate-50`. */
+                    className="rounded-2xl border-2 border-dashed border-slate-200 bg-white/85 px-4 py-5 text-center"
                   >
                     <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-400 tabular-nums">
                       {String(i + 1).padStart(2, '0')}

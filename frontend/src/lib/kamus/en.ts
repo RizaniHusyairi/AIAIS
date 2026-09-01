@@ -268,7 +268,14 @@ const en = {
     wisataSemua: 'View All Destinations',
     dariBandara: 'from the airport',
 
-    angkaJudul: 'APT Pranoto in Numbers',
+
+    mitraKicker: 'PARTNERS & STAKEHOLDERS',
+    mitraJudul: 'Trusted by Leading Partners',
+    mitraRingkas:
+      'The airlines, agencies, and service providers working with us to keep every flight at APT Pranoto safe, on time, and comfortable.',
+    mitraHitung: 'registered partners',
+    mitraMaskapai: 'Airlines',
+    mitraInstansi: 'Agencies & Services',
 
     newsletterJudul: 'Stay Up to Date',
     newsletterRingkas:

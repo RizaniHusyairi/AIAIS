@@ -13,7 +13,7 @@ import type { AirportStatItem } from '@/types';
  * Sebelum modul ini ada, kelima angkanya adalah konstanta di TIGA berkas yang
  * saling menyalin — dan salah satunya mengakuinya sendiri dalam komentar
  * ("Cermin dari ABOUT_STATS ... Bila angka di sana berubah, ubah di sini
- * juga"). Sekarang ketiga blok penampil membaca daftar yang sama dan menyaring
+ * juga"). Sekarang blok penampilnya membaca daftar yang sama dan menyaring
  * `show_*` masing-masing.
  *
  * Polanya menyalin `pejabatLive.ts`: halaman dibuka dengan konstanta cadangan
@@ -52,6 +52,8 @@ export type Statistik = {
   value: string;
   label: string;
   diTentang: boolean;
+  /** Tanpa penampil sejak blok gelap "dalam Angka" dihapus dari beranda; lihat
+   *  catatan pada bendera yang sama di `app/admin/angka-bandara/page.tsx`. */
   diAngka: boolean;
   diHero: boolean;
 };

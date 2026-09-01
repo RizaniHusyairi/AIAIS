@@ -126,14 +126,16 @@ const NAV: { section: string; items: NavItem[] }[] = [
       // kedinasan — dan blok "Tentang" yang memuat angka-angka ini memang
       // disunting di halaman sebelahnya.
       { name: 'Angka Bandara', href: '/admin/angka-bandara', icon: Gauge },
-      // Terjangkau juga lewat dropdown lonceng, tetapi tetap didaftarkan di
-      // sini: sakelar "nyalakan push di perangkat ini" harus dapat ditemukan
-      // orang yang belum pernah menerima satu notifikasi pun — dan selama
-      // loncengnya kosong, tidak ada apa pun yang menuntun ke sana.
+      // Kotak masuk kiriman warga: seluruh riwayat notifikasi, tersaring per
+      // jenis, ditambah sakelar push dan lonceng. Terjangkau juga lewat
+      // dropdown lonceng, tetapi tetap didaftarkan di sini — dropdown itu hanya
+      // memuat tiga puluh yang terbaru, dan selama loncengnya kosong tidak ada
+      // apa pun yang menuntun ke riwayat maupun ke sakelar pushnya.
       { name: 'Notifikasi', href: '/admin/notifikasi', icon: Bell },
-      // Notifikasi WhatsApp ke nomor piket. Terbuka bagi staf karena piket
-      // harian memang dipegang staf; kunci gatewaynya sendiri hanya dapat
-      // disimpan admin — rutenya di backend pun dijaga `role:admin`.
+      // Sebelahnya, dan sengaja tidak digabung: yang ini menyetel KANALNYA —
+      // gateway dan nomor piket — bukan membaca kabarnya. Terbuka bagi staf
+      // karena piket harian memang dipegang staf; kunci gatewaynya sendiri
+      // hanya dapat disimpan admin — rutenya di backend pun dijaga `role:admin`.
       { name: 'WhatsApp', href: '/admin/whatsapp', icon: MessageSquare },
       // Manajemen akun hanya untuk admin; rutenya di backend pun `role:admin`.
       { name: 'Pengguna', href: '/admin/users', icon: Users, roles: ['admin'] },

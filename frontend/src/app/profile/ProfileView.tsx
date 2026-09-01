@@ -862,9 +862,14 @@ export default function ProfileView() {
               whileHover={{ y: -8 }}
               className="group relative text-left cursor-pointer rounded-3xl focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
             >
-              {/* Bingkai putih, tanpa glow: foto resmi punya latar berbeda-beda
-                  (satu di antaranya JPEG berlatar putih opak), sehingga latar
-                  biru + blur akan menampakkan kotak putih di baliknya. */}
+              {/* Bingkai polos, tanpa glow: foto resmi punya latar
+                  berbeda-beda, sehingga latar biru + blur akan menampakkan
+                  kotak pucat di balik foto yang latarnya opak.
+
+                  Warnanya berganti sendiri di tema malam — pemetaan
+                  `.bg-gradient-to-b.from-white.to-slate-50` di globals.css,
+                  bukan varian `dark:` di sini. Alasannya ada di kepala blok
+                  tema malam berkas itu. */}
               <div className="relative rounded-3xl overflow-hidden bg-gradient-to-b from-white to-slate-50 border border-slate-100 aspect-[3/4]">
                 {/* eslint-disable-next-line @next/next/no-img-element -- aset statis lokal */}
                 <img
@@ -873,15 +878,25 @@ export default function ProfileView() {
                   loading="lazy"
                   className={`relative w-full h-full object-contain object-bottom origin-bottom p-3 pb-8 group-hover:scale-105 transition-transform duration-500 ${PEJABAT_PHOTO_FIT[p.slug] ?? ''}`}
                 />
-                <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#0b1e5b]/90 via-[#0b1e5b]/55 to-transparent" />
-
                 {p.slug === kepalaKantor.slug && (
                   <span className="absolute top-3 left-3 bg-amber-400 text-[#0b1e5b] text-[9.5px] font-black uppercase tracking-wider px-2 py-1 rounded-full">
                     Kepala Kantor
                   </span>
                 )}
 
-                <div className="absolute inset-x-0 bottom-0 p-3.5">
+                {/* Tirai gelap DAN teksnya dalam satu kotak, bukan dua lapis
+                    bertumpuk. Sebelumnya tirainya kotak tersendiri setinggi
+                    `h-28` (112px) sementara blok teks tumbuh mengikuti isinya:
+                    nama sepanjang "Mochamad Ikhsan Fadilah, SE, M.M.Tr" dengan
+                    jabatan dua baris mencapai 117px, sehingga baris pertamanya
+                    jatuh di luar tirai dan tercetak putih di atas seragam yang
+                    juga putih.
+
+                    Dengan gradiennya menempel pada kotak teks itu sendiri,
+                    tirainya ikut tumbuh bersama isinya; `pt-10` menyediakan
+                    ruang peluruhan di atas baris pertama supaya tepi atasnya
+                    tetap melembut, bukan terpotong lurus. */}
+                <div className="absolute inset-x-0 bottom-0 p-3.5 pt-10 bg-gradient-to-t from-[#0b1e5b] via-[#0b1e5b]/80 to-transparent">
                   <p className="text-white font-black text-[12.5px] leading-tight line-clamp-2">{p.name}</p>
                   <p className="text-cyan-200 text-[10.5px] mt-0.5 line-clamp-2">{p.shortTitle}</p>
                   <span className="mt-1.5 inline-flex items-center gap-1 text-cyan-300/90 text-[9.5px] font-semibold">

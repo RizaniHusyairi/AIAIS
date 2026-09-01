@@ -20,30 +20,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Bell, CheckCheck, PackageSearch, MessageSquareWarning, MessageCircle, ScrollText, Star } from 'lucide-react';
+import { Bell, CheckCheck } from 'lucide-react';
 import {
-  ambilNotifikasi, tandaiDibaca, tandaiSemuaDibaca,
-  type ItemNotifikasi, type JenisNotifikasi,
+  ambilNotifikasi, rupaJenis, tandaiDibaca, tandaiSemuaDibaca, waktuRelatif,
+  type ItemNotifikasi,
 } from '@/lib/notifikasi';
 
 const DENYUT_MS = 45_000;
-
-/** Ikon dan warna per jenis; hiasan, tidak menambah makna pada datanya. */
-const RUPA: Record<JenisNotifikasi, { icon: typeof Bell; warna: string }> = {
-  pengaduan: { icon: MessageSquareWarning, warna: '#fb7185' },
-  chat: { icon: MessageCircle, warna: '#38bdf8' },
-  kehilangan: { icon: PackageSearch, warna: '#fbbf24' },
-  informasi: { icon: ScrollText, warna: '#a78bfa' },
-  penilaian: { icon: Star, warna: '#34d399' },
-};
-
-function waktuRelatif(iso: string): string {
-  const detik = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
-  if (detik < 60) return 'baru saja';
-  if (detik < 3600) return `${Math.floor(detik / 60)} menit lalu`;
-  if (detik < 86400) return `${Math.floor(detik / 3600)} jam lalu`;
-  return new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-}
 
 export default function LonengNotifikasi() {
   const [buka, setBuka] = useState(false);
@@ -151,8 +134,8 @@ export default function LonengNotifikasi() {
                 </p>
               ) : (
                 items.map((n) => {
-                  const rupa = n.jenis ? RUPA[n.jenis] : null;
-                  const Icon = rupa?.icon ?? Bell;
+                  const rupa = rupaJenis(n.jenis);
+                  const Icon = rupa.icon;
                   return (
                     <Link
                       key={n.id}
@@ -164,9 +147,9 @@ export default function LonengNotifikasi() {
                     >
                       <span
                         className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
-                        style={{ backgroundColor: `${rupa?.warna ?? '#64748b'}22` }}
+                        style={{ backgroundColor: `${rupa.warna}22` }}
                       >
-                        <Icon className="w-4 h-4" style={{ color: rupa?.warna ?? '#64748b' }} />
+                        <Icon className="w-4 h-4" style={{ color: rupa.warna }} />
                       </span>
 
                       <span className="min-w-0 flex-1">
@@ -197,7 +180,7 @@ export default function LonengNotifikasi() {
               onClick={() => setBuka(false)}
               className="block px-4 py-3 text-center text-[11.5px] font-bold text-[var(--adm-accent)] border-t border-[var(--adm-line)] hover:bg-[var(--adm-hover)] transition-colors"
             >
-              Pengaturan notifikasi
+              Lihat semua notifikasi
             </Link>
           </motion.div>
         )}

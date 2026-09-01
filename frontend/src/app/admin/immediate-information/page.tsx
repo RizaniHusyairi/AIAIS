@@ -21,7 +21,7 @@ import {
   PageHeader, Panel, Btn, Badge, Field, Modal, ConfirmDialog, Toast, ToastMsg,
   Loading, EmptyState, Table, Row, Cell, SearchBox, StatCard, stagger,
 } from '@/components/admin/ui';
-import { Galat, IsianTautan, tautanSah } from '@/components/admin/isian';
+import { Galat, IsianKeterangan, IsianTautan, tautanSah } from '@/components/admin/isian';
 import { Radio, Plus, Pencil, Trash2, RefreshCw, Megaphone, AlertTriangle, Link as LinkIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -104,6 +104,11 @@ export default function AdminImmediateInformationPage() {
     const g: Record<string, string> = {};
     if (!form.uraian.trim()) g.uraian = 'Judul maklumat wajib diisi.';
     if (!form.keterangan.trim()) g.keterangan = 'Keterangan wajib diisi.';
+    // Ditahan di sini supaya galatnya menunjuk medan. Penolakan dari server
+    // sampai ke petugas sebagai satu kalimat di toast, tanpa menyebut medan mana.
+    else if (form.keterangan.trim().length > 2000) {
+      g.keterangan = `Keterangan maksimal 2000 karakter (sekarang ${form.keterangan.trim().length}).`;
+    }
     if (!form.link_url.trim()) g.link_url = 'Tautan selengkapnya wajib diisi.';
     else if (!tautanSah(form.link_url.trim())) g.link_url = 'Tautan harus diawali http:// atau https://';
 
@@ -221,14 +226,14 @@ export default function AdminImmediateInformationPage() {
             <Galat pesan={galat.uraian} />
           </div>
 
-          <div>
-            <Field
-              label="Keterangan" required type="textarea" rows={4}
-              value={form.keterangan} onChange={(v) => isi('keterangan', v)}
-              placeholder="Ringkasan singkat yang tampil pada kartu di halaman publik."
-            />
-            <Galat pesan={galat.keterangan} />
-          </div>
+          <IsianKeterangan
+            label="Keterangan" wajib
+            nilai={form.keterangan}
+            onChange={(v) => isi('keterangan', v)}
+            placeholder="Ringkasan singkat yang tampil pada kartu di halaman publik."
+            hint="Tempelkan caption Instagram apa adanya — baris kosong berlebih dan karakter tak terlihat dibersihkan sendiri."
+            galat={galat.keterangan}
+          />
 
           <IsianTautan
             label="Tautan Selengkapnya" wajib

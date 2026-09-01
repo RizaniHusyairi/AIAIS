@@ -29,6 +29,13 @@ type Draf = {
   label_id: string;
   label_en: string;
   show_about: boolean;
+  /* Tidak lagi disunting dari sini: blok gelap "APT Pranoto dalam Angka" yang
+     dulu dikendalikannya sudah dihapus dari beranda, karena angkanya tercetak
+     dua kali bersama bilah di kartu Tentang. Medannya sengaja DIPERTAHANKAN di
+     draf supaya nilai tersimpan ikut terkirim kembali apa adanya saat petugas
+     menyunting baris lama — melepasnya berarti diam-diam memadamkan bendera
+     itu pada setiap penyimpanan, dan blok itu tidak dapat dihidupkan lagi
+     tanpa menyemai ulang tabelnya. */
   show_numbers: boolean;
   show_hero: boolean;
   sort_order: number;
@@ -150,12 +157,11 @@ export default function AdminAngkaBandaraPage() {
 
   /* Peringatan yang benar-benar berguna: blok yang tidak punya satu pun angka
      aktif akan tampil kosong di beranda, dan itu tidak terlihat dari tabel ini
-     tanpa menghitung tiga kolom sekaligus. */
+     tanpa menghitung kolomnya sekaligus. */
   const blokKosong = useMemo(() => {
     const aktif = daftar.filter((d) => d.is_active);
     const kurang: string[] = [];
     if (!aktif.some((d) => d.show_about)) kurang.push('Tentang');
-    if (!aktif.some((d) => d.show_numbers)) kurang.push('dalam Angka');
     if (!aktif.some((d) => d.show_hero)) kurang.push('Hero');
     return kurang;
   }, [daftar]);
@@ -170,11 +176,11 @@ export default function AdminAngkaBandaraPage() {
       />
 
       <InfoNote>
-        Satu angka dapat tampil di lebih dari satu blok. <b>Tentang</b> adalah kartu
-        &ldquo;Tentang Bandar Udara APT Pranoto&rdquo;, <b>dalam Angka</b> adalah panel gelap
-        &ldquo;APT Pranoto dalam Angka&rdquo;, dan <b>Hero</b> adalah kartu ponsel di sisi kanan
-        bagian atas beranda (maksimal tiga angka pertama yang tampil). Angka-angka ini
-        dimasukkan tangan dan <b>bukan</b> diambil dari catatan lalu lintas udara.
+        Satu angka dapat tampil di lebih dari satu blok. <b>Tentang</b> adalah bilah di
+        kaki kartu &ldquo;Tentang Bandar Udara APT Pranoto&rdquo; — satu-satunya tempat
+        angka ini tayang penuh di beranda — dan <b>Hero</b> adalah kartu ponsel di sisi
+        kanan bagian atas beranda (maksimal tiga angka pertama yang tampil). Angka-angka
+        ini dimasukkan tangan dan <b>bukan</b> diambil dari catatan lalu lintas udara.
       </InfoNote>
 
       {blokKosong.length > 0 && (
@@ -198,7 +204,6 @@ export default function AdminAngkaBandaraPage() {
               const Ikon = ikonStatistik(s.icon);
               const blok = [
                 s.show_about && 'Tentang',
-                s.show_numbers && 'dalam Angka',
                 s.show_hero && 'Hero',
               ].filter(Boolean) as string[];
 
@@ -304,7 +309,6 @@ export default function AdminAngkaBandaraPage() {
               Tampil di blok
             </p>
             <Field label="Kartu Tentang" type="checkbox" value={draf.show_about} onChange={(v) => setDraf({ ...draf, show_about: v })} />
-            <Field label="Blok dalam Angka" type="checkbox" value={draf.show_numbers} onChange={(v) => setDraf({ ...draf, show_numbers: v })} />
             <Field label="Kartu hero (maks. 3)" type="checkbox" value={draf.show_hero} onChange={(v) => setDraf({ ...draf, show_hero: v })} />
           </div>
 

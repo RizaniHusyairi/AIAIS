@@ -4,8 +4,9 @@
  * Peta Google yang disematkan pada kartu lokasi beranda.
  *
  * Dipilih secara sadar sebagai pengganti peta lokator mandiri: yang dicari
- * pengunjung di kartu ini adalah peta jalan yang bisa mereka kenali, dan
- * lokator seukuran pulau tidak menjawabnya.
+ * pengunjung di kartu ini adalah peta sekitar bandara yang bisa mereka
+ * kenali — di sini citra satelit, lihat `JENIS_PETA_EMBED` — dan lokator
+ * seukuran pulau tidak menjawabnya.
  *
  * KONSEKUENSI YANG PERLU DIKETAHUI SIAPA PUN YANG MENYUNTING BERKAS INI.
  * Sematan ini membuat beranda portal memuat sumber daya dari server Google
@@ -43,6 +44,17 @@ const BANDARA = AIRPORTS[HOME_IATA];
    terminal, cukup jauh untuk tidak kehilangan konteks sekitarnya. */
 const ZOOM = 15;
 
+/* Citra satelit, bukan peta jalan. Bandara ini berdiri di tengah lahan hijau
+   yang pada peta jalan tampil sebagai bidang kosong nyaris tanpa penanda;
+   citranya memperlihatkan landas pacu, apron, dan gedung terminal apa adanya,
+   sehingga pengunjung mengenali tempatnya sebelum membaca alamatnya.
+   Nilainya berbeda antara dua bentuk alamat sematan: Embed API resmi memakai
+   `maptype=satellite` — di sana nama jalan tetap digambar di atas citra —
+   sedangkan bentuk tanpa kunci memakai `t=h` (hybrid), karena `t=k` di sana
+   memberi citra polos tanpa nama jalan sama sekali. */
+const JENIS_PETA_EMBED = 'satellite';
+const JENIS_PETA_TANPA_KUNCI = 'h';
+
 /**
  * Alamat sematan.
  *
@@ -60,9 +72,9 @@ function alamatSematan(): string {
   const kunci = process.env.NEXT_PUBLIC_GOOGLE_MAPS_EMBED_KEY?.trim();
 
   if (kunci) {
-    return `https://www.google.com/maps/embed/v1/place?key=${kunci}&q=${q}&zoom=${ZOOM}&language=id&region=ID`;
+    return `https://www.google.com/maps/embed/v1/place?key=${kunci}&q=${q}&zoom=${ZOOM}&maptype=${JENIS_PETA_EMBED}&language=id&region=ID`;
   }
-  return `https://maps.google.com/maps?q=${q}&hl=id&z=${ZOOM}&output=embed`;
+  return `https://maps.google.com/maps?q=${q}&hl=id&z=${ZOOM}&t=${JENIS_PETA_TANPA_KUNCI}&output=embed`;
 }
 
 export default function PetaSematanGoogle({ className = '' }: { className?: string }) {

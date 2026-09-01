@@ -6,7 +6,8 @@
  *   Sumber : OurAirports — https://davidmegginson.github.io/ourairports-data/airports.csv
  *   Lisensi: domain publik (dedikasi publik oleh OurAirports)
  *   Diunduh: 27 Juli 2026; LPU dan RTU ditambahkan dari unduhan ulang
- *            2 Agustus 2026 (lihat catatan pada kedua entri itu)
+ *            2 Agustus 2026, MHU dari unduhan ulang 1 September 2026
+ *            (lihat catatan pada ketiga entri itu)
  *   Saring : iso_country = "ID"
  *
  *   Kolom `icao` disertakan sebagai pembanding silang manual terhadap
@@ -63,6 +64,28 @@ export const AIRPORTS: Record<string, AirportGeo> = {
    */
   LPU: { iata: 'LPU', icao: 'WAQL', name: 'Long Apung', city: 'Kayan Hulu, Malinau', lat: 1.706932, lon: 114.969934 },
   MDC: { iata: 'MDC', icao: 'WAMM', name: 'Sam Ratulangi', city: 'Manado', lat: 1.5486, lon: 124.9262 },
+  /**
+   * Muara Wahau — rute perintis dari Samarinda.
+   *
+   * DUA HAL YANG PERLU DIKETAHUI SEBELUM MENYUNTING ENTRI INI.
+   *
+   * Pertama, `MHU` BUKAN kode IATA milik bandara ini. Pada OurAirports entri
+   * Muara Wahau tidak punya `iata_code` sama sekali, dan `MHU` justru terdaftar
+   * sebagai IATA Mount Hotham, Victoria, Australia. Kode ini dipakai di sini
+   * semata karena FIDS bandara mengirimkannya begitu — persis jebakan yang
+   * diperingatkan di `airportFromPlace`, hanya kali ini datang dari dalam
+   * kurung sehingga kodenya dipercaya. Pemetaan lokal ini aman selama portal
+   * hanya melayani rute domestik Kalimantan; bila suatu saat tabel ini dipakai
+   * untuk rute internasional, tinjau ulang entri ini lebih dahulu. Alias nama
+   * di bawah didaftarkan supaya penyelesaian tetap benar walau kurungnya
+   * hilang, bukan sekadar cadangan.
+   *
+   * Kedua, catatan ICAO sama seperti LPU: kolom `ident` OurAirports masih
+   * berisi kode lama `WRLW`, sedangkan `icao_code`/`gps_code` berisi `WALW`.
+   * Yang dipakai `WALW`, sejalan dengan awalan WAL* bandara Kalimantan Timur
+   * lain pada tabel ini (WALS Samarinda, WALL Balikpapan, WALC Bontang).
+   */
+  MHU: { iata: 'MHU', icao: 'WALW', name: 'Muara Wahau', city: 'Muara Wahau, Kutai Timur', lat: 1.193225, lon: 116.955886 },
   MOF: { iata: 'MOF', icao: 'WATC', name: 'Frans Xavier Seda', city: 'Maumere', lat: -8.6395, lon: 122.2381 },
   NNX: { iata: 'NNX', icao: 'WAQA', name: 'Nunukan', city: 'Nunukan', lat: 4.1340, lon: 117.6695 },
   PDG: { iata: 'PDG', icao: 'WIEE', name: 'Minangkabau', city: 'Padang', lat: -0.7860, lon: 100.2804 },
@@ -124,6 +147,13 @@ const NAME_ALIASES: Record<string, string> = {
   'BANDAR UDARA LONG APUNG': 'LPU',
   MARATUA: 'RTU',
   'BANDAR UDARA MARATUA': 'RTU',
+  // Muara Wahau dikirim FIDS dengan huruf besar semua dan berawalan
+  // "BANDAR UDARA". Aliasnya bukan sekadar cadangan di sini: kode `MHU` dalam
+  // kurung itu milik Mount Hotham (Australia) menurut IATA, jadi nama inilah
+  // yang menjadi jangkar bila suatu saat kurungnya hilang. Lihat catatan pada
+  // entri MHU di atas.
+  'MUARA WAHAU': 'MHU',
+  'BANDAR UDARA MUARA WAHAU': 'MHU',
 };
 
 const normalize = (s: string) =>

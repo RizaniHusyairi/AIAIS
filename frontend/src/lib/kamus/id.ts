@@ -281,7 +281,14 @@ const id = {
     wisataSemua: 'Lihat Semua Destinasi',
     dariBandara: 'dari bandara',
 
-    angkaJudul: 'APT Pranoto dalam Angka',
+
+    mitraKicker: 'MITRA & PEMANGKU KEPENTINGAN',
+    mitraJudul: 'Dipercaya oleh Mitra Terkemuka',
+    mitraRingkas:
+      'Maskapai, instansi, dan penyedia layanan yang bekerja bersama kami menjaga penerbangan di APT Pranoto tetap aman, tepat waktu, dan nyaman.',
+    mitraHitung: 'mitra terdaftar',
+    mitraMaskapai: 'Maskapai',
+    mitraInstansi: 'Instansi & Layanan',
 
     newsletterJudul: 'Dapatkan Informasi Terbaru',
     newsletterRingkas:

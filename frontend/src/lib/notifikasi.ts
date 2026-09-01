@@ -5,10 +5,14 @@
  * berakhir mengikuti aturan panel yang sudah ada.
  */
 
+import {
+  Bell, FileText, MessageCircle, MessageSquareWarning, PackageSearch, ScrollText, Star,
+} from 'lucide-react';
+
 import { adminFetch } from '@/lib/adminApi';
 
 export type JenisNotifikasi =
-  | 'pengaduan' | 'chat' | 'kehilangan' | 'informasi' | 'penilaian';
+  | 'pengaduan' | 'chat' | 'kehilangan' | 'informasi' | 'penilaian' | 'pengajuan';
 
 export interface ItemNotifikasi {
   id: string;
@@ -18,6 +22,61 @@ export interface ItemNotifikasi {
   path: string;
   dibaca: boolean;
   created_at: string;
+}
+
+/**
+ * Ikon dan warna per jenis.
+ *
+ * Tinggal di sini, bukan di dalam salah satu komponen, karena lonceng pada
+ * kepala panel dan kotak masuk di `/admin/notifikasi` harus menampilkan jenis
+ * yang sama dengan rupa yang sama. Menggandakannya berarti dua daftar yang
+ * harus diingat bersamaan tiap kali `AktivitasPusatBantuan::JENIS` bertambah —
+ * dan `pengajuan` sempat luput justru karena itu.
+ */
+export const RUPA: Record<JenisNotifikasi, { icon: typeof Bell; warna: string }> = {
+  pengaduan: { icon: MessageSquareWarning, warna: '#fb7185' },
+  chat: { icon: MessageCircle, warna: '#38bdf8' },
+  kehilangan: { icon: PackageSearch, warna: '#fbbf24' },
+  informasi: { icon: ScrollText, warna: '#a78bfa' },
+  penilaian: { icon: Star, warna: '#34d399' },
+  pengajuan: { icon: FileText, warna: '#f472b6' },
+};
+
+/** Rupa satu jenis, termasuk saat jenisnya tidak dikenali. */
+export function rupaJenis(jenis: JenisNotifikasi | null) {
+  return (jenis && RUPA[jenis]) || { icon: Bell, warna: '#64748b' };
+}
+
+/** Waktu relatif ringkas; dipakai lonceng maupun kotak masuk. */
+export function waktuRelatif(iso: string): string {
+  const detik = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+  if (detik < 60) return 'baru saja';
+  if (detik < 3600) return `${Math.floor(detik / 60)} menit lalu`;
+  if (detik < 86400) return `${Math.floor(detik / 3600)} jam lalu`;
+  return new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+}
+
+export interface RekapNotifikasi {
+  total: number;
+  belum_dibaca: number;
+  hari_ini: number;
+  per_jenis: Record<string, number>;
+}
+
+export interface SaringNotifikasi {
+  jenis?: JenisNotifikasi | '';
+  status?: 'belum' | 'sudah' | '';
+  q?: string;
+  page?: number;
+  per_page?: number;
+}
+
+export interface HasilNotifikasi {
+  items: ItemNotifikasi[];
+  belum_dibaca: number;
+  rekap: RekapNotifikasi;
+  jenis_tersedia: { kunci: JenisNotifikasi; judul: string }[];
+  halaman: { saat_ini: number; terakhir: number; total: number };
 }
 
 export interface StatusNotifikasi {
@@ -55,8 +114,28 @@ export interface StatusNotifikasi {
   penerima: number;
 }
 
-export const ambilNotifikasi = () =>
-  adminFetch<{ items: ItemNotifikasi[]; belum_dibaca: number }>('/notifications');
+/**
+ * Ambil riwayat notifikasi.
+ *
+ * Seluruh saringannya opsional: dipanggil tanpa argumen — seperti yang
+ * dilakukan lonceng — hasilnya tetap 30 terbaru, sama seperti sebelum
+ * penyaringan ada.
+ */
+export const ambilNotifikasi = (saring: SaringNotifikasi = {}) => {
+  const kueri = new URLSearchParams();
+
+  // Nilai kosong sengaja tidak ikut dikirim; chip "Semua" adalah ketiadaan
+  // penyaring, bukan penyaring bernilai kosong yang harus ditolak validasi.
+  if (saring.jenis) kueri.set('jenis', saring.jenis);
+  if (saring.status) kueri.set('status', saring.status);
+  if (saring.q?.trim()) kueri.set('q', saring.q.trim());
+  if (saring.page && saring.page > 1) kueri.set('page', String(saring.page));
+  if (saring.per_page) kueri.set('per_page', String(saring.per_page));
+
+  const tanya = kueri.toString();
+
+  return adminFetch<HasilNotifikasi>(`/notifications${tanya ? `?${tanya}` : ''}`);
+};
 
 export const statusNotifikasi = () =>
   adminFetch<StatusNotifikasi>('/notifications/status');

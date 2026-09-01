@@ -199,7 +199,11 @@ export default function InformasiSertaMertaView() {
                       <h3 className="text-[14.5px] font-black text-slate-900 leading-snug group-hover:text-blue-700 transition-colors">
                         {it.uraian}
                       </h3>
-                      <p className="mt-2 text-[12.5px] text-slate-600 leading-relaxed">
+                      {/* `whitespace-pre-line`: maklumat kerap disalin dari caption
+                          Instagram yang berparagraf, dan jeda itu memang disunting
+                          petugas di panel. Tanpa ini seluruhnya runtuh menjadi satu
+                          blok panjang — rapi di formulir, tetapi tidak di sini. */}
+                      <p className="mt-2 text-[12.5px] text-slate-600 leading-relaxed whitespace-pre-line">
                         {it.keterangan}
                       </p>
                     </div>

@@ -25,10 +25,11 @@ import { useTeks, formatTanggal, type Kamus } from '@/lib/kamus';
 import { useStatistikBandara } from '@/lib/statistikBandara';
 import { useTentang } from '@/lib/tentang';
 import VideoProfil from '@/components/home/VideoProfil';
+import MitraLogos from '@/components/home/MitraLogos';
 import {
   Plane, ArrowRight, Building2, ChevronRight, ChevronLeft, MapPin, Car,
   ParkingSquare, Headphones,
-  CarFront, Bus, Mail, Share2, Send, Navigation, Calendar, Palmtree, Clock,
+  CarFront, Bus, Mail, Share2, Navigation, Calendar, Palmtree, Clock,
 } from 'lucide-react';
 
 /* ================================================================
@@ -124,7 +125,13 @@ const aksesBandara = (t: Kamus) => [
  * Dulu ada DUA larik di sini — `aboutStats` dan `dalamAngka` — yang menyalin
  * nilai yang sama, ditambah salinan ketiga di `HeroBoardingPass.tsx`.
  * Semuanya kini membaca `useStatistikBandara()` dan menyaring benderanya
- * masing-masing, sehingga satu suntingan petugas mengubah ketiga blok.
+ * masing-masing.
+ *
+ * Beranda kini menayangkan angka itu SEKALI saja, pada bilah di kaki kartu
+ * Tentang. Sebelumnya ada blok kedua "APT Pranoto dalam Angka" di dekat kaki
+ * halaman yang membaca daftar yang sama lewat bendera `show_numbers`; karena
+ * tiga barisnya bercentang dua-duanya, angka yang sama tercetak dua kali di
+ * satu halaman. Blok itu dihapus, `show_about` yang menentukan.
  */
 
 /*
@@ -163,7 +170,6 @@ export default function HomePage() {
   const semuaAngka = useStatistikBandara();
   const ABOUT_STATS = semuaAngka.filter((s) => s.diTentang);
   const AKSES = aksesBandara(t);
-  const ANGKA = semuaAngka.filter((s) => s.diAngka);
 
   /* Unggahan Instagram — kini mengisi kolom kanan hero, menggantikan papan
      penerbangan. Dibaca dari tabel LOKAL portal, bukan dari Instagram: token
@@ -409,7 +415,7 @@ export default function HomePage() {
         pengunjung mengira ada yang gagal dimuat.
       */}
       {SLIDES.length > 0 && (
-        <section className="max-w-[1400px] mx-auto px-4 sm:px-6 mt-8">
+        <section className="max-w-[1400px] mx-auto px-4 sm:px-6 mt-12">
           <div
             className="relative overflow-hidden rounded-3xl bg-[#0b1e5b] shadow-xl shadow-blue-950/15 ring-1 ring-slate-200/70"
             onMouseEnter={() => setSlideTertahan(true)}
@@ -502,89 +508,226 @@ export default function HomePage() {
         Dulu bagian ini satu kartu putih berisi teks, LIMA kotak angka, dan
         video 220px — semuanya diperas ke dalam satu baris tujuh kolom. Kini
         angkanya turun menjadi bilah selebar kartu dengan pemisah, dan videonya
-        memakai rasio 16:9. Kartunya diberi pita gradien di kepalanya supaya
-        tidak terbaca sebagai kotak putih kesekian.
+        memakai rasio 16:9.
+
+        BAND SELEBAR LAYAR, bukan kartu yang melayang di atas `bg-slate-50`
+        seperti kebanyakan seksi lain. Di atasnya ada papan pengumuman berlatar
+        biru tua; kartu putih polos yang menempel langsung padanya terbaca
+        seperti halaman yang terputus. Resepnya sengaja sama persis dengan band
+        Fasilitas di bawah, sehingga keduanya menjadi dua jeda yang teratur di
+        sepanjang halaman alih-alih dua perlakuan yang berbeda.
+
+        Bilah angka di kakinya adalah SATU-SATUNYA tempat angka bandara tayang
+        di beranda — lihat catatan panjang di dekat `useStatistikBandara()` di
+        atas soal blok kedua yang dihapus.
       */}
-      <section className="max-w-[1400px] mx-auto px-4 sm:px-6 mt-10">
-        <div className="relative overflow-hidden bg-white rounded-3xl shadow-sm shadow-slate-200/60 border border-slate-100">
-          <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-600 via-sky-400 to-transparent" aria-hidden="true" />
+      <section className="mt-12 border-y border-slate-200/70 bg-gradient-to-b from-white via-slate-100/60 to-slate-50 py-14">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6">
+          <div className="relative overflow-hidden bg-white rounded-3xl shadow-sm shadow-slate-200/60 border border-slate-100">
+            <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-600 via-sky-400 to-transparent" aria-hidden="true" />
 
-          <div className="grid grid-cols-1 lg:grid-cols-2">
-            <motion.div
-              initial={{ opacity: 0, y: 18 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
-              className="p-7 sm:p-9 lg:p-12 flex flex-col justify-center"
-            >
-              <JudulBagian kicker={tentang.kicker}>{tentang.judul}</JudulBagian>
-
-              <p className="mt-4 text-slate-500 text-[14px] leading-[1.85] max-w-xl">
-                {tentang.teks}
-              </p>
-
-              <Link
-                href="/profile"
-                className="mt-7 self-start inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[13px] px-5 py-3 rounded-full shadow-lg shadow-blue-600/20 transition-colors"
+            <div className="grid grid-cols-1 lg:grid-cols-2">
+              <motion.div
+                initial={{ opacity: 0, y: 18 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5 }}
+                className="p-7 sm:p-9 lg:p-12 flex flex-col justify-center"
               >
-                {t.beranda.profilLengkap}
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-            </motion.div>
+                <JudulBagian kicker={tentang.kicker}>{tentang.judul}</JudulBagian>
 
-            <motion.div
-              initial={{ opacity: 0, y: 18 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.08 }}
-              className="p-7 sm:p-9 lg:p-12 lg:pl-0 flex items-center"
-            >
-              <div className="w-full rounded-2xl overflow-hidden ring-1 ring-slate-200/70 shadow-xl shadow-slate-300/30">
-                <VideoProfil
-                  gambar={tentang.gambar}
-                  videoUrl={tentang.videoUrl}
-                  caption={tentang.caption}
-                  tinggiKelas="aspect-video h-auto"
-                />
-              </div>
-            </motion.div>
+                <p className="mt-4 text-slate-500 text-[14px] leading-[1.85] max-w-xl">
+                  {tentang.teks}
+                </p>
+
+                <Link
+                  href="/profile"
+                  className="mt-7 self-start inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[13px] px-5 py-3 rounded-full shadow-lg shadow-blue-600/20 transition-colors"
+                >
+                  {t.beranda.profilLengkap}
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 18 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.08 }}
+                className="p-7 sm:p-9 lg:p-12 lg:pl-0 flex items-center"
+              >
+                <div className="w-full rounded-2xl overflow-hidden ring-1 ring-slate-200/70 shadow-xl shadow-slate-300/30">
+                  <VideoProfil
+                    gambar={tentang.gambar}
+                    videoUrl={tentang.videoUrl}
+                    caption={tentang.caption}
+                    tinggiKelas="aspect-video h-auto"
+                  />
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Bilah angka selebar kartu. Lima kolom di sini punya ruang; lima
+                kolom di dalam separuh kartu tidak. */}
+            {ABOUT_STATS.length > 0 && (
+              <motion.div
+                variants={container}
+                initial="hidden"
+                whileInView="show"
+                viewport={{ once: true }}
+                /* `divide-y` sampai lg: di bawah itu kelimanya membungkus ke baris
+                   kedua, dan pemisah tegak saja membuat baris keduanya tampak
+                   seperti garis nyasar alih-alih lanjutan bilah yang sama. */
+                className="border-t border-slate-100 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 divide-x divide-y lg:divide-y-0 divide-slate-100"
+              >
+                {ABOUT_STATS.map((s) => {
+                  const Icon = s.icon;
+                  return (
+                    <motion.div
+                      key={s.slug}
+                      variants={rise}
+                      className="group px-5 py-6 hover:bg-slate-50/70 transition-colors"
+                    >
+                      <span className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+                        <Icon className="w-[18px] h-[18px] text-blue-600" />
+                      </span>
+                      <p className="mt-3 text-[22px] font-black text-slate-900 leading-none tabular-nums">{s.value}</p>
+                      <p className="mt-1.5 text-[11.5px] text-slate-500 leading-snug">{s.label}</p>
+                    </motion.div>
+                  );
+                })}
+              </motion.div>
+            )}
           </div>
-
-          {/* Bilah angka selebar kartu. Lima kolom di sini punya ruang; lima
-              kolom di dalam separuh kartu tidak. */}
-          {ABOUT_STATS.length > 0 && (
-            <motion.div
-              variants={container}
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true }}
-              /* `divide-y` sampai lg: di bawah itu kelimanya membungkus ke baris
-                 kedua, dan pemisah tegak saja membuat baris keduanya tampak
-                 seperti garis nyasar alih-alih lanjutan bilah yang sama. */
-              className="border-t border-slate-100 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 divide-x divide-y lg:divide-y-0 divide-slate-100"
-            >
-              {ABOUT_STATS.map((s) => {
-                const Icon = s.icon;
-                return (
-                  <motion.div
-                    key={s.slug}
-                    variants={rise}
-                    className="group px-5 py-6 hover:bg-slate-50/70 transition-colors"
-                  >
-                    <span className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
-                      <Icon className="w-[18px] h-[18px] text-blue-600" />
-                    </span>
-                    <p className="mt-3 text-[22px] font-black text-slate-900 leading-none tabular-nums">{s.value}</p>
-                    <p className="mt-1.5 text-[11.5px] text-slate-500 leading-snug">{s.label}</p>
-                  </motion.div>
-                );
-              })}
-            </motion.div>
-          )}
         </div>
       </section>
 
-      {/* ================= 5. BERITA ================= */}
+      {/* ================= 5. PEJABAT BANDARA ================= */}
+      <section className="max-w-[1400px] mx-auto px-4 sm:px-6 mt-12">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+          <JudulBagian kicker={t.beranda.pejabatKicker} className="mb-5">{t.beranda.pejabatJudul}</JudulBagian>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            {/* kartu utama dengan latar bandara */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="lg:col-span-8 relative overflow-hidden rounded-2xl min-h-[320px] flex"
+            >
+              <img src="/bg/bg-card-pejabat.png" alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#0b1e5b]/92 via-[#123a8f]/55 to-transparent" />
+
+              <div className="relative z-10 flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4 p-6">
+                {/* teks */}
+                <motion.div key={current.name} initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.45 }} className="flex flex-col justify-center">
+                  <p className="text-cyan-300 text-[13px] italic font-medium">{current.shortTitle}</p>
+                  <h3 className="mt-1.5 text-[26px] sm:text-[28px] font-black text-white leading-tight">{current.name}</h3>
+                  <p className="mt-1.5 text-blue-100/85 text-[12.5px]">{ORG_NAME}</p>
+
+                  {/* Nomenklatur jabatan lengkap menggantikan slot "quote".
+                      Tidak ada kutipan resmi dari para pejabat ini; yang
+                      sebelumnya ada di sini karangan. */}
+                  <p className="mt-4 text-blue-50 text-[12.5px] leading-relaxed max-w-xs">{current.title}</p>
+
+                  <div className="mt-4 flex items-center gap-2">
+                    {/* Email resmi sesuai aptpairport.id. */}
+                    <a href="mailto:mail.aptpranotoairport@gmail.com" className="w-8 h-8 rounded-lg bg-white/12 border border-white/20 flex items-center justify-center text-white hover:bg-white/22 transition-colors" aria-label="Email">
+                      <Mail className="w-4 h-4" />
+                    </a>
+                    <a href="#" className="w-8 h-8 rounded-lg bg-white/12 border border-white/20 flex items-center justify-center text-white hover:bg-white/22 transition-colors" aria-label={t.beranda.bagikanProfil}>
+                      <Share2 className="w-4 h-4" />
+                    </a>
+                  </div>
+
+                  <Link href="/profile#pejabat" className="mt-5 inline-flex items-center gap-2 bg-white text-blue-700 font-bold text-[12.5px] px-4 py-2.5 rounded-full w-fit hover:bg-blue-50 transition-colors">
+                    <Plane className="w-3.5 h-3.5 rotate-45" /> {t.beranda.profilLengkap}
+                  </Link>
+                </motion.div>
+
+                {/* foto */}
+                <div className="relative hidden sm:flex items-end justify-center">
+                  {/* `top-8` menurunkan foto ~32px sehingga tepi bawahnya lewat di
+                      bawah batas kartu dan tertutup `overflow-hidden`. Foto pejabat
+                      ini potret cutout yang habis di pinggang; tanpa itu garis
+                      potongnya melayang tepat di atas dasar kartu dan terbaca
+                      seperti tersayat. Dipakai `top`, bukan `translate-y`, karena
+                      framer-motion sudah memakai `transform` untuk animasi masuk —
+                      kelas translate apa pun akan ditimpa.
+
+                      `object-bottom` wajib menyertai `object-contain`: rasio foto
+                      berbeda-beda, jadi pada kolom yang sempit foto terlebar
+                      menyusut di dalam kotaknya. Tanpa `object-bottom` sisa ruangnya
+                      dibagi rata atas-bawah dan garis potong itu terangkat kembali
+                      ke dalam kartu.
+
+                      Koreksi tinggi subjek (`PEJABAT_PHOTO_FIT`) aman dipasang di
+                      gambar yang sama meski framer-motion memakai `transform` untuk
+                      animasi masuk: Tailwind v4 memakai properti `scale` tersendiri,
+                      bukan `transform`, jadi keduanya menumpuk alih-alih saling
+                      menimpa. `origin-bottom` menjaga tepi bawah tetap terkunci saat
+                      diskalakan. */}
+                  <motion.img
+                    key={current.photo}
+                    initial={{ opacity: 0, y: 18 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                    src={current.photo}
+                    alt={current.name}
+                    className={`relative top-8 z-10 h-[360px] w-auto object-contain object-bottom origin-bottom drop-shadow-2xl ${PEJABAT_PHOTO_FIT[current.slug] ?? ''}`}
+                  />
+                </div>
+              </div>
+
+              {/* kontrol */}
+              <div className="absolute bottom-5 right-5 z-20 flex items-center gap-3">
+                <span className="text-white/90 text-[12px] font-mono tracking-wider">
+                  <b className="text-white">{String(aman + 1).padStart(2, '0')}</b> / {String(EXECUTIVES.length).padStart(2, '0')}
+                </span>
+                <motion.button
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => pickExec((aman - 1 + EXECUTIVES.length) % EXECUTIVES.length)}
+                  className="w-9 h-9 rounded-full bg-white/15 border border-white/25 backdrop-blur flex items-center justify-center text-white hover:bg-white/25 transition-colors cursor-pointer"
+                  aria-label={t.beranda.sebelumnya}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => pickExec((aman + 1) % EXECUTIVES.length)}
+                  className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-blue-700 shadow-lg hover:bg-blue-50 transition-colors cursor-pointer"
+                  aria-label={t.beranda.selanjutnya}
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </motion.button>
+              </div>
+            </motion.div>
+
+            {/* daftar pejabat lain */}
+            <div className="lg:col-span-4 space-y-3">
+              {others.map((p) => {
+                const idx = EXECUTIVES.findIndex((e) => e.slug === p.slug);
+                return (
+                  <motion.button
+                    key={p.slug}
+                    onClick={() => pickExec(idx)}
+                    whileHover={{ x: 4 }}
+                    className="w-full flex items-center gap-3.5 p-2.5 rounded-xl hover:bg-slate-50 transition-colors text-left cursor-pointer"
+                  >
+                    <img src={p.photo} alt={p.name} loading="lazy" className={`w-14 h-14 rounded-xl object-contain object-bottom origin-bottom bg-slate-50 p-0.5 flex-shrink-0 ${PEJABAT_PHOTO_FIT[p.slug] ?? ''}`} />
+                    <div className="min-w-0">
+                      <p className="font-bold text-slate-900 text-[13px] leading-snug truncate">{p.name}</p>
+                      <p className="text-[11px] text-slate-500 leading-snug line-clamp-2">{p.shortTitle}</p>
+                    </div>
+                  </motion.button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ================= 6. BERITA ================= */}
       {/*
         Berita dan Fasilitas dulu berbagi satu baris — tujuh kolom untuk tiga
         kartu berita, lima untuk enam baris fasilitas. Keduanya jadi sempit
@@ -646,7 +789,7 @@ export default function HomePage() {
         )}
       </section>
 
-      {/* ================= 6. FASILITAS UNGGULAN ================= */}
+      {/* ================= 7. FASILITAS UNGGULAN ================= */}
       {/*
         Berdata, bukan lagi enam kartu tetap dari kamus.
 
@@ -811,203 +954,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ================= 7. PEJABAT BANDARA ================= */}
-      <section className="max-w-[1400px] mx-auto px-4 sm:px-6 mt-6">
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-          <JudulBagian kicker={t.beranda.pejabatKicker} className="mb-5">{t.beranda.pejabatJudul}</JudulBagian>
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-            {/* kartu utama dengan latar bandara */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="lg:col-span-8 relative overflow-hidden rounded-2xl min-h-[320px] flex"
-            >
-              <img src="/bg/bg-card-pejabat.png" alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-r from-[#0b1e5b]/92 via-[#123a8f]/55 to-transparent" />
-
-              <div className="relative z-10 flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4 p-6">
-                {/* teks */}
-                <motion.div key={current.name} initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.45 }} className="flex flex-col justify-center">
-                  <p className="text-cyan-300 text-[13px] italic font-medium">{current.shortTitle}</p>
-                  <h3 className="mt-1.5 text-[26px] sm:text-[28px] font-black text-white leading-tight">{current.name}</h3>
-                  <p className="mt-1.5 text-blue-100/85 text-[12.5px]">{ORG_NAME}</p>
-
-                  {/* Nomenklatur jabatan lengkap menggantikan slot "quote".
-                      Tidak ada kutipan resmi dari para pejabat ini; yang
-                      sebelumnya ada di sini karangan. */}
-                  <p className="mt-4 text-blue-50 text-[12.5px] leading-relaxed max-w-xs">{current.title}</p>
-
-                  <div className="mt-4 flex items-center gap-2">
-                    {/* Email resmi sesuai aptpairport.id. */}
-                    <a href="mailto:mail.aptpranotoairport@gmail.com" className="w-8 h-8 rounded-lg bg-white/12 border border-white/20 flex items-center justify-center text-white hover:bg-white/22 transition-colors" aria-label="Email">
-                      <Mail className="w-4 h-4" />
-                    </a>
-                    <a href="#" className="w-8 h-8 rounded-lg bg-white/12 border border-white/20 flex items-center justify-center text-white hover:bg-white/22 transition-colors" aria-label={t.beranda.bagikanProfil}>
-                      <Share2 className="w-4 h-4" />
-                    </a>
-                  </div>
-
-                  <Link href="/profile#pejabat" className="mt-5 inline-flex items-center gap-2 bg-white text-blue-700 font-bold text-[12.5px] px-4 py-2.5 rounded-full w-fit hover:bg-blue-50 transition-colors">
-                    <Plane className="w-3.5 h-3.5 rotate-45" /> {t.beranda.profilLengkap}
-                  </Link>
-                </motion.div>
-
-                {/* foto */}
-                <div className="relative hidden sm:flex items-end justify-center">
-                  {/* `top-8` menurunkan foto ~32px sehingga tepi bawahnya lewat di
-                      bawah batas kartu dan tertutup `overflow-hidden`. Foto pejabat
-                      ini potret cutout yang habis di pinggang; tanpa itu garis
-                      potongnya melayang tepat di atas dasar kartu dan terbaca
-                      seperti tersayat. Dipakai `top`, bukan `translate-y`, karena
-                      framer-motion sudah memakai `transform` untuk animasi masuk —
-                      kelas translate apa pun akan ditimpa.
-
-                      `object-bottom` wajib menyertai `object-contain`: rasio foto
-                      berbeda-beda, jadi pada kolom yang sempit foto terlebar
-                      menyusut di dalam kotaknya. Tanpa `object-bottom` sisa ruangnya
-                      dibagi rata atas-bawah dan garis potong itu terangkat kembali
-                      ke dalam kartu.
-
-                      Koreksi tinggi subjek (`PEJABAT_PHOTO_FIT`) aman dipasang di
-                      gambar yang sama meski framer-motion memakai `transform` untuk
-                      animasi masuk: Tailwind v4 memakai properti `scale` tersendiri,
-                      bukan `transform`, jadi keduanya menumpuk alih-alih saling
-                      menimpa. `origin-bottom` menjaga tepi bawah tetap terkunci saat
-                      diskalakan. */}
-                  <motion.img
-                    key={current.photo}
-                    initial={{ opacity: 0, y: 18 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                    src={current.photo}
-                    alt={current.name}
-                    className={`relative top-8 z-10 h-[360px] w-auto object-contain object-bottom origin-bottom drop-shadow-2xl ${PEJABAT_PHOTO_FIT[current.slug] ?? ''}`}
-                  />
-                </div>
-              </div>
-
-              {/* kontrol */}
-              <div className="absolute bottom-5 right-5 z-20 flex items-center gap-3">
-                <span className="text-white/90 text-[12px] font-mono tracking-wider">
-                  <b className="text-white">{String(aman + 1).padStart(2, '0')}</b> / {String(EXECUTIVES.length).padStart(2, '0')}
-                </span>
-                <motion.button
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => pickExec((aman - 1 + EXECUTIVES.length) % EXECUTIVES.length)}
-                  className="w-9 h-9 rounded-full bg-white/15 border border-white/25 backdrop-blur flex items-center justify-center text-white hover:bg-white/25 transition-colors cursor-pointer"
-                  aria-label={t.beranda.sebelumnya}
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </motion.button>
-                <motion.button
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => pickExec((aman + 1) % EXECUTIVES.length)}
-                  className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-blue-700 shadow-lg hover:bg-blue-50 transition-colors cursor-pointer"
-                  aria-label={t.beranda.selanjutnya}
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </motion.button>
-              </div>
-            </motion.div>
-
-            {/* daftar pejabat lain */}
-            <div className="lg:col-span-4 space-y-3">
-              {others.map((p) => {
-                const idx = EXECUTIVES.findIndex((e) => e.slug === p.slug);
-                return (
-                  <motion.button
-                    key={p.slug}
-                    onClick={() => pickExec(idx)}
-                    whileHover={{ x: 4 }}
-                    className="w-full flex items-center gap-3.5 p-2.5 rounded-xl hover:bg-slate-50 transition-colors text-left cursor-pointer"
-                  >
-                    <img src={p.photo} alt={p.name} loading="lazy" className={`w-14 h-14 rounded-xl object-contain object-bottom origin-bottom bg-slate-50 p-0.5 flex-shrink-0 ${PEJABAT_PHOTO_FIT[p.slug] ?? ''}`} />
-                    <div className="min-w-0">
-                      <p className="font-bold text-slate-900 text-[13px] leading-snug truncate">{p.name}</p>
-                      <p className="text-[11px] text-slate-500 leading-snug line-clamp-2">{p.shortTitle}</p>
-                    </div>
-                  </motion.button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ================= 8. AKSES MENUJU BANDARA ================= */}
-      <section className="max-w-[1400px] mx-auto px-4 sm:px-6 mt-6 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-        {/* moda transportasi */}
-        <div className="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-          <JudulBagian kicker={t.beranda.aksesKicker} className="mb-5">{t.beranda.aksesJudul}</JudulBagian>
-          <motion.div variants={container} initial="hidden" whileInView="show" viewport={{ once: true }} className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            {AKSES.map((a) => {
-              const Icon = a.icon;
-              const isi = (
-                <>
-                  <span className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center group-hover:bg-blue-50 group-hover:border-blue-100 transition-colors">
-                    <Icon className="w-5 h-5 text-slate-600 group-hover:text-blue-600 transition-colors" />
-                  </span>
-                  <p className="mt-2.5 font-bold text-slate-900 text-[12.5px] leading-snug">{a.nama}</p>
-                  <p className="mt-1 text-[10.5px] text-slate-500 leading-snug">{a.desc}</p>
-                </>
-              );
-              return (
-                <motion.div key={a.kunci} variants={rise} whileHover={{ y: -4 }} className="group">
-                  {a.href ? <Link href={a.href} className="block">{isi}</Link> : isi}
-                </motion.div>
-              );
-            })}
-          </motion.div>
-        </div>
-
-        {/* peta */}
-{/* Peta lokasi, disematkan dari Google Maps pada koordinat asli bandara
-            (`lib/airports.ts`, berprovenans OurAirports). Peta lokator mandiri
-            tetap berada di belakangnya sebagai jaring pengaman ketika sematan
-            belum atau tidak dapat termuat — lihat catatan panjang di
-            `PetaSematanGoogle.tsx` soal harga yang ditanggung sematan ini. */}
-        <motion.div initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="lg:col-span-5 relative rounded-2xl overflow-hidden border border-slate-100 min-h-[240px]">
-          <PetaSematanGoogle />
-
-          <div className="absolute top-6 left-5 right-5">
-            <div className="bg-white rounded-xl shadow-lg border border-slate-100 p-3 flex gap-2.5">
-              <span className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
-                <MapPin className="w-4 h-4 text-white" />
-              </span>
-              <div className="min-w-0">
-                <p className="font-bold text-slate-900 text-[12.5px]">APT Pranoto Samarinda</p>
-                {/* Alamat resmi sesuai aptpairport.id. */}
-                <p className="text-[11px] text-slate-500 leading-snug">Jl. Poros Samarinda–Bontang, Kel. Sungai Siring, Samarinda 75119</p>
-                {/* Koordinat ikut ditulis karena inilah satu-satunya keterangan
-                    letak yang tetap berguna saat petanya tidak dapat dimuat. */}
-                <p className="mt-1 text-[10.5px] text-slate-400 tabular-nums">
-                  {KOORDINAT_BANDARA} · {BANDARA_LOKASI.iata}/{BANDARA_LOKASI.icao}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Membuka aplikasi peta milik pengunjung sendiri, bukan menyematkan
-              peta pihak ketiga ke dalam beranda: yang pertama hanya berjalan
-              bila diklik, yang kedua menyeret setiap pengunjung portal ke
-              server pihak ketiga hanya untuk memuat halaman depan. */}
-          <a
-            href={TAUTAN_PETA}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="absolute bottom-5 left-5 inline-flex items-center gap-2 bg-white text-slate-800 font-bold text-[12px] px-4 py-2.5 rounded-full shadow-lg border border-slate-100 hover:bg-blue-50 hover:text-blue-700 transition-colors"
-          >
-            <Navigation className="w-3.5 h-3.5 text-blue-600" /> {t.beranda.bukaPetaAplikasi}
-            <span className="sr-only">{t.beranda.membukaTabBaru}</span>
-          </a>
-        </motion.div>
-
-      </section>
-
-      {/* ================= 9. PARIWISATA TERDEKAT ================= */}
-      <section className="max-w-[1400px] mx-auto px-4 sm:px-6 mt-6">
+      {/* ================= 8. PARIWISATA TERDEKAT ================= */}
+      <section className="max-w-[1400px] mx-auto px-4 sm:px-6 mt-12">
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
           <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
             <div>
@@ -1089,71 +1037,92 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ================= 10. DALAM ANGKA ================= */}
-      <section className="max-w-[1400px] mx-auto px-4 sm:px-6 mt-6">
-        <motion.div
-          initial={{ opacity: 0, y: 22 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0b1226] to-[#111c3d] p-7 sm:p-8"
-        >
-          <img src="/bg/bg-card-pejabat.png" alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover opacity-30" />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0b1226] via-[#0b1226]/85 to-transparent" />
-          <div
-            className="absolute inset-0 opacity-[0.12]"
-            style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.4) 1px, transparent 0)', backgroundSize: '22px 22px' }}
-          />
-
-          <h2 className="relative z-10 text-[19px] font-black text-white">{t.beranda.angkaJudul}</h2>
-
-          <motion.div variants={container} initial="hidden" whileInView="show" viewport={{ once: true }} className="relative z-10 mt-6 grid grid-cols-2 lg:grid-cols-4 gap-6">
-            {ANGKA.map((s, i) => {
-              const Icon = s.icon;
-              return (
-                <motion.div key={s.slug} variants={rise} className={`space-y-2 ${i < ANGKA.length - 1 ? 'lg:border-r lg:border-white/10' : ''}`}>
-                  <span className="w-10 h-10 rounded-xl bg-white/8 border border-white/12 flex items-center justify-center">
-                    <Icon className="w-5 h-5 text-blue-300" />
+      {/* ================= 9. AKSES MENUJU BANDARA ================= */}
+      <section className="max-w-[1400px] mx-auto px-4 sm:px-6 mt-12 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+        {/* moda transportasi */}
+        <div className="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+          <JudulBagian kicker={t.beranda.aksesKicker} className="mb-5">{t.beranda.aksesJudul}</JudulBagian>
+          <motion.div variants={container} initial="hidden" whileInView="show" viewport={{ once: true }} className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            {AKSES.map((a) => {
+              const Icon = a.icon;
+              const isi = (
+                <>
+                  <span className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center group-hover:bg-blue-50 group-hover:border-blue-100 transition-colors">
+                    <Icon className="w-5 h-5 text-slate-600 group-hover:text-blue-600 transition-colors" />
                   </span>
-                  <p className="text-[22px] font-black text-white leading-none">{s.value}</p>
-                  <p className="text-[11.5px] text-slate-400 leading-tight">{s.label}</p>
+                  <p className="mt-2.5 font-bold text-slate-900 text-[12.5px] leading-snug">{a.nama}</p>
+                  <p className="mt-1 text-[10.5px] text-slate-500 leading-snug">{a.desc}</p>
+                </>
+              );
+              return (
+                <motion.div key={a.kunci} variants={rise} whileHover={{ y: -4 }} className="group">
+                  {a.href ? <Link href={a.href} className="block">{isi}</Link> : isi}
                 </motion.div>
               );
             })}
           </motion.div>
-        </motion.div>
-      </section>
+        </div>
 
-      {/* ================= 11. NEWSLETTER ================= */}
-      <section className="max-w-[1400px] mx-auto px-4 sm:px-6 mt-6 mb-14">
-        <motion.div
-          initial={{ opacity: 0, y: 18 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 sm:p-7 grid grid-cols-1 lg:grid-cols-12 gap-5 items-center"
-        >
-          <div className="lg:col-span-5">
-            <h2 className="text-[18px] font-black text-slate-900">{t.beranda.newsletterJudul}</h2>
-            <p className="mt-2 text-slate-500 text-[12.5px] leading-relaxed max-w-sm">
-              {t.beranda.newsletterRingkas}
-            </p>
+        {/* peta */}
+{/* Peta lokasi, disematkan dari Google Maps pada koordinat asli bandara
+            (`lib/airports.ts`, berprovenans OurAirports). Peta lokator mandiri
+            tetap berada di belakangnya sebagai jaring pengaman ketika sematan
+            belum atau tidak dapat termuat — lihat catatan panjang di
+            `PetaSematanGoogle.tsx` soal harga yang ditanggung sematan ini. */}
+        <motion.div initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="lg:col-span-5 relative rounded-2xl overflow-hidden border border-slate-100 min-h-[240px]">
+          <PetaSematanGoogle />
+
+          <div className="absolute top-6 left-5 right-5">
+            <div className="bg-white rounded-xl shadow-lg border border-slate-100 p-3 flex gap-2.5">
+              <span className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
+                <MapPin className="w-4 h-4 text-white" />
+              </span>
+              <div className="min-w-0">
+                <p className="font-bold text-slate-900 text-[12.5px]">APT Pranoto Samarinda</p>
+                {/* Alamat resmi sesuai aptpairport.id. */}
+                <p className="text-[11px] text-slate-500 leading-snug">Jl. Poros Samarinda–Bontang, Kel. Sungai Siring, Samarinda 75119</p>
+                {/* Koordinat ikut ditulis karena inilah satu-satunya keterangan
+                    letak yang tetap berguna saat petanya tidak dapat dimuat. */}
+                <p className="mt-1 text-[10.5px] text-slate-400 tabular-nums">
+                  {KOORDINAT_BANDARA} · {BANDARA_LOKASI.iata}/{BANDARA_LOKASI.icao}
+                </p>
+              </div>
+            </div>
           </div>
 
-          <form onSubmit={(e) => e.preventDefault()} className="lg:col-span-7 flex flex-col sm:flex-row gap-3">
-            <input
-              type="email"
-              required
-              placeholder={t.beranda.newsletterEmail}
-              className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-[13px] text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-blue-400 focus:bg-white transition-colors"
-            />
-            <button
-              type="submit"
-              className="flex-shrink-0 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[13px] px-6 py-3.5 rounded-xl shadow-lg shadow-blue-600/25 flex items-center justify-center gap-2 transition-colors active:scale-95"
-            >
-              {t.beranda.newsletterKirim} <Send className="w-4 h-4" />
-            </button>
-          </form>
+          {/* Membuka aplikasi peta milik pengunjung sendiri, bukan menyematkan
+              peta pihak ketiga ke dalam beranda: yang pertama hanya berjalan
+              bila diklik, yang kedua menyeret setiap pengunjung portal ke
+              server pihak ketiga hanya untuk memuat halaman depan. */}
+          <a
+            href={TAUTAN_PETA}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="absolute bottom-5 left-5 inline-flex items-center gap-2 bg-white text-slate-800 font-bold text-[12px] px-4 py-2.5 rounded-full shadow-lg border border-slate-100 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+          >
+            <Navigation className="w-3.5 h-3.5 text-blue-600" /> {t.beranda.bukaPetaAplikasi}
+            <span className="sr-only">{t.beranda.membukaTabBaru}</span>
+          </a>
         </motion.div>
+
       </section>
+
+      {/* ================= 10. MITRA ================= */}
+      {/* `mb-14` di sini yang menanggung jarak ke footer — dulu tugas seksi
+          newsletter yang dihapus. */}
+      <section className="max-w-[1400px] mx-auto px-4 sm:px-6 mt-12 mb-14">
+        <MitraLogos />
+      </section>
+
+      {/* Seksi ini dulu berisi kotak berlangganan buletin. Dihapus karena
+          formulirnya tidak pernah terhubung ke apa pun: alamat surel yang
+          diketik pengunjung hanya ditelan `preventDefault` tanpa dikirim,
+          disimpan, atau ditindaklanjuti siapa pun. Meminta data pribadi lalu
+          membuangnya diam-diam lebih buruk daripada tidak memintanya sama
+          sekali. Bila buletin benar-benar diadakan, bangun kembali seksi ini
+          bersama endpoint penyimpanannya — bukan formulirnya lebih dulu.
+          Kotak serupa di halaman berita masih ada dan menanggung masalah yang
+          sama; lihat catatan pembuka `app/news/NewsView.tsx`. */}
     </div>
   );
 }
