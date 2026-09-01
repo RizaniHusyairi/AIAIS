@@ -340,6 +340,12 @@ export function Field({
   rows,
   placeholder,
   required,
+  hint,
+  error,
+  maxLength,
+  min,
+  max,
+  step,
   className = '',
 }: {
   label: string;
@@ -358,10 +364,20 @@ export function Field({
   rows?: number;
   placeholder?: string;
   required?: boolean;
+  hint?: string;
+  error?: string;
+  maxLength?: number;
+  min?: number;
+  max?: number;
+  step?: number;
   className?: string;
 }) {
   const base =
-    'w-full bg-[var(--adm-inset)] border border-[var(--adm-line)] rounded-xl px-3.5 py-2.5 text-[12.5px] text-[var(--adm-fg)] placeholder:text-[var(--adm-dim)] focus:outline-none focus:border-[var(--adm-accent-line)] focus:ring-2 focus:ring-[var(--adm-accent-ring)] transition-all duration-200';
+    `w-full bg-[var(--adm-inset)] border rounded-xl px-3.5 py-2.5 text-[12.5px] text-[var(--adm-fg)] placeholder:text-[var(--adm-dim)] focus:outline-none focus:ring-2 transition-all duration-200 ${
+      error
+        ? 'border-[var(--adm-danger)] focus:border-[var(--adm-danger)] focus:ring-[var(--adm-danger-soft)]'
+        : 'border-[var(--adm-line)] focus:border-[var(--adm-accent-line)] focus:ring-[var(--adm-accent-ring)]'
+    }`;
 
   if (type === 'checkbox') {
     return (
@@ -395,9 +411,9 @@ export function Field({
         {label} {required && <span className="text-[var(--adm-danger)]">*</span>}
       </label>
       {type === 'textarea' ? (
-        <textarea value={value ?? ''} onChange={(e) => onChange(e.target.value)} rows={rows ?? 3} placeholder={placeholder} className={base} />
+        <textarea value={value ?? ''} onChange={(e) => onChange(e.target.value)} rows={rows ?? 3} placeholder={placeholder} required={required} maxLength={maxLength} aria-invalid={!!error} className={base} />
       ) : type === 'select' ? (
-        <select value={value ?? ''} onChange={(e) => onChange(e.target.value)} className={base}>
+        <select value={value ?? ''} onChange={(e) => onChange(e.target.value)} required={required} aria-invalid={!!error} className={base}>
           {options?.map((o) => (
             <option key={o.value} value={o.value} className="bg-[var(--adm-inset)] text-[var(--adm-fg)]">
               {o.label}
@@ -405,7 +421,31 @@ export function Field({
           ))}
         </select>
       ) : (
-        <input type={type} value={value ?? ''} onChange={(e) => onChange(type === 'number' ? Number(e.target.value) : e.target.value)} placeholder={placeholder} className={base} />
+        <input
+          type={type}
+          value={value ?? ''}
+          onChange={(e) => onChange(type === 'number' && e.target.value !== '' ? Number(e.target.value) : e.target.value)}
+          placeholder={placeholder}
+          required={required}
+          maxLength={maxLength}
+          min={min}
+          max={max}
+          step={step}
+          aria-invalid={!!error}
+          className={base}
+        />
+      )}
+      {(error || hint || maxLength != null) && (
+        <div className="mt-1.5 flex items-start justify-between gap-3 text-[11px] leading-relaxed">
+          <span className={error ? 'text-[var(--adm-danger)]' : 'text-[var(--adm-dim)]'}>
+            {error || hint}
+          </span>
+          {maxLength != null && (
+            <span className="ml-auto flex-shrink-0 tabular-nums text-[var(--adm-dim)]">
+              {String(value ?? '').length}/{maxLength}
+            </span>
+          )}
+        </div>
       )}
     </div>
   );
@@ -485,7 +525,7 @@ export function Modal({
             <div className="flex-1 overflow-y-auto p-5">{children}</div>
 
             {footer && (
-              <div className="px-5 py-4 border-t border-[var(--adm-line)] bg-[var(--adm-hover)] flex justify-end gap-2">{footer}</div>
+              <div className="px-5 py-4 border-t border-[var(--adm-line)] bg-[var(--adm-hover)] flex flex-wrap justify-end gap-2">{footer}</div>
             )}
           </motion.div>
         </div>

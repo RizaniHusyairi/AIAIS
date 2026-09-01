@@ -243,7 +243,7 @@ export default function HomePage() {
   const others = EXECUTIVES.filter((_, i) => i !== aman).slice(0, 4);
   const latestNews = news.slice(0, 3);
 
-  /* Enam fasilitas untuk beranda.
+  /* Empat fasilitas untuk satu baris beranda.
 
      Kategori "Umum" didahulukan: itulah yang benar-benar dapat dipakai
      penumpang. Daftar basis data didominasi fasilitas teknis — Runway,
@@ -251,12 +251,12 @@ export default function HomePage() {
      sedang mencari mushola. Yang berfoto didahulukan di antara sesamanya,
      supaya barisan kartunya tidak seluruhnya berupa bidang gradien.
 
-     Delapan, bukan enam: kisinya empat kolom, dan enam kartu menyisakan dua
-     lubang pada baris kedua. */
+     Empat item mengisi tepat satu baris pada kisi desktop. Daftar lengkap
+     tetap tersedia melalui tautan "Lihat semua". */
   const FASILITAS = useMemo(() => {
     const nilai = (f: Facility) => (f.category === 'Umum' ? 0 : 2) + (f.image_url ? 0 : 1);
 
-    return [...facilities].sort((a, b) => nilai(a) - nilai(b)).slice(0, 8);
+    return [...facilities].sort((a, b) => nilai(a) - nilai(b)).slice(0, 4);
   }, [facilities]);
 
   /* Empat destinasi terdekat. Jaraknya boleh kosong — tabel warisan v1 tidak
