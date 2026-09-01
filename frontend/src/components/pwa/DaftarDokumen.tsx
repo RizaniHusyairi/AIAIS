@@ -6,11 +6,11 @@
  * Delapan daftar di portal ini berbentuk sama persis — judul, keterangan
  * singkat, dan satu tautan berkas: Surat Keputusan, Surat Edaran, Pusat
  * Unduhan, Regulasi PPID, Standar Pelayanan, Informasi Berkala, Informasi
- * Serta-Merta, Informasi Setiap Saat, dan Laporan Layanan Informasi. Bentuk
- * datanya berbeda-beda (`Letter`, `DocumentItem`, `PeriodicDocument`, …)
+ * Serta-Merta, dan Informasi Setiap Saat. Bentuk datanya berbeda-beda
+ * (`Letter`, `DocumentItem`, `PeriodicDocument`, …)
  * karena tabelnya memang warisan v1 yang tidak seragam.
  *
- * Menulis satu layar per daftar berarti sembilan berkas yang harus dijaga
+ * Menulis satu layar per daftar berarti delapan berkas yang harus dijaga
  * agar tetap serupa, dan pengalamannya pasti menyimpang begitu satu di
  * antaranya disunting. Komponen ini menerima ADAPTOR — fungsi kecil yang
  * memetakan satu baris apa pun menjadi `Dokumen` — sehingga bentuk datanya

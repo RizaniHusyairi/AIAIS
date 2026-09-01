@@ -1,13 +1,13 @@
 /**
- * Layanan Informasi Publik — empat halaman di bawah menu PPID.
+ * Layanan Informasi Publik — tiga halaman di bawah menu PPID.
  *
  * ────────────────────────────────────────────────────────────────────────
  * PROVENANS DATA
  *   Sumber  : aptpairport.id (situs produksi v1), halaman
- *             /informasi-publik/{laporan-layanan-informasi, informasi-berkala,
+ *             /informasi-publik/{informasi-berkala,
  *             informasi-serta-merta, informasi-setiap-saat}
  *   Diambil : 2 Agustus 2026
- *   Catatan : keempat halaman itu dikendalikan basis data, jadi basis data
+ *   Catatan : ketiga halaman itu dikendalikan basis data, jadi basis data
  *             lokal di repo legacy KOSONG dan tidak bisa dipakai sebagai
  *             sumber. Seluruh isi di bawah ditranskrip dari HTML yang tayang
  *             lewat pengurai yang memasangkan judul, tanggal, dan tautannya
@@ -47,36 +47,7 @@ export type InfoGroup = {
 };
 
 /* ------------------------------------------------------------------ */
-/*  1. Laporan Layanan Informasi                                       */
-/* ------------------------------------------------------------------ */
-
-export const LAPORAN_PENGANTAR =
-  'Dokumen laporan tahunan mengenai layanan informasi publik yang telah kami sediakan.';
-
-export type LaporanTahunan = {
-  slug: string;
-  year: number;
-  title: string;
-  url: string;
-};
-
-export const LAPORAN_TAHUNAN: LaporanTahunan[] = [
-  {
-    slug: 'ppid-2025',
-    year: 2025,
-    title: 'Laporan Tahunan PPID 2025',
-    url: 'https://drive.google.com/file/d/1m_EUEfQ36XY6SZfKLGKpKzgd-BOebIEK/view?usp=drive_link',
-  },
-  {
-    slug: 'ppid-2024',
-    year: 2024,
-    title: 'Laporan Tahunan PPID 2024',
-    url: 'https://drive.google.com/file/d/1_mgSX3_tW0V8m9QkbkZj_HDONLFemz3k/view?usp=drive_link',
-  },
-];
-
-/* ------------------------------------------------------------------ */
-/*  2. Informasi Berkala                                               */
+/*  1. Informasi Berkala                                               */
 /* ------------------------------------------------------------------ */
 
 export const BERKALA_PENGANTAR =
@@ -182,7 +153,7 @@ export const INFO_BERKALA: InfoGroup[] = [
 ];
 
 /* ------------------------------------------------------------------ */
-/*  3. Informasi Serta Merta                                           */
+/*  2. Informasi Serta Merta                                           */
 /* ------------------------------------------------------------------ */
 
 export const SERTA_MERTA_PENGANTAR =
@@ -320,7 +291,7 @@ export const INFO_SERTA_MERTA: InfoSertaMerta[] = [
 ];
 
 /* ------------------------------------------------------------------ */
-/*  4. Informasi Setiap Saat                                           */
+/*  3. Informasi Setiap Saat                                           */
 /* ------------------------------------------------------------------ */
 
 export const SETIAP_SAAT_PENGANTAR =
@@ -402,7 +373,7 @@ export const INFO_SETIAP_SAAT: InfoGroup[] = [
 ];
 
 /* ------------------------------------------------------------------ */
-/*  5. Regulasi PPID                                                   */
+/*  4. Regulasi PPID                                                   */
 /* ------------------------------------------------------------------ */
 
 export const REGULASI_PENGANTAR =

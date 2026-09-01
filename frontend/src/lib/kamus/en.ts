@@ -112,7 +112,6 @@ const en = {
     pengajuanInformasi: { nama: 'Public Information Request', desc: 'Request form for public information' },
     regulasiPpid: { nama: 'PPID Regulations', desc: 'Legal basis for public information services' },
     layananInformasi: { nama: 'Information Services', desc: 'Reports and classification of public information' },
-    laporanLayananInformasi: { nama: 'Information Service Reports' },
     informasiBerkala: { nama: 'Periodic Information' },
     informasiSertaMerta: { nama: 'Immediate Information' },
     informasiSetiapSaat: { nama: 'Information Available at All Times' },

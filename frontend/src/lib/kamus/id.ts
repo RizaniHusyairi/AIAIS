@@ -120,7 +120,6 @@ const id = {
     pengajuanInformasi: { nama: 'Pengajuan Informasi Publik', desc: 'Formulir permohonan informasi publik' },
     regulasiPpid: { nama: 'Regulasi PPID', desc: 'Dasar hukum penyelenggaraan PPID' },
     layananInformasi: { nama: 'Layanan Informasi', desc: 'Laporan dan klasifikasi informasi publik' },
-    laporanLayananInformasi: { nama: 'Laporan Layanan Informasi' },
     informasiBerkala: { nama: 'Informasi Berkala' },
     informasiSertaMerta: { nama: 'Informasi Serta Merta' },
     informasiSetiapSaat: { nama: 'Informasi Setiap Saat' },

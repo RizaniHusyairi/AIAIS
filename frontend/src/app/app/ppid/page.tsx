@@ -16,12 +16,13 @@ import { PPID_ORG, PPID_VISI, PPID_MISI, PPID_DASAR_HUKUM } from '@/lib/ppidData
 import { fetchApi } from '@/lib/api';
 import { useSetting } from '@/lib/settings';
 import VideoProfil from '@/components/home/VideoProfil';
+import { idYouTube } from '@/lib/tentang';
 import { formatTanggal } from '@/lib/kamus';
 import { useBahasa } from '@/lib/bahasa';
 import type { PpidProfileDocument } from '@/types';
 import { StatusBar, AppHeader, listContainer, listItem } from '@/components/pwa/ui';
 import {
-  ShieldCheck, FileText, ClipboardList, Scale, FolderOpen, Send,
+  ShieldCheck, FileText, ClipboardList, Scale, Send,
   ChevronRight, ExternalLink, Megaphone, BookOpen, Archive,
   PlayCircle, CalendarRange,
 } from 'lucide-react';
@@ -34,7 +35,6 @@ const CABANG = [
   { href: '/app/ppid/berkala', nama: 'Informasi Berkala', desc: 'Diumumkan secara rutin', icon: BookOpen, warna: '#ea580c', latar: '#fff7ed' },
   { href: '/app/ppid/serta-merta', nama: 'Informasi Serta-Merta', desc: 'Diumumkan tanpa diminta', icon: Megaphone, warna: '#dc2626', latar: '#fef2f2' },
   { href: '/app/ppid/setiap-saat', nama: 'Informasi Setiap Saat', desc: 'Tersedia kapan pun diminta', icon: Archive, warna: '#0d9488', latar: '#f0fdfa' },
-  { href: '/app/ppid/laporan', nama: 'Laporan Layanan', desc: 'Laporan tahunan penyelenggaraan PPID', icon: FolderOpen, warna: '#475569', latar: '#f1f5f9' },
 ];
 
 export default function PpidScreen() {
@@ -104,11 +104,13 @@ export default function PpidScreen() {
           </ul>
         </motion.div>
 
-        {/* Video Profil PPID. Tidak dirender bila belum ada tautannya —
-            pemutar kosong hanya menjanjikan sesuatu yang tidak ada. Pemutar
-            YouTube sendiri baru lahir setelah tombol putar ditekan; lihat
-            catatan privasi di VideoProfil.tsx. */}
-        {videoUrl.trim() && (
+        {/* Video Profil PPID. Tidak dirender bila videonya belum ada —
+            pemutar kosong hanya menjanjikan sesuatu yang tidak ada. Yang
+            diperiksa hasil `idYouTube()`, bukan sekadar kolom yang terisi:
+            tautan salah ketik menyisakan sampul diam tanpa tombol putar.
+            Pemutar YouTube sendiri baru lahir setelah tombol putar ditekan;
+            lihat catatan privasi di VideoProfil.tsx. */}
+        {idYouTube(videoUrl) && (
           <motion.div variants={listItem} className="bg-white rounded-2xl shadow-sm shadow-slate-200/60 overflow-hidden">
             <div className="px-4 pt-4">
               <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400 inline-flex items-center gap-1.5">
@@ -121,9 +123,9 @@ export default function PpidScreen() {
               <VideoProfil
                 gambar={videoGambar.trim() || '/ppid/struktur-ppid.jpg'}
                 videoUrl={videoUrl}
-                caption="Profil Bandara"
+                caption="Profil PPID"
                 tinggiKelas="aspect-video h-auto"
-                captionHref="/app/profil"
+                captionHref="/app/ppid"
               />
             </div>
           </motion.div>

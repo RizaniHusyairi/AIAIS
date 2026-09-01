@@ -64,7 +64,6 @@ const STATIS: { path: string; priority: number; changeFrequency: MetadataRoute.S
   { path: '/ppid/informasi-serta-merta', priority: 0.7, changeFrequency: 'monthly' },
   { path: '/ppid/informasi-setiap-saat', priority: 0.7, changeFrequency: 'monthly' },
   { path: '/ppid/pengajuan-informasi', priority: 0.7, changeFrequency: 'yearly' },
-  { path: '/ppid/laporan-layanan-informasi', priority: 0.6, changeFrequency: 'yearly' },
   { path: '/ppid/standar-pelayanan', priority: 0.6, changeFrequency: 'yearly' },
   { path: '/ppid/regulasi', priority: 0.6, changeFrequency: 'monthly' },
   { path: '/ppid/sop', priority: 0.6, changeFrequency: 'yearly' },

@@ -25,6 +25,7 @@ import { motion } from 'framer-motion';
 import PpidHero, { FlightArc } from '@/components/ppid/PpidHero';
 import ImageLightbox, { LightboxThumb, type LightboxImage } from '@/components/ui/ImageLightbox';
 import { SeksiSkPpid, SeksiVideoPpid, PapanLaporanBulanan } from '@/components/ppid/ProfilPpidSeksi';
+import { idYouTube } from '@/lib/tentang';
 import {
   PPID_ORG, PPID_LATAR, PPID_VISI, PPID_VISI_PILAR, PPID_MISI, PPID_TUGAS,
   PPID_DOKUMEN, PPID_DASAR_HUKUM,
@@ -61,6 +62,10 @@ export default function ProfilPpidView() {
   const heroBg = useSetting('bg_ppid');
   const videoUrl = useSetting('ppid_video_url');
   const videoGambar = useSetting('ppid_video_gambar');
+
+  /* Tata letak dua kolom hanya berlaku bila videonya benar-benar ada; lihat
+     `SeksiVideoPpid`, yang memakai ukuran "ada" yang sama. */
+  const adaVideo = Boolean(idYouTube(videoUrl));
 
   const gulirKeLaporan = (event: React.MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();
@@ -154,30 +159,47 @@ export default function ProfilPpidView() {
       </PpidHero>
 
       {/* ============================================================ */}
-      {/*  LATAR BELAKANG                                              */}
+      {/*  LATAR BELAKANG + VIDEO PROFIL PPID                          */}
       {/* ============================================================ */}
+      {/* Videonya berdampingan dengan latar belakang, bukan sebagai bagian
+          sendiri di bawahnya: keduanya menjawab pertanyaan yang sama — apa
+          itu PPID — dan dipisah membuat pengunjung menggulir melewati satu
+          jawaban untuk sampai ke jawaban yang lain. Tanpa video, teksnya
+          kembali ke satu kolom terpusat seperti sebelumnya; kolom sempit
+          sendirian di kiri hanya menyisakan ruang kosong tanpa alasan. */}
       <section className="max-w-[1400px] mx-auto px-4 sm:px-6 py-16">
-        <motion.div variants={container} initial="hidden" whileInView="show" viewport={{ once: true }} className="max-w-4xl mx-auto">
-          <motion.span variants={rise} className="inline-block text-blue-600 text-[11px] font-bold uppercase tracking-[0.16em] bg-blue-50 px-3 py-1 rounded-full">
-            Latar Belakang
-          </motion.span>
+        <div
+          className={
+            adaVideo
+              ? 'grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.95fr)] gap-10 lg:gap-14 items-center'
+              : ''
+          }
+        >
+          <motion.div
+            variants={container}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true }}
+            className={adaVideo ? '' : 'max-w-4xl mx-auto'}
+          >
+            <motion.span variants={rise} className="inline-block text-blue-600 text-[11px] font-bold uppercase tracking-[0.16em] bg-blue-50 px-3 py-1 rounded-full">
+              Latar Belakang
+            </motion.span>
 
-          <motion.h2 variants={rise} className="mt-3 text-3xl font-black text-slate-900 tracking-tight">
-            Mengapa PPID Ada
-          </motion.h2>
+            <motion.h2 variants={rise} className="mt-3 text-3xl font-black text-slate-900 tracking-tight">
+              Mengapa PPID Ada
+            </motion.h2>
 
-          {PPID_LATAR.map((p, i) => (
-            <motion.p key={i} variants={rise} className="mt-4 text-[14.5px] text-slate-600 leading-[1.85]">
-              {p}
-            </motion.p>
-          ))}
-        </motion.div>
+            {PPID_LATAR.map((p, i) => (
+              <motion.p key={i} variants={rise} className="mt-4 text-[14.5px] text-slate-600 leading-[1.85]">
+                {p}
+              </motion.p>
+            ))}
+          </motion.div>
+
+          <SeksiVideoPpid url={videoUrl} gambar={videoGambar} />
+        </div>
       </section>
-
-      {/* ============================================================ */}
-      {/*  VIDEO PROFIL PPID                                           */}
-      {/* ============================================================ */}
-      <SeksiVideoPpid url={videoUrl} gambar={videoGambar} />
 
       {/* ============================================================ */}
       {/*  VISI — digambarkan sebagai rencana terbang                  */}

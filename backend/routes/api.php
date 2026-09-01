@@ -21,7 +21,6 @@ use App\Http\Controllers\Api\FlightController;
 use App\Http\Controllers\Api\FoundItemController;
 use App\Http\Controllers\Api\ImmediateInformationController;
 use App\Http\Controllers\Api\InformationRequestController;
-use App\Http\Controllers\Api\InformationServiceReportController;
 use App\Http\Controllers\Api\InstagramController;
 use App\Http\Controllers\Api\InventoryController;
 use App\Http\Controllers\Api\LetterController;
@@ -179,11 +178,6 @@ Route::prefix(config('api.version'))->group(function () {
     Route::get('/periodic-documents', [PeriodicDocumentController::class, 'index']);
     Route::get('/evergreen-information', [EvergreenInformationController::class, 'index']);
     Route::get('/immediate-information', [ImmediateInformationController::class, 'index']);
-
-    // Laporan tahunan PPID. Endpointnya sudah aktif, tetapi halaman publik
-    // belum memakainya selama tabel warisannya masih kosong — lihat
-    // InformationServiceReportController.
-    Route::get('/information-service-reports', [InformationServiceReportController::class, 'index']);
 
     // Angka ringkas bandara pada beranda. Satu daftar untuk tiga blok
     // penampil sekaligus; penyaringannya di sisi klien — lihat controllernya.
@@ -463,11 +457,6 @@ Route::prefix(config('api.version'))->group(function () {
             Route::post('/immediate-information', [ImmediateInformationController::class, 'store']);
             Route::put('/immediate-information/{id}', [ImmediateInformationController::class, 'update']);
             Route::delete('/immediate-information/{id}', [ImmediateInformationController::class, 'destroy']);
-
-            Route::get('/information-service-reports', [InformationServiceReportController::class, 'adminIndex']);
-            Route::post('/information-service-reports', [InformationServiceReportController::class, 'store']);
-            Route::put('/information-service-reports/{id}', [InformationServiceReportController::class, 'update']);
-            Route::delete('/information-service-reports/{id}', [InformationServiceReportController::class, 'destroy']);
 
             /*
              * Notifikasi WhatsApp — status, kiriman uji, dan nomor piket.

@@ -113,7 +113,6 @@ const TABEL: PetaRute[] = [
   // versi desktop berasal dari struktur menu v1 dan tidak perlu ditiru di
   // layar selebar ponsel.
   { publik: '/ppid/pengajuan-informasi', app: '/app/ppid/permohonan' },
-  { publik: '/ppid/laporan-layanan-informasi', app: '/app/ppid/laporan' },
   { publik: '/ppid/informasi-berkala', app: '/app/ppid/berkala' },
   { publik: '/ppid/informasi-serta-merta', app: '/app/ppid/serta-merta' },
   { publik: '/ppid/informasi-setiap-saat', app: '/app/ppid/setiap-saat' },

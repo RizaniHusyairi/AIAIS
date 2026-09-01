@@ -683,14 +683,6 @@ export interface ImmediateInformation {
   link_text: string;
 }
 
-/** Laporan tahunan penyelenggaraan PPID. */
-export interface InformationServiceReport {
-  id: number;
-  title: string;
-  publication_year: number;
-  document_link: string;
-}
-
 /** Peraturan dasar hukum PPID. Dokumennya selalu tautan luar, bukan unggahan. */
 export interface PpidRegulation {
   id: number;

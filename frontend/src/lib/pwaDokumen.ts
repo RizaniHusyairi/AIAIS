@@ -1,7 +1,7 @@
 /**
  * Tabel layar daftar dokumen di dalam PWA.
  *
- * Sembilan daftar berbentuk sama — judul, keterangan, satu tautan berkas —
+ * Delapan daftar berbentuk sama — judul, keterangan, satu tautan berkas —
  * tetapi bentuk barisnya berbeda-beda karena tabelnya warisan v1 yang tidak
  * seragam (`document_link`, `document_path`, `file_url`, `link_url`). Berkas
  * ini yang menampung ketidakseragaman itu, sehingga
@@ -14,7 +14,7 @@
 import type { Dokumen } from '@/components/pwa/DaftarDokumen';
 import type {
   PpidRegulation, PeriodicDocument, EvergreenInformation, ImmediateInformation,
-  InformationServiceReport, ServiceStandard, DocumentItem, Letter,
+  ServiceStandard, DocumentItem, Letter,
 } from '@/types';
 
 /**
@@ -110,18 +110,6 @@ export const LAYAR_PPID: Record<string, LayarDokumen> = {
       meta: i.keterangan,
       tautan: i.link_url,
       labelTautan: i.link_text || 'Buka',
-    }),
-  },
-
-  'laporan': {
-    judul: 'Laporan Layanan Informasi',
-    endpoint: '/information-service-reports',
-    keteranganKosong: 'Laporan tahunan penyelenggaraan PPID belum diunggah petugas.',
-    adaptor: (l: InformationServiceReport): Dokumen => ({
-      id: l.id,
-      judul: l.title,
-      meta: `Tahun ${l.publication_year}`,
-      tautan: l.document_link,
     }),
   },
 

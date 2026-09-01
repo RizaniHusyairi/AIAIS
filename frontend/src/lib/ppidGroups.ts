@@ -1,12 +1,12 @@
 ﻿/**
  * Pengelompokan dokumen PPID untuk `DocAccordion`.
  *
- * Empat halaman PPID — Regulasi, Informasi Berkala, Informasi Setiap Saat, dan
- * kelak Laporan Layanan — menerima daftar datar dari API lalu menampilkannya
- * sebagai akordeon per kategori. Backend sengaja tidak mengelompokkan: bentuk
- * respons daftar di portal ini selalu datar, dan penyaringan memang dikerjakan
- * di sisi klien. Pengelompokannya diletakkan di sini supaya keempat halaman
- * tidak menulis ulang logika yang sama.
+ * Tiga halaman PPID — Regulasi, Informasi Berkala, dan Informasi Setiap Saat —
+ * menerima daftar datar dari API lalu menampilkannya sebagai akordeon per
+ * kategori. Backend sengaja tidak mengelompokkan: bentuk respons daftar di
+ * portal ini selalu datar, dan penyaringan memang dikerjakan di sisi klien.
+ * Pengelompokannya diletakkan di sini supaya ketiga halaman tidak menulis
+ * ulang logika yang sama.
  */
 
 import type { InfoDoc, InfoGroup } from '@/lib/publicInfoData';

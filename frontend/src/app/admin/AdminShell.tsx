@@ -16,7 +16,7 @@ import {
   LayoutDashboard, Newspaper, Megaphone, Building2, Store, FileText, MessageSquareWarning,
   LogOut, ExternalLink, ShieldCheck, Menu, Radar, ChevronRight, ImageIcon, ScrollText, Scale, Landmark,
   Search, SearchX, Sun, Moon,
-  CalendarClock, DoorOpen, Radio, FileBarChart, Globe, ClipboardList, Users, UserCircle, UserRound, HelpCircle, MapPin, BarChart3, Gauge, MessageSquare, CalendarRange, Wallet, School, BadgeCheck, Gavel, HardHat, PartyPopper,
+  CalendarClock, DoorOpen, Radio, Globe, ClipboardList, Users, UserCircle, UserRound, HelpCircle, MapPin, BarChart3, Gauge, MessageSquare, CalendarRange, Wallet, School, BadgeCheck, Gavel, HardHat, PartyPopper,
   PlaneTakeoff, Clock3, GraduationCap, Boxes, Wrench, Mail, CalendarCheck,
   PackageSearch, Bell,
 } from 'lucide-react';
@@ -68,7 +68,6 @@ const NAV: { section: string; items: NavItem[] }[] = [
       { name: 'Informasi Berkala', href: '/admin/periodic-documents', icon: CalendarClock },
       { name: 'Informasi Setiap Saat', href: '/admin/evergreen-information', icon: DoorOpen },
       { name: 'Informasi Serta-Merta', href: '/admin/immediate-information', icon: Radio },
-      { name: 'Laporan Layanan', href: '/admin/information-service-reports', icon: FileBarChart },
       { name: 'Standar Pelayanan', href: '/admin/service-standards', icon: ClipboardList },
     ],
   },

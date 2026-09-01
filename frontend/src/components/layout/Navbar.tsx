@@ -107,7 +107,6 @@ function buatMenu(t: Kamus): MenuItem[] {
           icon: FolderOpen,
           desc: n.layananInformasi.desc,
           children: [
-            { name: n.laporanLayananInformasi.nama, href: '/ppid/laporan-layanan-informasi', icon: FileText },
             { name: n.informasiBerkala.nama, href: '/ppid/informasi-berkala', icon: FileText },
             { name: n.informasiSertaMerta.nama, href: '/ppid/informasi-serta-merta', icon: FileText },
             { name: n.informasiSetiapSaat.nama, href: '/ppid/informasi-setiap-saat', icon: FileText },

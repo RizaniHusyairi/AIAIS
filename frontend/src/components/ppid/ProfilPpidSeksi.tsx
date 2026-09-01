@@ -19,13 +19,14 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import VideoProfil from '@/components/home/VideoProfil';
+import { idYouTube } from '@/lib/tentang';
 import { FlightArc } from '@/components/ppid/PpidHero';
 import { formatTanggal } from '@/lib/kamus';
 import { useBahasa } from '@/lib/bahasa';
 import type { PpidProfileDocument } from '@/types';
 import {
   Scale, ExternalLink, ChevronDown, BadgeCheck, Hash, CalendarDays,
-  FileClock, PlayCircle, CalendarRange, FileText,
+  FileClock, CalendarRange, FileText,
 } from 'lucide-react';
 
 const rise = {
@@ -198,66 +199,50 @@ export function SeksiSkPpid({ berlaku, riwayat }: { berlaku: PpidProfileDocument
    ================================================================ */
 
 /**
- * Bagian video. Tidak dirender sama sekali bila belum ada tautannya —
+ * Bingkai video profil. Tidak dirender sama sekali bila videonya belum ada —
  * pemutar kosong hanya menjanjikan sesuatu yang tidak ada.
+ *
+ * "Belum ada" diukur lewat `idYouTube()`, bukan sekadar kolom yang terisi:
+ * tautan yang salah ketik menyisakan sampul diam tanpa tombol putar, dan itu
+ * persis janji kosong yang hendak dihindari.
+ *
+ * Yang dikembalikan HANYA pemutarnya, tanpa judul maupun paragraf pengantar:
+ * ia berdampingan dengan "Mengapa PPID Ada" sebagai kolom kanan, dan judul
+ * kedua di sebelah judul bagian itu membuat pembaca mengira ada dua bagian
+ * terpisah. Pemanggilnya yang menentukan lebar kolomnya.
  *
  * Pemutarnya memakai `VideoProfil` yang sama dengan beranda, bukan salinan:
  * seluruh jaminan privasinya bergantung pada iframe YouTube yang hanya lahir
  * sesudah tombol putar ditekan.
  */
 export function SeksiVideoPpid({ url, gambar }: { url: string; gambar: string }) {
-  if (!url.trim()) return null;
+  if (!idYouTube(url)) return null;
 
   const sampul = gambar.trim() || '/ppid/struktur-ppid.jpg';
 
   return (
-    <section className="max-w-[1400px] mx-auto px-4 sm:px-6 pb-16">
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] gap-8 lg:gap-12 items-center">
-        <motion.div
-          initial={{ opacity: 0, y: 22 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ type: 'spring', stiffness: 260, damping: 28 }}
-        >
-          <span className="inline-flex items-center gap-2 text-blue-600 text-[11px] font-bold uppercase tracking-[0.16em] bg-blue-50 px-3 py-1 rounded-full">
-            <PlayCircle className="w-3.5 h-3.5" /> Video Profil
-          </span>
-          <h2 className="mt-3 text-3xl font-black text-slate-900 tracking-tight">
-            Mengenal PPID Bandara
-          </h2>
-          <p className="mt-3 text-[13.5px] text-slate-500 leading-relaxed max-w-xl">
-            Sekilas layanan informasi publik bandara: siapa yang mengelolanya, informasi apa saja
-            yang tersedia, dan bagaimana cara mengajukan permohonannya.
-          </p>
-          <p className="mt-4 text-[12px] text-slate-400 leading-relaxed max-w-xl">
-            Pemutar YouTube baru dimuat setelah Anda menekan tombol putar, sehingga menjelajah
-            halaman ini tidak membuat Anda ikut terlacak.
-          </p>
-        </motion.div>
+    /* Bingkai gelap membawa nuansa langit ke bagian yang terang ini tanpa
+       menjadikan seluruh pitanya gelap — bagian Visi di bawah sudah berupa
+       pita gelap, dan dua pita gelap berdempet terbaca sebagai sambungan yang
+       keliru, bukan sebagai rancangan. */
+    <motion.div
+      initial={{ opacity: 0, y: 22 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: 'spring', stiffness: 260, damping: 28, delay: 0.08 }}
+      className="relative rounded-[28px] p-2.5 bg-gradient-to-br from-[#0b1e5b] via-blue-800 to-sky-600 shadow-2xl shadow-blue-950/25"
+    >
+      <FlightArc className="absolute inset-x-0 -top-2 w-full h-24 text-white/20 pointer-events-none" d="M-20 150 Q 420 40 1020 120" />
 
-        {/* Bingkai gelap membawa nuansa langit ke bagian yang terang ini tanpa
-            menjadikan seluruh pitanya gelap — bagian Visi tepat di bawah sudah
-            berupa pita gelap, dan dua pita gelap berdempet terbaca sebagai
-            sambungan yang keliru, bukan sebagai rancangan. */}
-        <motion.div
-          initial={{ opacity: 0, y: 22 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ type: 'spring', stiffness: 260, damping: 28, delay: 0.08 }}
-          className="relative rounded-[28px] p-2.5 bg-gradient-to-br from-[#0b1e5b] via-blue-800 to-sky-600 shadow-2xl shadow-blue-950/25"
-        >
-          <FlightArc className="absolute inset-x-0 -top-2 w-full h-24 text-white/20 pointer-events-none" d="M-20 150 Q 420 40 1020 120" />
-
-          <div className="relative rounded-[20px] overflow-hidden ring-1 ring-white/15">
-            <VideoProfil
-              gambar={sampul}
-              videoUrl={url}
-              caption="Profil Bandara"
-              tinggiKelas="aspect-video h-auto"
-              captionHref="/ppid"
-            />
-          </div>
-        </motion.div>
+      <div className="relative rounded-[20px] overflow-hidden ring-1 ring-white/15">
+        <VideoProfil
+          gambar={sampul}
+          videoUrl={url}
+          caption="Profil PPID"
+          tinggiKelas="aspect-video h-auto"
+          captionHref="/ppid"
+        />
       </div>
-    </section>
+    </motion.div>
   );
 }
 

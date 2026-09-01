@@ -5,7 +5,11 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Longgarkan kolom empat tabel isi PPID warisan v1.
+ * Longgarkan kolom tiga tabel isi PPID warisan v1.
+ *
+ * Semula empat: `information_service_reports` ikut dilonggarkan di sini
+ * sampai modul Laporan Layanan Informasi dihapus dan tabelnya dibuang —
+ * lihat migrasi 2026_09_01_000200.
  *
  * Ketiganya dibuat dengan `varchar(125)` yang sama di seluruh basis data v1 —
  * panjang bawaan yang tampaknya diterapkan menyeluruh, bukan hasil pengukuran
@@ -35,10 +39,6 @@ return new class extends Migration
         Schema::table('immediate_information', function (Blueprint $table) {
             $table->string('link_url', 500)->change();
             $table->string('link_text', 150)->default('Lihat Detail')->change();
-        });
-
-        Schema::table('information_service_reports', function (Blueprint $table) {
-            $table->string('title', 500)->change();
         });
     }
 
