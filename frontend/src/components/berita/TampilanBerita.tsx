@@ -137,7 +137,7 @@ export default function TampilanBerita({
        SELURUH keturunannya berhenti bekerja tanpa pesan apa pun — rel tegak
        dan sidebar akan tergulir keluar layar. Hero sudah menahan luapan
        mendatarnya sendiri lewat `overflow-hidden` miliknya. */
-    <div className="relative bg-[#f6f8fc]">
+    <div className="relative bg-slate-50">
       {/* Bilah kemajuan mendatar hanya di bawah xl, tempat rel tegak tidak muat. */}
       {!pratinjau && <BilahKemajuan bacaanRef={bacaanRef} />}
 
@@ -557,7 +557,7 @@ function SobekanTiket({
   pratinjau: boolean;
 }) {
   return (
-    <div className="relative mt-12 rounded-2xl bg-[#f6f8fc] border border-slate-200 overflow-hidden">
+    <div className="relative mt-12 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
       <span className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white border-r border-slate-200" aria-hidden />
       <span className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white border-l border-slate-200" aria-hidden />
 

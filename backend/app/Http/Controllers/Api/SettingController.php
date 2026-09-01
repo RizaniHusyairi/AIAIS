@@ -38,6 +38,10 @@ class SettingController extends Controller
         // Video hero (dipertahankan agar kompatibel dengan pengaturan lama)
         'hero_video_url' => 'https://assets.mixkit.co/videos/preview/mixkit-airplane-taking-off-at-sunset-41484-large.mp4',
 
+        // Satu ukuran kanvas untuk seluruh Slide Informasi pada beranda.
+        'info_slide_width' => '1400',
+        'info_slide_height' => '525',
+
         /*
          * Survei Kepuasan Masyarakat.
          *
@@ -201,6 +205,22 @@ class SettingController extends Controller
 
         if (empty($incoming)) {
             return ApiResponse::error('Tidak ada pengaturan yang dikenali untuk disimpan', null, 422);
+        }
+
+        $batasUkuran = [
+            'info_slide_width' => [320, 1400, 'Lebar slide harus antara 320–1.400 piksel.'],
+            'info_slide_height' => [160, 900, 'Tinggi slide harus antara 160–900 piksel.'],
+        ];
+
+        foreach ($batasUkuran as $key => [$minimum, $maksimum, $pesan]) {
+            if (! array_key_exists($key, $incoming) || $incoming[$key] === '') {
+                continue;
+            }
+
+            $nilai = filter_var($incoming[$key], FILTER_VALIDATE_INT);
+            if ($nilai === false || $nilai < $minimum || $nilai > $maksimum) {
+                return ApiResponse::error($pesan, [$key => [$pesan]], 422);
+            }
         }
 
         foreach ($incoming as $key => $value) {

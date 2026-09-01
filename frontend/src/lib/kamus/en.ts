@@ -245,6 +245,9 @@ const en = {
 
     pejabatKicker: 'Governance',
     pejabatJudul: 'Officials of APT Pranoto Samarinda Airport',
+    pejabatAktif: 'Current official',
+    hubungiKantor: 'Contact the office',
+    pilihPejabatLain: 'View other officials',
     profilLengkap: 'Full Profile',
     bagikanProfil: 'Share profile',
     sebelumnya: 'Previous',
@@ -305,6 +308,7 @@ const en = {
       'The Information and Documentation Management Officer safeguards your right to public information under',
     lihatSop: 'View PPID Procedures',
     skTim: 'PPID Team Decree',
+    laporanBulanan: 'View Monthly PPID Reports',
     catatanIsi: 'The PPID documents and descriptions below are official documents published in Indonesian.',
   },
 

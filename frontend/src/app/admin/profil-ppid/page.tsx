@@ -44,45 +44,20 @@ const JENIS_META: Record<Jenis, { label: string; color: string; icon: React.Elem
   'Laporan Bulanan': { label: 'Laporan Bulanan', color: '#a78bfa', icon: CalendarRange },
 };
 
-const BULAN = [
-  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
-];
-
 type FormState = {
   type: Jenis;
   title: string;
   document_number: string;
   description: string;
   published_date: string;
-  /** Disusun dari dua isian di bawah menjadi `YYYY-MM-01` saat disimpan. */
-  bulan: number;
-  tahun: number;
   document_link: string;
   is_current: boolean;
   is_active: boolean;
 };
 
-const sekarang = new Date();
-
 const EMPTY: FormState = {
   type: 'SK PPID', title: '', document_number: '', description: '',
-  published_date: '', bulan: sekarang.getMonth() + 1, tahun: sekarang.getFullYear(),
-  document_link: '', is_current: false, is_active: true,
-};
-
-/** "2026-08-01" → { bulan: 8, tahun: 2026 }; nilai kosong jatuh ke bulan ini. */
-function uraiPeriode(iso: string | null): { bulan: number; tahun: number } {
-  const cocok = String(iso ?? '').match(/^(\d{4})-(\d{2})/);
-
-  return cocok
-    ? { tahun: Number(cocok[1]), bulan: Number(cocok[2]) }
-    : { tahun: sekarang.getFullYear(), bulan: sekarang.getMonth() + 1 };
-}
-
-const namaBulan = (iso: string | null) => {
-  const { bulan, tahun } = uraiPeriode(iso);
-  return `${BULAN[bulan - 1]} ${tahun}`;
+  published_date: '', document_link: '', is_current: false, is_active: true,
 };
 
 export default function AdminProfilPpidPage() {
@@ -192,16 +167,12 @@ export default function AdminProfilPpidPage() {
   };
 
   const openEdit = (d: PpidProfileDocument) => {
-    const { bulan, tahun } = uraiPeriode(d.period_date);
-
     setForm({
       type: d.type,
       title: d.title,
       document_number: d.document_number ?? '',
       description: d.description ?? '',
       published_date: d.published_date ? String(d.published_date).slice(0, 10) : '',
-      bulan,
-      tahun,
       // Hanya tautan luar yang dipulihkan ke isian; berkas unggahan punya
       // lintasannya sendiri dan tidak boleh tampil sebagai teks yang dapat
       // disunting.
@@ -221,7 +192,6 @@ export default function AdminProfilPpidPage() {
     const g: Record<string, string> = {};
     if (!form.title.trim()) g.title = 'Judul dokumen wajib diisi.';
     if (!form.published_date) g.published_date = 'Tanggal dokumen wajib diisi.';
-    if (form.type === 'Laporan Bulanan' && !(form.tahun > 1900)) g.tahun = 'Tahun laporan tidak sah.';
 
     const tautan = form.document_link.trim();
     if (!berkas && tautan && !tautanSah(tautan)) {
@@ -248,10 +218,6 @@ export default function AdminProfilPpidPage() {
     fd.append('published_date', form.published_date);
     fd.append('is_current', form.type === 'SK PPID' && form.is_current ? '1' : '0');
     fd.append('is_active', form.is_active ? '1' : '0');
-
-    if (form.type === 'Laporan Bulanan') {
-      fd.append('period_date', `${form.tahun}-${String(form.bulan).padStart(2, '0')}-01`);
-    }
 
     if (berkas) {
       fd.append('file', berkas);
@@ -376,7 +342,7 @@ export default function AdminProfilPpidPage() {
         ) : visible.length === 0 ? (
           <EmptyState text="Belum ada dokumen" hint="Tambahkan SK Tim PPID atau laporan bulanan agar tampil di halaman Profil PPID." />
         ) : (
-          <Table head={['Dokumen', 'Jenis', 'Periode', 'Berkas', 'Status', 'Aksi']}>
+          <Table head={['Dokumen', 'Jenis', 'Tanggal', 'Berkas', 'Status', 'Aksi']}>
             {visible.map((d) => {
               const meta = JENIS_META[d.type] ?? { label: d.type, color: '#94a3b8', icon: Scale };
               const Icon = meta.icon;
@@ -407,9 +373,7 @@ export default function AdminProfilPpidPage() {
                   </Cell>
 
                   <Cell className="whitespace-nowrap">
-                    {d.type === 'Laporan Bulanan'
-                      ? namaBulan(d.period_date)
-                      : String(d.published_date ?? '').slice(0, 10) || <span className="text-[var(--adm-dim)]">—</span>}
+                    {String(d.published_date ?? '').slice(0, 10) || <span className="text-[var(--adm-dim)]">—</span>}
                   </Cell>
 
                   <Cell>
@@ -517,26 +481,6 @@ export default function AdminProfilPpidPage() {
               <Galat pesan={galat.published_date} />
             </div>
           </div>
-
-          {/* Bulan laporan dipisahkan dari tanggal terbit dengan sengaja:
-              laporan bulan Agustus lazim terbit pada September. */}
-          {form.type === 'Laporan Bulanan' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field
-                label="Bulan Laporan" required type="select"
-                value={String(form.bulan)}
-                onChange={(v) => isi('bulan', Number(v))}
-                options={BULAN.map((b, i) => ({ value: String(i + 1), label: b }))}
-              />
-              <div>
-                <Field
-                  label="Tahun Laporan" required type="number"
-                  value={form.tahun} onChange={(v) => isi('tahun', Number(v))}
-                />
-                <Galat pesan={galat.tahun} />
-              </div>
-            </div>
-          )}
 
           <Field label="Keterangan" type="textarea" rows={3} value={form.description} onChange={(v) => isi('description', v)} />
 

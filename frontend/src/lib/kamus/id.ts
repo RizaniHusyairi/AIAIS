@@ -258,6 +258,9 @@ const id = {
 
     pejabatKicker: 'Tata Kelola',
     pejabatJudul: 'Pejabat Bandar Udara APT Pranoto Samarinda',
+    pejabatAktif: 'Pejabat aktif',
+    hubungiKantor: 'Hubungi kantor',
+    pilihPejabatLain: 'Pilih pejabat lainnya',
     profilLengkap: 'Profil Lengkap',
     bagikanProfil: 'Bagikan profil',
     sebelumnya: 'Sebelumnya',
@@ -320,6 +323,7 @@ const id = {
     leadAwal: 'Pejabat Pengelola Informasi dan Dokumentasi menjamin hak Anda atas informasi publik sesuai',
     lihatSop: 'Lihat SOP PPID',
     skTim: 'SK Tim PPID',
+    laporanBulanan: 'Lihat Laporan Bulanan PPID',
     catatanIsi:
       'Dokumen dan uraian PPID di bawah adalah dokumen resmi berbahasa Indonesia.',
   },

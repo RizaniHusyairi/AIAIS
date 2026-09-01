@@ -26,18 +26,6 @@ import {
   PlayCircle, CalendarRange,
 } from 'lucide-react';
 
-const BULAN = [
-  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
-];
-
-/** "2026-08-01" → "Agustus 2026"; kosong bila kolomnya tidak terisi. */
-function namaBulan(iso: string | null): string {
-  const cocok = String(iso ?? '').match(/^(\d{4})-(\d{2})/);
-
-  return cocok ? BULAN[Number(cocok[2]) - 1] + ' ' + cocok[1] : '';
-}
-
 const CABANG = [
   { href: '/app/ppid/sop', nama: 'SOP PPID', desc: 'Prosedur permohonan, keberatan, dan sengketa', icon: ClipboardList, warna: '#2563eb', latar: '#eff6ff' },
   { href: '/app/ppid/permohonan', nama: 'Permohonan Informasi', desc: 'Ajukan permohonan informasi publik', icon: Send, warna: '#059669', latar: '#ecfdf5' },
@@ -69,10 +57,11 @@ export default function PpidScreen() {
       const skPpid = daftar.filter((d) => d.type === 'SK PPID');
       setSk(skPpid.find((d) => d.is_current) ?? skPpid[0] ?? null);
 
-      /* Hanya bulan yang laporannya benar-benar terbit. Papan 12 bulan versi
-         desktop sengaja menampilkan bulan kosong sebagai penanda kejujuran;
-         di layar selebar ponsel deretan itu jadi gangguan, dan tidak ada yang
-         diklaim dengan menghilangkannya. */
+      /* Hanya laporan yang berkasnya benar-benar ada. Daftar versi desktop
+         sengaja ikut menampilkan dokumen yang keberadaannya sudah dicatat tapi
+         berkasnya belum terbit; di layar selebar ponsel baris yang tak dapat
+         dibuka itu jadi gangguan, dan tidak ada yang diklaim dengan
+         menghilangkannya. */
       setLaporan(daftar.filter((d) => d.type === 'Laporan Bulanan' && d.has_document));
     });
 
@@ -166,7 +155,7 @@ export default function PpidScreen() {
           })}
         </div>
 
-        {/* Laporan Bulanan PPID. Hanya bulan yang laporannya sudah terbit. */}
+        {/* Laporan Bulanan PPID. Hanya yang berkasnya sudah terbit. */}
         {laporan.length > 0 && (
           <motion.div variants={listItem} className="bg-white rounded-2xl shadow-sm shadow-slate-200/60 p-4">
             <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400 inline-flex items-center gap-1.5">
@@ -187,7 +176,7 @@ export default function PpidScreen() {
                     </span>
                     <span className="flex-1 min-w-0">
                       <span className="block text-[12.5px] font-bold text-slate-900 leading-snug">
-                        {namaBulan(l.period_date) || l.title}
+                        {l.title}
                       </span>
                       <span className="block text-[11px] text-slate-500 mt-0.5">
                         Terbit {formatTanggal(l.published_date, bahasa)}

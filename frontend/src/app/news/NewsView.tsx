@@ -115,7 +115,7 @@ export default function NewsView() {
   }, [sorotan.length, kurangiGerak]);
 
   return (
-    <div className="bg-[#f6f8fc] min-h-screen pb-20">
+    <div className="min-h-screen bg-slate-50 pb-20">
       <Hero
         total={berita.length}
         kategori={kategoriTersedia.length}
@@ -489,7 +489,7 @@ function Sorotan({
 
               <Link
                 href={`/news/${berita.slug}`}
-                className="group mt-6 inline-flex items-center gap-2.5 bg-white hover:bg-cyan-300 text-[#050d1f] text-[13px] font-bold px-5 py-3 rounded-full transition-colors w-fit"
+                className="group mt-6 inline-flex w-fit items-center gap-2.5 rounded-full bg-cyan-300 px-5 py-3 text-[13px] font-bold text-slate-950 transition-colors hover:bg-cyan-200"
               >
                 Baca Selengkapnya
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />

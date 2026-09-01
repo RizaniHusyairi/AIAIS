@@ -95,6 +95,10 @@ export const DEFAULT_SETTINGS: Record<string, string> = {
   bg_ppid: '',
   hero_video_url: 'https://assets.mixkit.co/videos/preview/mixkit-airplane-taking-off-at-sunset-41484-large.mp4',
 
+  // Satu ukuran responsif yang dipakai seluruh Slide Informasi di beranda.
+  info_slide_width: '1400',
+  info_slide_height: '525',
+
   // Survei Kepuasan Masyarakat — lihat catatan pada SettingController::DEFAULTS.
   skm_url: 'https://skm.dephub.go.id/ly/ApfkINxw',
   skm_label: 'Isi Survei Kepuasan Masyarakat',

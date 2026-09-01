@@ -2,7 +2,7 @@
 
 /**
  * Tiga bagian berdata pada halaman Profil PPID: SK Tim PPID, Video Profil,
- * dan papan Laporan Bulanan.
+ * dan daftar Laporan Bulanan.
  *
  * Ketiganya dipisahkan dari `ProfilPpidView` karena hanya ketiganya yang
  * mengambil isinya dari API; sisa halaman itu tetap presentasi murni atas
@@ -16,7 +16,7 @@
  * `/ppid/standar-pelayanan` tampil kosong padahal datanya ada.
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import VideoProfil from '@/components/home/VideoProfil';
 import { FlightArc } from '@/components/ppid/PpidHero';
@@ -33,18 +33,6 @@ const rise = {
   show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 28 } },
 };
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
-
-const BULAN = [
-  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
-];
-
-/** Ambil bagian tahun/bulan dari kolom tanggal, tanpa melewati zona waktu. */
-function periode(iso: string | null): { tahun: number; bulan: number } | null {
-  const cocok = String(iso ?? '').match(/^(\d{4})-(\d{2})/);
-
-  return cocok ? { tahun: Number(cocok[1]), bulan: Number(cocok[2]) } : null;
-}
 
 /* ================================================================
    1. SK Tim PPID
@@ -273,38 +261,21 @@ export function SeksiVideoPpid({ url, gambar }: { url: string; gambar: string })
   );
 }
 
+
 /* ================================================================
-   3. Papan Laporan Bulanan
+   3. Daftar Laporan Bulanan
    ================================================================ */
 
+/**
+ * Rekapitulasi layanan informasi publik.
+ *
+ * Namanya "Laporan Bulanan", tetapi PPID bandara menerbitkan seluruh bulan
+ * sebagai satu dokumen — karena itu seksi ini daftar dokumen, bukan papan dua
+ * belas bulan. Papan lama memaksa sebelas kotak permanen bertuliskan "belum
+ * terbit" untuk laporan yang sebenarnya sudah lengkap.
+ */
 export function PapanLaporanBulanan({ laporan }: { laporan: PpidProfileDocument[] }) {
   const bahasa = useBahasa();
-
-  /** Tahun yang benar-benar ada di data, terbaru lebih dulu. */
-  const tahunAda = useMemo(() => {
-    const set = new Set<number>();
-    laporan.forEach((l) => { const p = periode(l.period_date); if (p) set.add(p.tahun); });
-
-    return [...set].sort((a, b) => b - a);
-  }, [laporan]);
-
-  const [tahun, setTahun] = useState<number | null>(null);
-  const tahunKini = tahun ?? tahunAda[0] ?? null;
-
-  /** Dua belas kotak bulan untuk tahun terpilih; kosong berarti belum terbit. */
-  const bulanan = useMemo(() => {
-    const kotak: (PpidProfileDocument | null)[] = Array(12).fill(null);
-    if (tahunKini === null) return kotak;
-
-    laporan.forEach((l) => {
-      const p = periode(l.period_date);
-      if (p && p.tahun === tahunKini) kotak[p.bulan - 1] = l;
-    });
-
-    return kotak;
-  }, [laporan, tahunKini]);
-
-  const terisi = bulanan.filter(Boolean).length;
 
   return (
     <section id="laporan-bulanan" className="max-w-[1400px] mx-auto px-4 sm:px-6 pb-20 scroll-mt-24">
@@ -314,119 +285,72 @@ export function PapanLaporanBulanan({ laporan }: { laporan: PpidProfileDocument[
         </span>
         <h2 className="mt-3 text-3xl font-black text-slate-900 tracking-tight">Laporan Bulanan PPID</h2>
         <p className="mt-2 text-[13.5px] text-slate-500 max-w-2xl leading-relaxed">
-          Rekapitulasi layanan informasi publik yang disusun setiap bulan. Bulan yang laporannya
-          belum terbit tetap ditampilkan apa adanya.
+          Rekapitulasi layanan informasi publik. Dokumen yang keberadaannya sudah
+          dicatat tetapi berkasnya belum terbit tetap ditampilkan apa adanya.
         </p>
       </motion.div>
 
-      {tahunAda.length === 0 ? (
+      {laporan.length === 0 ? (
         <div className="mt-8 rounded-3xl bg-white ring-1 ring-slate-200/70 px-6 py-10 text-center">
-          <p className="text-[13.5px] font-bold text-slate-700">Belum ada laporan bulanan yang ditayangkan.</p>
+          <p className="text-[13.5px] font-bold text-slate-700">Belum ada laporan yang ditayangkan.</p>
           <p className="mt-1 text-[12.5px] text-slate-500">Laporan akan tampil di sini setelah diunggah petugas.</p>
         </div>
       ) : (
-        <>
-          {/* Pemilih tahun — bergaya papan jadwal keberangkatan. */}
-          <div className="mt-7 flex flex-wrap items-center gap-2">
-            {tahunAda.map((y) => {
-              const aktif = y === tahunKini;
+        <motion.div
+          variants={container}
+          initial="hidden"
+          animate="show"
+          className="mt-7 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+        >
+          {laporan.map((doc) => {
+            const bisaDibuka = doc.has_document && !!doc.document_url;
 
-              return (
-                <button
-                  key={y}
-                  type="button"
-                  onClick={() => setTahun(y)}
-                  aria-pressed={aktif}
-                  className={`px-4 py-2 rounded-full text-[13px] font-black tabular-nums transition-colors cursor-pointer ${
-                    aktif
-                      ? 'bg-[#0b1e5b] text-white shadow-lg shadow-blue-950/20'
-                      : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:ring-blue-300 hover:text-blue-700'
-                  }`}
-                >
-                  {y}
-                </button>
-              );
-            })}
+            return (
+              <motion.article
+                key={doc.id}
+                variants={rise}
+                whileHover={bisaDibuka ? { y: -5 } : undefined}
+                className="group relative flex flex-col h-full overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200/70 pl-6 pr-5 py-5 shadow-sm transition-shadow hover:shadow-xl hover:shadow-blue-900/5"
+              >
+                <span className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-600 to-sky-400" />
 
-            <span className="ml-1 text-[11.5px] text-slate-500 tabular-nums">
-              {terisi} dari 12 bulan terbit
-            </span>
-          </div>
+                <h3 className="text-[15px] font-black text-slate-900 leading-snug">{doc.title}</h3>
 
-          <motion.div
-            key={tahunKini ?? 'kosong'}
-            variants={container}
-            initial="hidden"
-            animate="show"
-            className="mt-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4"
-          >
-            {bulanan.map((doc, i) => {
-              const nama = BULAN[i];
+                {/* Nomor dan tanggal satu baris: keduanya keterangan pendek, dan
+                    menumpuknya membuat kartu tinggi tanpa menambah kejelasan. */}
+                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11.5px] text-slate-500">
+                  {doc.document_number && (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Hash className="w-3 h-3 flex-shrink-0" />{doc.document_number}
+                    </span>
+                  )}
+                  <span className="inline-flex items-center gap-1.5">
+                    <CalendarDays className="w-3 h-3 flex-shrink-0" />{formatTanggal(doc.published_date, bahasa)}
+                  </span>
+                </div>
 
-              if (!doc) {
-                return (
-                  <motion.div
-                    key={nama}
-                    variants={rise}
-                    /* `bg-white/85`, bukan `/50`. Tema malam sengaja hanya memetakan
-                       putih beropasitas tinggi menjadi permukaan panel; yang di bawahnya
-                       dibiarkan karena hampir selalu berupa lapisan di atas hero gelap.
-                       Ubin ini justru kebalikannya — ia permukaan kertas — dan pada `/50`
-                       ia luput dari pemetaan lalu tampil sebagai kotak kelabu dengan
-                       tulisan yang tak terbaca di atasnya. Selisihnya tak kasatmata di
-                       tema siang: keduanya sama-sama putih di atas latar `slate-50`. */
-                    className="rounded-2xl border-2 border-dashed border-slate-200 bg-white/85 px-4 py-5 text-center"
-                  >
-                    <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-400 tabular-nums">
-                      {String(i + 1).padStart(2, '0')}
-                    </p>
-                    <p className="mt-1 text-[14px] font-black text-slate-400">{nama}</p>
-                    <p className="mt-1.5 text-[11px] text-slate-400">belum terbit</p>
-                  </motion.div>
-                );
-              }
-
-              const bisaDibuka = doc.has_document && !!doc.document_url;
-
-              return (
-                <motion.article
-                  key={nama}
-                  variants={rise}
-                  whileHover={bisaDibuka ? { y: -5 } : undefined}
-                  className="group relative overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200/70 px-4 py-5 shadow-sm transition-shadow hover:shadow-xl hover:shadow-blue-900/5"
-                >
-                  <span className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-600 to-sky-400" />
-
-                  <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-blue-600 tabular-nums">
-                    {String(i + 1).padStart(2, '0')}
-                  </p>
-                  <p className="mt-1 text-[15px] font-black text-slate-900">{nama}</p>
-
-                  <p className="mt-1.5 text-[11.5px] text-slate-500 leading-snug line-clamp-2">{doc.title}</p>
-
-                  <p className="mt-2 inline-flex items-center gap-1 text-[11px] text-slate-400">
-                    <CalendarDays className="w-3 h-3" /> {formatTanggal(doc.published_date, bahasa)}
-                  </p>
-
+                {/* `mt-auto` merapatkan aksi ke dasar kartu supaya sederet kartu
+                    berjudul sepanjang apa pun tetap sebaris tombolnya. */}
+                <div className="mt-auto pt-4">
                   {bisaDibuka ? (
                     <a
                       href={doc.document_url as string}
                       target="_blank"
                       rel="noreferrer"
-                      className="mt-3 inline-flex items-center gap-1.5 text-[12px] font-bold text-blue-600 hover:underline"
+                      className="inline-flex items-center gap-1.5 text-[12px] font-bold text-blue-600 hover:underline"
                     >
-                      <FileText className="w-3.5 h-3.5" /> Lihat Laporan
+                      <FileText className="w-3.5 h-3.5 flex-shrink-0" /> Lihat Laporan
                     </a>
                   ) : (
-                    <p className="mt-3 inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-amber-600">
-                      <FileClock className="w-3.5 h-3.5" /> Berkas belum tersedia
-                    </p>
+                    <span className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-amber-600">
+                      <FileClock className="w-3.5 h-3.5 flex-shrink-0" /> Berkas belum tersedia
+                    </span>
                   )}
-                </motion.article>
-              );
-            })}
-          </motion.div>
-        </>
+                </div>
+              </motion.article>
+            );
+          })}
+        </motion.div>
       )}
     </section>
   );

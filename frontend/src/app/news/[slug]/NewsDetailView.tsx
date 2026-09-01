@@ -68,7 +68,7 @@ export default function NewsDetailView({ params }: { params: Promise<{ slug: str
 
 function SedangMemuat() {
   return (
-    <div className="min-h-[75vh] flex flex-col items-center justify-center gap-5 bg-[#f6f8fc]">
+    <div className="min-h-[75vh] flex flex-col items-center justify-center gap-5 bg-slate-50">
       <motion.div
         animate={{ x: [-18, 18, -18], y: [5, -5, 5] }}
         transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
@@ -89,7 +89,7 @@ function SedangMemuat() {
  */
 function TidakDitemukan() {
   return (
-    <div className="min-h-[75vh] bg-[#f6f8fc] flex flex-col items-center justify-center gap-5 px-4 text-center">
+    <div className="min-h-[75vh] bg-slate-50 flex flex-col items-center justify-center gap-5 px-4 text-center">
       <span className="w-16 h-16 rounded-3xl bg-white border border-slate-200 shadow-sm flex items-center justify-center">
         <Compass className="w-8 h-8 text-slate-300" />
       </span>

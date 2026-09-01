@@ -953,6 +953,7 @@ html[data-plane-cursor] * {
 /* Tipografi artikel. Warnanya dipatok heks di blok `.article-content` di
    kepala berkas ini, jadi tidak ada utilitas yang bisa dipetakan. */
 :root[data-site-theme='night'] .article-content { color: var(--mlm-body); }
+:root[data-site-theme='night'] .article-content :is(p, li, dd, figcaption) { color: var(--mlm-body); }
 :root[data-site-theme='night'] .article-content :is(h1, h2, h3, h4, strong, b) { color: var(--mlm-fg); }
 :root[data-site-theme='night'] .article-content a { color: var(--mlm-accent); }
 :root[data-site-theme='night'] .article-content :is(blockquote, pre, code, table, th, td) {
@@ -961,6 +962,8 @@ html[data-plane-cursor] * {
   color: var(--mlm-body);
 }
 :root[data-site-theme='night'] .article-content hr { border-color: var(--mlm-line); }
+:root[data-site-theme='night'] .article-content--majalah > p:first-of-type::first-letter { color: var(--mlm-accent-kuat); }
+:root[data-site-theme='night'] .article-content--majalah h2::after { border-color: var(--mlm-line-kuat); }
 :root[data-site-theme='night'] .faq-answer { color: var(--mlm-body); }
 :root[data-site-theme='night'] .faq-answer :is(strong, b) { color: var(--mlm-fg); }
 
@@ -1237,6 +1240,14 @@ html[data-plane-cursor] * {
     rgba(3, 7, 18, 0.82) 50%,
     rgba(3, 7, 18, 0.25) 100%
   );
+}
+
+/* Foto pejabat beranda menyatu langsung dengan latar pada tema terang.
+   Bayangan hanya dipakai di tema malam agar seragam putihnya tidak hilang
+   pada bidang gelap. */
+.pejabat-foto-utama { filter: none; }
+:root[data-site-theme='night'] .pejabat-foto-utama {
+  filter: drop-shadow(0 18px 24px rgba(2, 6, 23, 0.42));
 }
 
 /* Kaki hero yang meleburkan foto ke warna halaman. */

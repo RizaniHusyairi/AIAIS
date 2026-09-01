@@ -34,18 +34,17 @@ class PpidProfileDocument extends Model
     /** Jenis yang mengenal penanda "berlaku". */
     public const TYPE_SK = 'SK PPID';
 
-    /** Jenis yang wajib menyebutkan bulan laporannya. */
+    /** Jenis rekapitulasi layanan; seluruh bulan terbit sebagai satu dokumen. */
     public const TYPE_LAPORAN = 'Laporan Bulanan';
 
     protected $fillable = [
         'type', 'title', 'document_number', 'description',
-        'published_date', 'period_date',
+        'published_date',
         'file_path', 'document_link', 'is_current', 'is_active',
     ];
 
     protected $casts = [
         'published_date' => 'date',
-        'period_date' => 'date',
         'is_current' => 'boolean',
         'is_active' => 'boolean',
     ];

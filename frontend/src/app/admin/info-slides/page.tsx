@@ -16,10 +16,11 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { adminFetch, adminUpload } from '@/lib/adminApi';
+import { fetchSettings, invalidateSettings } from '@/lib/settings';
 import { InfoSlide } from '@/types';
 import {
   PageHeader, Panel, Btn, Badge, Modal, ConfirmDialog, Toast, ToastMsg,
-  Loading, EmptyState, StatCard, InfoNote, stagger,
+  Loading, EmptyState, StatCard, InfoNote, stagger, Field,
 } from '@/components/admin/ui';
 import { Galat, IsianTautan, tautanSah } from '@/components/admin/isian';
 import {
@@ -36,6 +37,10 @@ export default function AdminInfoSlidesPage() {
   const [loading, setLoading] = useState(true);
 
   const [link, setLink] = useState('');
+  const [lebar, setLebar] = useState('1400');
+  const [tinggi, setTinggi] = useState('525');
+  const [ukuranTersimpan, setUkuranTersimpan] = useState({ lebar: '1400', tinggi: '525' });
+  const [menyimpanUkuran, setMenyimpanUkuran] = useState(false);
   const [tampil, setTampil] = useState(true);
   const [galat, setGalat] = useState<Record<string, string>>({});
   const [berkas, setBerkas] = useState<File | null>(null);
@@ -76,6 +81,18 @@ export default function AdminInfoSlidesPage() {
     })();
 
     return () => { batal = true; };
+  }, []);
+
+  useEffect(() => {
+    fetchSettings(true).then((settings) => {
+      const berikutnya = {
+        lebar: settings.info_slide_width || '1400',
+        tinggi: settings.info_slide_height || '525',
+      };
+      setLebar(berikutnya.lebar);
+      setTinggi(berikutnya.tinggi);
+      setUkuranTersimpan(berikutnya);
+    });
   }, []);
 
   const stats = useMemo(() => ({
@@ -127,6 +144,7 @@ export default function AdminInfoSlidesPage() {
     const t = link.trim();
     if (t && !tautanSah(t)) g.link_url = 'Tautan harus diawali http:// atau https://';
 
+
     setGalat(g);
     return Object.keys(g).length === 0;
   };
@@ -170,6 +188,35 @@ export default function AdminInfoSlidesPage() {
     if (res.ok) load();
   };
 
+  const simpanUkuran = async () => {
+    const nilaiLebar = Number(lebar);
+    const nilaiTinggi = Number(tinggi);
+
+    if (!Number.isInteger(nilaiLebar) || nilaiLebar < 320 || nilaiLebar > 1400) {
+      setToast({ text: 'Lebar harus berupa angka bulat antara 320–1.400 px.', kind: 'error' });
+      return;
+    }
+    if (!Number.isInteger(nilaiTinggi) || nilaiTinggi < 160 || nilaiTinggi > 900) {
+      setToast({ text: 'Tinggi harus berupa angka bulat antara 160–900 px.', kind: 'error' });
+      return;
+    }
+
+    setMenyimpanUkuran(true);
+    const res = await adminFetch<Record<string, string>>('/settings', {
+      method: 'POST',
+      body: { info_slide_width: lebar, info_slide_height: tinggi },
+    });
+    setMenyimpanUkuran(false);
+
+    if (res.ok) {
+      setUkuranTersimpan({ lebar, tinggi });
+      invalidateSettings();
+      setToast({ text: 'Ukuran seluruh slide berhasil diperbarui', kind: 'success' });
+    } else {
+      setToast({ text: res.message, kind: 'error' });
+    }
+  };
+
   const gambarForm = pratinjau || gambarKini || '';
 
   return (
@@ -194,6 +241,66 @@ export default function AdminInfoSlidesPage() {
       </motion.div>
 
       <Panel>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--adm-line)] px-5 py-3.5">
+          <div>
+            <h2 className="text-[13.5px] font-bold text-[var(--adm-fg)]">Ukuran Seluruh Slide</h2>
+            <p className="mt-0.5 text-[11.5px] text-[var(--adm-muted)]">Pengaturan ini berlaku seragam untuk semua gambar pada carousel beranda.</p>
+          </div>
+          <Btn
+            onClick={simpanUkuran}
+            disabled={menyimpanUkuran || (lebar === ukuranTersimpan.lebar && tinggi === ukuranTersimpan.tinggi)}
+          >
+            {menyimpanUkuran ? 'Menyimpan...' : 'Simpan Ukuran'}
+          </Btn>
+        </div>
+
+        <div className="grid grid-cols-1 gap-5 p-5 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-1">
+            <Field
+              label="Lebar Semua Slide (px)"
+              type="number"
+              value={lebar}
+              onChange={(v) => setLebar(String(v))}
+              min={320}
+              max={1400}
+              step={1}
+              required
+              hint="Maksimal 1.400 px; otomatis mengecil di layar sempit."
+            />
+            <Field
+              label="Tinggi Semua Slide (px)"
+              type="number"
+              value={tinggi}
+              onChange={(v) => setTinggi(String(v))}
+              min={160}
+              max={900}
+              step={1}
+              required
+              hint="Berlaku sebagai tinggi dan rasio seluruh gambar."
+            />
+          </div>
+
+          <div className="flex min-h-48 items-center justify-center rounded-xl bg-[var(--adm-hover)] p-4 ring-1 ring-[var(--adm-line)]">
+            <div
+              className="relative w-full max-w-full overflow-hidden rounded-xl bg-gradient-to-br from-cyan-950 to-blue-950 ring-1 ring-cyan-400/20"
+              style={{
+                maxWidth: `${Math.max(Number(lebar) || 1400, 1)}px`,
+                aspectRatio: `${Math.max(Number(lebar) || 1400, 1)} / ${Math.max(Number(tinggi) || 525, 1)}`,
+              }}
+            >
+              <div className="absolute inset-0 flex items-center justify-center text-center">
+                <div>
+                  <ImageIcon className="mx-auto h-7 w-7 text-cyan-300" />
+                  <p className="mt-2 text-xs font-bold text-white">Pratinjau kanvas seluruh slide</p>
+                  <p className="mt-1 font-mono text-[10.5px] text-cyan-200">{lebar || 0} × {tinggi || 0} px</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Panel>
+
+      <Panel>
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-[var(--adm-line)]">
           <h2 className="text-[13.5px] font-bold text-[var(--adm-fg)]">Daftar Slide</h2>
           <span className="text-[11.5px] text-[var(--adm-muted)]">Slide terbaru tampil lebih dulu di beranda</span>
@@ -202,8 +309,8 @@ export default function AdminInfoSlidesPage() {
         <div className="p-5">
           <InfoNote>
             Satu slide adalah <span className="text-[var(--adm-accent)] font-semibold">selembar gambar</span> — tidak ada judul
-            maupun teks di atasnya, persis seperti papan pengumuman portal lama. Siapkan gambarnya dalam perbandingan
-            lebar 16:9 agar tidak terpotong. Tautan bersifat opsional: bila diisi, slide dapat diklik.
+            maupun teks di atasnya, persis seperti papan pengumuman portal lama. Lebar dan tinggi tampilannya dapat
+            diatur untuk menyesuaikan komposisi gambar. Tautan bersifat opsional: bila diisi, slide dapat diklik.
           </InfoNote>
 
           {loading ? (
@@ -218,7 +325,7 @@ export default function AdminInfoSlidesPage() {
                   variants={{ hidden: { opacity: 0, y: 14 }, show: { opacity: 1, y: 0 } }}
                   className="rounded-xl overflow-hidden bg-[var(--adm-inset)] ring-1 ring-[var(--adm-line)]"
                 >
-                  <div className="relative aspect-video bg-[var(--adm-hover)]">
+                  <div className="relative bg-[var(--adm-hover)]" style={{ aspectRatio: `${Number(lebar) || 1400} / ${Number(tinggi) || 525}` }}>
                     {s.has_image && s.image_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={s.image_url} alt="" className="w-full h-full object-cover" />
@@ -241,18 +348,20 @@ export default function AdminInfoSlidesPage() {
                   </div>
 
                   <div className="flex items-center justify-between gap-2 px-3 py-2.5">
-                    {s.link_url ? (
-                      <a
-                        href={s.link_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-[var(--adm-accent)] truncate"
-                      >
-                        <LinkIcon className="w-3.5 h-3.5 flex-shrink-0" /> <span className="truncate">{s.link_url}</span>
-                      </a>
-                    ) : (
-                      <span className="text-[11.5px] text-[var(--adm-dim)]">Tanpa tautan</span>
-                    )}
+                    <div className="min-w-0">
+                      {s.link_url ? (
+                        <a
+                          href={s.link_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-0.5 inline-flex max-w-full items-center gap-1.5 truncate text-[11.5px] font-semibold text-[var(--adm-accent)]"
+                        >
+                          <LinkIcon className="w-3.5 h-3.5 flex-shrink-0" /> <span className="truncate">{s.link_url}</span>
+                        </a>
+                      ) : (
+                        <span className="mt-0.5 block text-[11.5px] text-[var(--adm-dim)]">Tanpa tautan</span>
+                      )}
+                    </div>
 
                     <div className="flex gap-1.5 flex-shrink-0">
                       <button onClick={() => bukaForm(s)} className="w-8 h-8 rounded-lg bg-[var(--adm-hover)] hover:bg-cyan-500/20 text-[var(--adm-body)] hover:text-[var(--adm-accent)] flex items-center justify-center transition-colors cursor-pointer" title="Ubah">
@@ -284,7 +393,7 @@ export default function AdminInfoSlidesPage() {
         <div className="space-y-4">
           <div className="rounded-xl bg-[var(--adm-hover)] ring-1 ring-white/8 p-4 space-y-3">
             <label className="block text-[11.5px] font-semibold text-[var(--adm-body)]">
-              Gambar Slide <span className="text-[var(--adm-dim)]">(JPG/PNG/WEBP, maks 5 MB, sebaiknya 16:9)</span>
+              Gambar Slide <span className="text-[var(--adm-dim)]">(JPG/PNG/WEBP, maks 5 MB)</span>
             </label>
 
             {gambarForm ? (
@@ -292,11 +401,15 @@ export default function AdminInfoSlidesPage() {
               <img
                 src={gambarForm}
                 alt="Pratinjau slide"
-                className="w-full aspect-video object-cover rounded-xl border border-[var(--adm-line)]"
+                className="w-full object-cover rounded-xl border border-[var(--adm-line)]"
+                style={{ aspectRatio: `${Math.max(Number(lebar) || 1400, 1)} / ${Math.max(Number(tinggi) || 525, 1)}` }}
                 onError={(e) => ((e.target as HTMLImageElement).style.opacity = '0.25')}
               />
             ) : (
-              <div className="w-full aspect-video rounded-xl border-2 border-dashed border-[var(--adm-line)] flex flex-col items-center justify-center gap-1.5 text-center px-4">
+              <div
+                className="flex w-full flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-[var(--adm-line)] px-4 text-center"
+                style={{ aspectRatio: `${Math.max(Number(lebar) || 1400, 1)} / ${Math.max(Number(tinggi) || 525, 1)}` }}
+              >
                 <UploadCloud className="w-7 h-7 text-[var(--adm-accent)]" />
                 <span className="text-[11.5px] text-[var(--adm-muted)]">Belum ada gambar dipilih.</span>
               </div>

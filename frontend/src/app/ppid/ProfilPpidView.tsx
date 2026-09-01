@@ -35,7 +35,7 @@ import type { PpidProfileDocument } from '@/types';
 import { CONTACT } from '@/lib/airportProfile';
 import {
   Quote, Target, ListChecks, FileText, ExternalLink,
-  Eye, Users, Sparkles, ArrowRight, Radio, Mail, Phone, MapPin, Plane,
+  Eye, Users, Sparkles, ArrowRight, Radio, Mail, Phone, MapPin, Plane, CalendarRange,
 } from 'lucide-react';
 import { useBahasa } from '@/lib/bahasa';
 import { useTeks } from '@/lib/kamus';
@@ -61,6 +61,19 @@ export default function ProfilPpidView() {
   const heroBg = useSetting('bg_ppid');
   const videoUrl = useSetting('ppid_video_url');
   const videoGambar = useSetting('ppid_video_gambar');
+
+  const gulirKeLaporan = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+
+    const tujuan = document.getElementById('laporan-bulanan');
+    if (!tujuan) return;
+
+    window.history.pushState(null, '', '#laporan-bulanan');
+    tujuan.scrollIntoView({
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+      block: 'start',
+    });
+  };
 
   useEffect(() => {
     let batal = false;
@@ -122,6 +135,15 @@ export default function ProfilPpidView() {
               <ExternalLink className="w-3.5 h-3.5" />
             </a>
           )}
+          <Link
+            href="#laporan-bulanan"
+            onClick={gulirKeLaporan}
+            className="inline-flex items-center gap-2 rounded-full border border-cyan-200/40 bg-cyan-300/15 px-5 py-3 text-[13.5px] font-bold text-cyan-50 transition-colors hover:bg-cyan-300 hover:text-slate-950"
+          >
+            <CalendarRange className="w-4 h-4" />
+            {t.ppid.laporanBulanan}
+            <ArrowRight className="w-4 h-4" />
+          </Link>
         </div>
 
         {/* Dokumen PPID adalah dokumen hukum berbahasa Indonesia; tidak

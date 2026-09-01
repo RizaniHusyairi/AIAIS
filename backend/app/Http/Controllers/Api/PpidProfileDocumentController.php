@@ -31,7 +31,7 @@ class PpidProfileDocumentController extends Controller
     {
         $items = PpidProfileDocument::where('is_active', true)
             ->orderByDesc('is_current')
-            ->orderByRaw('COALESCE(period_date, published_date) DESC')
+            ->orderByDesc('published_date')
             ->get();
 
         return ApiResponse::success($items, 'Dokumen profil PPID');
@@ -41,7 +41,7 @@ class PpidProfileDocumentController extends Controller
     public function adminIndex()
     {
         $items = PpidProfileDocument::orderByDesc('is_current')
-            ->orderByRaw('COALESCE(period_date, published_date) DESC')
+            ->orderByDesc('published_date')
             ->get();
 
         return ApiResponse::success($items, 'Seluruh dokumen profil PPID');
@@ -107,18 +107,12 @@ class PpidProfileDocumentController extends Controller
             'document_number' => 'nullable|string|max:150',
             'description' => 'nullable|string|max:2000',
             'published_date' => $partial.'required|date',
-
-            // Bulan laporan hanya bermakna — dan wajib — bagi laporan bulanan.
-            'period_date' => 'nullable|date|required_if:type,'.PpidProfileDocument::TYPE_LAPORAN,
-
             'is_current' => 'boolean',
             'is_active' => 'boolean',
         ], [
             'type.in' => 'Jenis dokumen tidak dikenali.',
             'title.required' => 'Judul dokumen wajib diisi.',
             'published_date.required' => 'Tanggal dokumen wajib diisi.',
-            'period_date.required_if' => 'Bulan laporan wajib dipilih untuk Laporan Bulanan.',
-            'period_date.date' => 'Bulan laporan tidak sah.',
         ]);
 
         // Multipart mengirim boolean sebagai '1'/'0'; `boolean()` yang
@@ -129,11 +123,11 @@ class PpidProfileDocumentController extends Controller
             }
         }
 
-        // Penanda "berlaku" tidak berlaku bagi laporan bulanan. Dibiarkan
-        // menempel, papan bulanan akan menampilkan lencana yang tak berarti.
+        // Penanda "berlaku" hanya bermakna bagi SK — ia menunjuk SK yang sedang
+        // menetapkan tim. Dibiarkan menempel pada laporan, daftar publik akan
+        // menampilkan lencana yang tak berarti.
         if (($validated['type'] ?? null) === PpidProfileDocument::TYPE_LAPORAN) {
             $validated['is_current'] = false;
-            $validated['period_date'] ??= null;
         }
 
         return $validated;

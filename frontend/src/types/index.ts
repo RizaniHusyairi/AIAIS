@@ -627,8 +627,6 @@ export interface PpidProfileDocument {
   description: string | null;
   /** Tanggal penetapan SK atau tanggal terbit laporan. */
   published_date: string;
-  /** Bulan yang dilaporkan (selalu tanggal 1); null bagi SK. */
-  period_date: string | null;
   /** SK yang sedang berlaku. Selalu false bagi Laporan Bulanan. */
   is_current: boolean;
   is_active: boolean;

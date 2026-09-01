@@ -29,7 +29,7 @@ import MitraLogos from '@/components/home/MitraLogos';
 import {
   Plane, ArrowRight, Building2, ChevronRight, ChevronLeft, MapPin, Car,
   ParkingSquare, Headphones,
-  CarFront, Bus, Mail, Share2, Navigation, Calendar, Palmtree, Clock,
+  CarFront, Bus, Navigation, Calendar, Palmtree, Clock,
 } from 'lucide-react';
 
 /* ================================================================
@@ -90,6 +90,7 @@ type WisataKartu = {
   duration: string | null;
   city: string | null;
   ringkas: string;
+  cover: string | null;
 };
 
 const wisataDariApi = (t: TourismItem): WisataKartu => ({
@@ -100,6 +101,7 @@ const wisataDariApi = (t: TourismItem): WisataKartu => ({
   duration: t.duration,
   city: t.city,
   ringkas: t.short_desc || t.description,
+  cover: t.cover_url,
 });
 
 const wisataDariArsip = (t: (typeof TOURISM_SPOTS)[number]): WisataKartu => ({
@@ -110,6 +112,7 @@ const wisataDariArsip = (t: (typeof TOURISM_SPOTS)[number]): WisataKartu => ({
   duration: t.duration,
   city: t.city,
   ringkas: t.description,
+  cover: null,
 });
 
 const aksesBandara = (t: Kamus) => [
@@ -190,6 +193,8 @@ export default function HomePage() {
   const [auto, setAuto] = useState(true);
 
   const heroBg = useSetting('bg_home');
+  const lebarSlide = Number(useSetting('info_slide_width')) || 1400;
+  const tinggiSlide = Number(useSetting('info_slide_height')) || 525;
 
   /* Pejabat bandara — dikelola lewat /admin/pejabat. Membuka dengan teks
      otoritatif, lalu berpindah ke data API begitu jawabannya tiba. */
@@ -288,6 +293,11 @@ export default function HomePage() {
     () => [...wisata].sort((a, b) => (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999)).slice(0, 4),
     [wisata],
   );
+  const wisataUtama = WISATA[0];
+  const wisataLain = WISATA.slice(1);
+  const metaWisataUtama = wisataUtama
+    ? (TOURISM_CAT_META[wisataUtama.category as TourismCategory] ?? { color: '#0f766e', bg: '#ecfdf5' })
+    : { color: '#0f766e', bg: '#ecfdf5' };
 
   const pickExec = (i: number) => { setExec(i); setAuto(false); };
 
@@ -415,16 +425,20 @@ export default function HomePage() {
         pengunjung mengira ada yang gagal dimuat.
       */}
       {SLIDES.length > 0 && (
-        <section className="max-w-[1400px] mx-auto px-4 sm:px-6 mt-12">
+        <section className="mx-auto mt-12 px-4 sm:px-6">
           <div
-            className="relative overflow-hidden rounded-3xl bg-[#0b1e5b] shadow-xl shadow-blue-950/15 ring-1 ring-slate-200/70"
+            className="relative mx-auto w-full overflow-hidden rounded-3xl bg-[#0b1e5b] shadow-xl shadow-blue-950/15 ring-1 ring-slate-200/70 transition-[max-width] duration-500"
+            style={{ maxWidth: `${lebarSlide}px` }}
             onMouseEnter={() => setSlideTertahan(true)}
             onMouseLeave={() => setSlideTertahan(false)}
             role="region"
             aria-roledescription="carousel"
             aria-label={t.beranda.pengumumanJudul}
           >
-            <div className="relative aspect-[21/9] sm:aspect-[16/6]">
+            <div
+              className="relative min-h-[200px] transition-[aspect-ratio] duration-500 sm:min-h-0"
+              style={{ aspectRatio: `${lebarSlide} / ${tinggiSlide}` }}
+            >
               <AnimatePresence initial={false} mode="wait">
                 <motion.div
                   key={SLIDES[slideIdx]?.id}
@@ -504,224 +518,214 @@ export default function HomePage() {
       )}
 
       {/* ================= 4. TENTANG ================= */}
-      {/*
-        Dulu bagian ini satu kartu putih berisi teks, LIMA kotak angka, dan
-        video 220px — semuanya diperas ke dalam satu baris tujuh kolom. Kini
-        angkanya turun menjadi bilah selebar kartu dengan pemisah, dan videonya
-        memakai rasio 16:9.
+      {/* Bentang editorial terbuka: seluruh isi duduk langsung pada latar
+          beranda. Tidak ada panel putih, bingkai, atau bayangan pembungkus. */}
+      <section className="relative mt-12 overflow-hidden pb-6 pt-16 sm:pb-8 sm:pt-20 lg:pb-6 lg:pt-24">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_76%_42%,rgba(37,99,235,0.13),transparent_32%),radial-gradient(circle_at_12%_82%,rgba(6,182,212,0.08),transparent_24%)]" />
+        <div className="pointer-events-none absolute right-[-5rem] top-[-3rem] select-none text-[15rem] font-black leading-none tracking-[-0.1em] text-blue-950/[0.025] sm:text-[22rem] lg:right-[2%] lg:text-[28rem]" aria-hidden="true">
+          AAP
+        </div>
 
-        BAND SELEBAR LAYAR, bukan kartu yang melayang di atas `bg-slate-50`
-        seperti kebanyakan seksi lain. Di atasnya ada papan pengumuman berlatar
-        biru tua; kartu putih polos yang menempel langsung padanya terbaca
-        seperti halaman yang terputus. Resepnya sengaja sama persis dengan band
-        Fasilitas di bawah, sehingga keduanya menjadi dua jeda yang teratur di
-        sepanjang halaman alih-alih dua perlakuan yang berbeda.
+        <div className="relative mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-12 lg:gap-12 xl:gap-16">
+            <motion.div
+              initial={{ opacity: 0, x: -24 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, amount: 0.35 }}
+              transition={{ duration: 0.6 }}
+              className="lg:col-span-5 xl:col-span-4"
+            >
+              <span className="inline-flex items-center gap-2 text-[10.5px] font-bold uppercase tracking-[0.2em] text-blue-600">
+                <Building2 className="h-4 w-4" />
+                {tentang.kicker}
+              </span>
 
-        Bilah angka di kakinya adalah SATU-SATUNYA tempat angka bandara tayang
-        di beranda — lihat catatan panjang di dekat `useStatistikBandara()` di
-        atas soal blok kedua yang dihapus.
-      */}
-      <section className="mt-12 border-y border-slate-200/70 bg-gradient-to-b from-white via-slate-100/60 to-slate-50 py-14">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6">
-          <div className="relative overflow-hidden bg-white rounded-3xl shadow-sm shadow-slate-200/60 border border-slate-100">
-            <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-600 via-sky-400 to-transparent" aria-hidden="true" />
+              <h2 className="mt-4 max-w-xl text-[32px] font-black leading-[1.08] tracking-[-0.035em] text-slate-900 sm:text-[40px] lg:text-[46px]">
+                {tentang.judul}
+              </h2>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2">
-              <motion.div
-                initial={{ opacity: 0, y: 18 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5 }}
-                className="p-7 sm:p-9 lg:p-12 flex flex-col justify-center"
+              <div className="mt-5 flex items-center gap-2" aria-hidden="true">
+                <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
+                <span className="h-px w-16 bg-gradient-to-r from-cyan-400 to-blue-500" />
+                <Plane className="h-4 w-4 rotate-45 text-blue-600" />
+              </div>
+
+              <p className="mt-6 max-w-xl text-[14.5px] leading-[1.9] text-slate-600 sm:text-[15px]">
+                {tentang.teks}
+              </p>
+
+              <Link
+                href="/profile"
+                className="group mt-8 inline-flex items-center gap-3 rounded-full bg-blue-600 px-6 py-3.5 text-[13px] font-bold text-white shadow-lg shadow-blue-600/20 transition-colors hover:bg-blue-700"
               >
-                <JudulBagian kicker={tentang.kicker}>{tentang.judul}</JudulBagian>
+                {t.beranda.profilLengkap}
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </Link>
+            </motion.div>
 
-                <p className="mt-4 text-slate-500 text-[14px] leading-[1.85] max-w-xl">
-                  {tentang.teks}
-                </p>
+            <motion.div
+              initial={{ opacity: 0, x: 28 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, amount: 0.25 }}
+              transition={{ duration: 0.65, delay: 0.06 }}
+              className="relative lg:col-span-7 xl:col-span-8"
+            >
+              <div className="pointer-events-none absolute -left-8 -top-8 h-44 w-44 rounded-full border border-blue-300/30" aria-hidden="true" />
+              <div className="pointer-events-none absolute -bottom-10 right-[12%] h-52 w-52 rounded-full border border-dashed border-cyan-300/30" aria-hidden="true" />
+              <div className="pointer-events-none absolute -left-4 bottom-[18%] z-10 hidden rounded-full bg-blue-600 px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-white shadow-lg shadow-blue-900/25 sm:block" aria-hidden="true">
+                AAP · Samarinda
+              </div>
 
-                <Link
-                  href="/profile"
-                  className="mt-7 self-start inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[13px] px-5 py-3 rounded-full shadow-lg shadow-blue-600/20 transition-colors"
-                >
-                  {t.beranda.profilLengkap}
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 18 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: 0.08 }}
-                className="p-7 sm:p-9 lg:p-12 lg:pl-0 flex items-center"
-              >
-                <div className="w-full rounded-2xl overflow-hidden ring-1 ring-slate-200/70 shadow-xl shadow-slate-300/30">
-                  <VideoProfil
-                    gambar={tentang.gambar}
-                    videoUrl={tentang.videoUrl}
-                    caption={tentang.caption}
-                    tinggiKelas="aspect-video h-auto"
-                  />
-                </div>
-              </motion.div>
-            </div>
-
-            {/* Bilah angka selebar kartu. Lima kolom di sini punya ruang; lima
-                kolom di dalam separuh kartu tidak. */}
-            {ABOUT_STATS.length > 0 && (
-              <motion.div
-                variants={container}
-                initial="hidden"
-                whileInView="show"
-                viewport={{ once: true }}
-                /* `divide-y` sampai lg: di bawah itu kelimanya membungkus ke baris
-                   kedua, dan pemisah tegak saja membuat baris keduanya tampak
-                   seperti garis nyasar alih-alih lanjutan bilah yang sama. */
-                className="border-t border-slate-100 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 divide-x divide-y lg:divide-y-0 divide-slate-100"
-              >
-                {ABOUT_STATS.map((s) => {
-                  const Icon = s.icon;
-                  return (
-                    <motion.div
-                      key={s.slug}
-                      variants={rise}
-                      className="group px-5 py-6 hover:bg-slate-50/70 transition-colors"
-                    >
-                      <span className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
-                        <Icon className="w-[18px] h-[18px] text-blue-600" />
-                      </span>
-                      <p className="mt-3 text-[22px] font-black text-slate-900 leading-none tabular-nums">{s.value}</p>
-                      <p className="mt-1.5 text-[11.5px] text-slate-500 leading-snug">{s.label}</p>
-                    </motion.div>
-                  );
-                })}
-              </motion.div>
-            )}
+              <div className="relative z-[1] ml-auto w-full lg:max-w-[920px]">
+                <VideoProfil
+                  gambar={tentang.gambar}
+                  videoUrl={tentang.videoUrl}
+                  caption={tentang.caption}
+                  tinggiKelas="aspect-[16/9] h-auto sm:aspect-[16/8.6]"
+                />
+              </div>
+            </motion.div>
           </div>
+
+          {/* Statistik tetap satu-satunya ringkasan angka profil di beranda,
+              tetapi kini berdiri langsung di latar alih-alih menjadi kaki card. */}
+          {ABOUT_STATS.length > 0 && (
+            <motion.div
+              variants={container}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, amount: 0.25 }}
+              className="mt-12 grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-3 lg:mt-16 lg:grid-cols-5 lg:gap-x-10"
+            >
+              {ABOUT_STATS.map((s) => {
+                const Icon = s.icon;
+                return (
+                  <motion.div key={s.slug} variants={rise} className="group min-w-0">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100/80 transition-colors group-hover:bg-blue-600">
+                      <Icon className="h-[18px] w-[18px] text-blue-700 transition-colors group-hover:text-white" />
+                    </span>
+                    <p className="mt-4 text-[25px] font-black leading-none tabular-nums tracking-tight text-slate-900 sm:text-[28px]">{s.value}</p>
+                    <p className="mt-2 max-w-[11rem] text-[11.5px] font-medium leading-snug text-slate-500">{s.label}</p>
+                  </motion.div>
+                );
+              })}
+            </motion.div>
+          )}
         </div>
       </section>
 
       {/* ================= 5. PEJABAT BANDARA ================= */}
-      <section className="max-w-[1400px] mx-auto px-4 sm:px-6 mt-12">
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-          <JudulBagian kicker={t.beranda.pejabatKicker} className="mb-5">{t.beranda.pejabatJudul}</JudulBagian>
+      <section className="relative mt-14 overflow-hidden py-8 sm:py-10">
+        {/* Seluruh atmosfer bersifat transparan agar seksi ini tetap menjadi
+            bagian dari latar halaman, bukan panel atau kartu tersendiri. */}
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_62%_48%,rgba(37,99,235,0.12),transparent_34%),radial-gradient(circle_at_8%_80%,rgba(14,165,233,0.07),transparent_25%)]" />
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-            {/* kartu utama dengan latar bandara */}
+        <div className="relative max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-4 sm:mb-0">
+            <JudulBagian kicker={t.beranda.pejabatKicker}>{t.beranda.pejabatJudul}</JudulBagian>
+            <Link href="/profile#pejabat" className="group inline-flex items-center gap-2 self-start sm:self-auto text-[12.5px] font-bold text-blue-700">
+              {t.beranda.profilLengkap}
+              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 lg:gap-10 xl:gap-14 items-stretch">
+            {/* Presentasi utama dibuat seperti bentang editorial terbuka: foto,
+                tipografi, dan atmosfer bertumpuk langsung di latar halaman. */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="lg:col-span-8 relative overflow-hidden rounded-2xl min-h-[320px] flex"
+              className="lg:col-span-9 relative min-h-[520px] grid grid-cols-1 md:grid-cols-[minmax(0,0.9fr)_minmax(360px,1.1fr)] items-center"
             >
-              <img src="/bg/bg-card-pejabat.png" alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-r from-[#0b1e5b]/92 via-[#123a8f]/55 to-transparent" />
+              <div className="pointer-events-none absolute right-[10%] top-[17%] w-[390px] h-[390px] rounded-full border border-blue-300/30" />
+              <div className="pointer-events-none absolute right-[16%] top-[25%] w-[290px] h-[290px] rounded-full border border-dashed border-sky-300/30" />
+              <div className="pointer-events-none absolute right-[7%] bottom-[10%] h-40 w-[58%] bg-[radial-gradient(ellipse_at_center,rgba(59,130,246,0.11),transparent_68%)]" />
 
-              <div className="relative z-10 flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4 p-6">
-                {/* teks */}
-                <motion.div key={current.name} initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.45 }} className="flex flex-col justify-center">
-                  <p className="text-cyan-300 text-[13px] italic font-medium">{current.shortTitle}</p>
-                  <h3 className="mt-1.5 text-[26px] sm:text-[28px] font-black text-white leading-tight">{current.name}</h3>
-                  <p className="mt-1.5 text-blue-100/85 text-[12.5px]">{ORG_NAME}</p>
-
-                  {/* Nomenklatur jabatan lengkap menggantikan slot "quote".
-                      Tidak ada kutipan resmi dari para pejabat ini; yang
-                      sebelumnya ada di sini karangan. */}
-                  <p className="mt-4 text-blue-50 text-[12.5px] leading-relaxed max-w-xs">{current.title}</p>
-
-                  <div className="mt-4 flex items-center gap-2">
-                    {/* Email resmi sesuai aptpairport.id. */}
-                    <a href="mailto:mail.aptpranotoairport@gmail.com" className="w-8 h-8 rounded-lg bg-white/12 border border-white/20 flex items-center justify-center text-white hover:bg-white/22 transition-colors" aria-label="Email">
-                      <Mail className="w-4 h-4" />
-                    </a>
-                    <a href="#" className="w-8 h-8 rounded-lg bg-white/12 border border-white/20 flex items-center justify-center text-white hover:bg-white/22 transition-colors" aria-label={t.beranda.bagikanProfil}>
-                      <Share2 className="w-4 h-4" />
-                    </a>
-                  </div>
-
-                  <Link href="/profile#pejabat" className="mt-5 inline-flex items-center gap-2 bg-white text-blue-700 font-bold text-[12.5px] px-4 py-2.5 rounded-full w-fit hover:bg-blue-50 transition-colors">
-                    <Plane className="w-3.5 h-3.5 rotate-45" /> {t.beranda.profilLengkap}
-                  </Link>
-                </motion.div>
-
-                {/* foto */}
-                <div className="relative hidden sm:flex items-end justify-center">
-                  {/* `top-8` menurunkan foto ~32px sehingga tepi bawahnya lewat di
-                      bawah batas kartu dan tertutup `overflow-hidden`. Foto pejabat
-                      ini potret cutout yang habis di pinggang; tanpa itu garis
-                      potongnya melayang tepat di atas dasar kartu dan terbaca
-                      seperti tersayat. Dipakai `top`, bukan `translate-y`, karena
-                      framer-motion sudah memakai `transform` untuk animasi masuk —
-                      kelas translate apa pun akan ditimpa.
-
-                      `object-bottom` wajib menyertai `object-contain`: rasio foto
-                      berbeda-beda, jadi pada kolom yang sempit foto terlebar
-                      menyusut di dalam kotaknya. Tanpa `object-bottom` sisa ruangnya
-                      dibagi rata atas-bawah dan garis potong itu terangkat kembali
-                      ke dalam kartu.
-
-                      Koreksi tinggi subjek (`PEJABAT_PHOTO_FIT`) aman dipasang di
-                      gambar yang sama meski framer-motion memakai `transform` untuk
-                      animasi masuk: Tailwind v4 memakai properti `scale` tersendiri,
-                      bukan `transform`, jadi keduanya menumpuk alih-alih saling
-                      menimpa. `origin-bottom` menjaga tepi bawah tetap terkunci saat
-                      diskalakan. */}
-                  <motion.img
-                    key={current.photo}
-                    initial={{ opacity: 0, y: 18 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                    src={current.photo}
-                    alt={current.name}
-                    className={`relative top-8 z-10 h-[360px] w-auto object-contain object-bottom origin-bottom drop-shadow-2xl ${PEJABAT_PHOTO_FIT[current.slug] ?? ''}`}
-                  />
+              <motion.div
+                key={current.name}
+                initial={{ opacity: 0, x: -16 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.45 }}
+                className="relative z-10 flex flex-col py-8 md:h-[520px] md:py-12 md:pr-6"
+              >
+                <div className="flex items-center gap-3 text-[11px] font-black uppercase tracking-[0.18em] text-blue-700">
+                  <span className="h-px w-9 bg-blue-500" />
+                  {t.beranda.pejabatAktif}
                 </div>
-              </div>
+                {/* Ruang identitas dibuat tetap. Nama dan jabatan yang lebih
+                    panjang boleh membungkus, tetapi tidak lagi mendorong
+                    organisasi, uraian, dan navigasi ke posisi berbeda. */}
+                <div className="mt-6 h-[2.75rem] overflow-hidden">
+                  <p className="line-clamp-2 text-[13px] font-bold italic leading-snug text-cyan-700 sm:text-[14px]">{current.shortTitle}</p>
+                </div>
+                <div className="mt-1 flex h-[5.8rem] items-start overflow-hidden sm:h-24">
+                  <h3 className="line-clamp-2 max-w-xl text-[clamp(1.9rem,2.55vw,2.65rem)] font-black leading-[1.08] tracking-[-0.035em] text-slate-900">
+                    {current.name}
+                  </h3>
+                </div>
+                <p className="mt-4 text-[12px] font-bold uppercase tracking-[0.12em] text-slate-400">{ORG_NAME}</p>
+                <p className="mt-6 h-[3rem] max-w-md overflow-hidden border-l-2 border-blue-500 pl-4 text-[13px] leading-relaxed text-slate-600 line-clamp-2 sm:text-[14px]">
+                  {current.title}
+                </p>
 
-              {/* kontrol */}
-              <div className="absolute bottom-5 right-5 z-20 flex items-center gap-3">
-                <span className="text-white/90 text-[12px] font-mono tracking-wider">
-                  <b className="text-white">{String(aman + 1).padStart(2, '0')}</b> / {String(EXECUTIVES.length).padStart(2, '0')}
-                </span>
-                <motion.button
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => pickExec((aman - 1 + EXECUTIVES.length) % EXECUTIVES.length)}
-                  className="w-9 h-9 rounded-full bg-white/15 border border-white/25 backdrop-blur flex items-center justify-center text-white hover:bg-white/25 transition-colors cursor-pointer"
-                  aria-label={t.beranda.sebelumnya}
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </motion.button>
-                <motion.button
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => pickExec((aman + 1) % EXECUTIVES.length)}
-                  className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-blue-700 shadow-lg hover:bg-blue-50 transition-colors cursor-pointer"
-                  aria-label={t.beranda.selanjutnya}
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </motion.button>
+                <div className="mt-auto flex flex-wrap items-center gap-4 pt-8">
+                  <div className="flex items-center gap-3 text-[12px] font-mono tracking-wider text-slate-400">
+                    <b className="text-blue-700">{String(aman + 1).padStart(2, '0')}</b>
+                    <span>/</span>
+                    <span>{String(EXECUTIVES.length).padStart(2, '0')}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <motion.button whileTap={{ scale: 0.9 }} onClick={() => pickExec((aman - 1 + EXECUTIVES.length) % EXECUTIVES.length)} className="w-9 h-9 rounded-full border border-slate-300 flex items-center justify-center text-slate-600 hover:border-blue-400 hover:text-blue-700 transition-colors cursor-pointer" aria-label={`${t.beranda.sebelumnya} — ${t.beranda.pejabatJudul}`}>
+                      <ChevronLeft className="w-4 h-4" />
+                    </motion.button>
+                    <motion.button whileTap={{ scale: 0.9 }} onClick={() => pickExec((aman + 1) % EXECUTIVES.length)} className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-colors cursor-pointer" aria-label={`${t.beranda.selanjutnya} — ${t.beranda.pejabatJudul}`}>
+                      <ChevronRight className="w-4 h-4" />
+                    </motion.button>
+                  </div>
+                </div>
+              </motion.div>
+
+              <div className="relative min-h-[380px] md:min-h-[520px] flex items-end justify-center">
+                <motion.img
+                  key={current.photo}
+                  initial={{ opacity: 0, y: 22 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.55 }}
+                  src={current.photo}
+                  alt={current.name}
+                  className={`pejabat-foto-utama relative z-10 h-[390px] sm:h-[440px] md:h-[510px] max-w-full w-auto object-contain object-bottom origin-bottom ${PEJABAT_PHOTO_FIT[current.slug] ?? ''}`}
+                  style={{ WebkitMaskImage: 'linear-gradient(to bottom, black 92%, transparent 100%)', maskImage: 'linear-gradient(to bottom, black 92%, transparent 100%)' }}
+                />
               </div>
             </motion.div>
 
-            {/* daftar pejabat lain */}
-            <div className="lg:col-span-4 space-y-3">
-              {others.map((p) => {
-                const idx = EXECUTIVES.findIndex((e) => e.slug === p.slug);
-                return (
-                  <motion.button
-                    key={p.slug}
-                    onClick={() => pickExec(idx)}
-                    whileHover={{ x: 4 }}
-                    className="w-full flex items-center gap-3.5 p-2.5 rounded-xl hover:bg-slate-50 transition-colors text-left cursor-pointer"
-                  >
-                    <img src={p.photo} alt={p.name} loading="lazy" className={`w-14 h-14 rounded-xl object-contain object-bottom origin-bottom bg-slate-50 p-0.5 flex-shrink-0 ${PEJABAT_PHOTO_FIT[p.slug] ?? ''}`} />
-                    <div className="min-w-0">
-                      <p className="font-bold text-slate-900 text-[13px] leading-snug truncate">{p.name}</p>
-                      <p className="text-[11px] text-slate-500 leading-snug line-clamp-2">{p.shortTitle}</p>
-                    </div>
-                  </motion.button>
-                );
-              })}
+            {/* Daftar lain berupa indeks terbuka, hanya dipisahkan garis tipis.
+                Tidak ada permukaan, radius, atau bayangan kartu. */}
+            <div className="lg:col-span-3 lg:border-l lg:border-slate-200 lg:pl-7 xl:pl-9 lg:pt-10">
+              <p className="pb-4 text-[10.5px] font-black uppercase tracking-[0.16em] text-slate-400">{t.beranda.pilihPejabatLain}</p>
+              <div className="border-t border-slate-200">
+                {others.map((p, urutan) => {
+                  const idx = EXECUTIVES.findIndex((e) => e.slug === p.slug);
+                  return (
+                    <motion.button
+                      key={p.slug}
+                      onClick={() => pickExec(idx)}
+                      whileHover={{ x: 5 }}
+                      className="group grid h-[105px] w-full grid-cols-[24px_58px_minmax(0,1fr)_18px] items-center gap-3 border-b border-slate-200 text-left cursor-pointer"
+                    >
+                      <span className="text-[10px] font-mono text-slate-400">{String(urutan + 1).padStart(2, '0')}</span>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={p.photo} alt={p.name} loading="lazy" className={`w-[58px] h-[72px] object-contain object-bottom origin-bottom flex-shrink-0 grayscale group-hover:grayscale-0 transition-all ${PEJABAT_PHOTO_FIT[p.slug] ?? ''}`} />
+                      <span className="min-w-0">
+                        <span className="line-clamp-2 font-black text-slate-900 text-[13px] leading-snug group-hover:text-blue-700 transition-colors">{p.name}</span>
+                        <span className="block mt-1 text-[11px] text-slate-500 leading-snug line-clamp-2">{p.shortTitle}</span>
+                      </span>
+                      <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all" />
+                    </motion.button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
@@ -815,7 +819,7 @@ export default function HomePage() {
         gabungan butir-butir itu sendiri; menampilkan keduanya utuh membuat satu
         kalimat tercetak dua kali.
       */}
-      <section className="mt-12 border-y border-slate-200/70 bg-gradient-to-b from-white via-slate-100/60 to-slate-50 py-14">
+      <section className="mt-12 py-14">
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <JudulBagian kicker={t.beranda.fasilitasKicker}>{t.beranda.fasilitasJudul}</JudulBagian>
@@ -956,85 +960,105 @@ export default function HomePage() {
 
       {/* ================= 8. PARIWISATA TERDEKAT ================= */}
       <section className="max-w-[1400px] mx-auto px-4 sm:px-6 mt-12">
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-          <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
-            <div>
-              <span className="inline-flex items-center gap-2 text-emerald-600 text-[10.5px] font-bold uppercase tracking-[0.16em] bg-emerald-50 px-2.5 py-1 rounded-full">
-                <Palmtree className="w-3.5 h-3.5" /> {t.beranda.wisataKicker}
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-7">
+          <div>
+            <span className="inline-flex items-center gap-2 text-emerald-700 text-[10.5px] font-black uppercase tracking-[0.16em]">
+              <span className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
+                <Palmtree className="w-4 h-4" />
               </span>
-              <h2 className="mt-2.5 text-[19px] font-black text-slate-900">{t.beranda.wisataJudul}</h2>
-              <p className="mt-1 text-[12px] text-slate-500 max-w-lg leading-relaxed">
-                {t.beranda.wisataRingkas}
-              </p>
-            </div>
-            <Link href="/tourism" className="inline-flex items-center gap-1.5 text-[12.5px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-4 py-2.5 rounded-full transition-colors">
-              {t.beranda.wisataSemua} <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+              {t.beranda.wisataKicker}
+            </span>
+            <h2 className="mt-3 text-[22px] sm:text-[25px] font-black tracking-[-0.02em] text-slate-900">{t.beranda.wisataJudul}</h2>
+            <p className="mt-1.5 text-[12.5px] text-slate-500 max-w-xl leading-relaxed">{t.beranda.wisataRingkas}</p>
           </div>
-
-          {/* Isinya datang dari API, jadi pemicunya `animate` — bukan
-              `whileInView` milik pembungkus yang sudah selesai menyala saat
-              datanya baru tiba. */}
-          {/* Jumlah kolom mengikuti jumlah destinasi yang benar-benar ada.
-              Tabel warisan v1 memuat tiga; kisi empat kolom akan menyisakan
-              satu lubang yang terbaca sebagai kartu yang gagal dimuat. */}
-          <motion.div
-            variants={container}
-            initial="hidden"
-            animate="show"
-            className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${WISATA.length >= 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}
-          >
-            {WISATA.map((spot) => {
-              /* Kategori dari basis data adalah teks bebas; yang tak dikenali
-                 jatuh ke warna netral alih-alih membuat kartunya gagal. */
-              const meta = TOURISM_CAT_META[spot.category as TourismCategory]
-                ?? { color: '#475569', bg: '#f1f5f9' };
-
-              return (
-                <motion.div key={spot.slug} variants={rise} whileHover={{ y: -4 }}>
-                  <Link
-                    href="/tourism#destinasi"
-                    className="group block h-full rounded-2xl border border-slate-100 hover:border-slate-200 hover:shadow-lg hover:shadow-slate-200/60 transition-all overflow-hidden"
-                  >
-                    <div className="flex items-center justify-between gap-2 px-4 py-2.5" style={{ backgroundColor: meta.bg }}>
-                      <span className="text-[10px] font-bold uppercase tracking-wider truncate" style={{ color: meta.color }}>
-                        {spot.category}
-                      </span>
-
-                      {/* Jarak hanya ditulis bila memang tercatat. Tabel
-                          warisan v1 mengosongkan `distance_km` pada seluruh
-                          barisnya, dan "0 km" adalah angka yang tidak pernah
-                          dikatakan siapa pun. */}
-                      {typeof spot.distanceKm === 'number' && (
-                        <span className="flex items-center gap-1 text-[10.5px] font-bold tabular-nums flex-shrink-0" style={{ color: meta.color }}>
-                          <Car className="w-3 h-3" /> {spot.distanceKm} km
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="p-4">
-                      <h4 className="font-bold text-slate-900 text-[13.5px] leading-snug group-hover:text-emerald-700 transition-colors">
-                        {spot.name}
-                      </h4>
-
-                      {spot.city && <p className="mt-1 text-[11px] text-slate-500">{spot.city}</p>}
-
-                      <p className="mt-2 text-[11.5px] text-slate-500 leading-relaxed line-clamp-3">
-                        {spot.ringkas}
-                      </p>
-
-                      {spot.duration && (
-                        <p className="mt-3 flex items-center gap-1.5 text-[11px] font-semibold text-slate-600">
-                          <Clock className="w-3.5 h-3.5" style={{ color: meta.color }} /> {spot.duration} {t.beranda.dariBandara}
-                        </p>
-                      )}
-                    </div>
-                  </Link>
-                </motion.div>
-              );
-            })}
-          </motion.div>
+          <Link href="/tourism" className="group inline-flex items-center gap-2 self-start sm:self-auto text-[12.5px] font-bold text-emerald-700">
+            {t.beranda.wisataSemua}
+            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+          </Link>
         </div>
+
+        {wisataUtama && (
+          <motion.div variants={container} initial="hidden" animate="show" className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
+            {/* Destinasi terdekat menjadi jangkar visual. Foto asli dari admin
+                dipakai bila ada; tanpa foto, warna kategori membentuk bidang
+                atmosfer yang tetap terasa sengaja dirancang. */}
+            <motion.article variants={rise} className="lg:col-span-7 min-h-[390px] sm:min-h-[470px]">
+              <Link href="/tourism#destinasi" className="group relative flex h-full min-h-[390px] sm:min-h-[470px] overflow-hidden rounded-[28px] bg-[#073b33]">
+                {wisataUtama.cover ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={wisataUtama.cover} alt={wisataUtama.name} className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1100ms] ease-out group-hover:scale-[1.045]" />
+                ) : (
+                  <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${metaWisataUtama.color} 0%, #0b1e5b 135%)` }}>
+                    <Palmtree className="absolute right-[10%] top-[12%] w-40 h-40 text-white/[0.08]" strokeWidth={1} />
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/28 to-black/5" />
+                <div className="absolute inset-0 bg-gradient-to-r from-black/30 via-transparent to-transparent" />
+
+                <div className="relative z-10 mt-auto w-full p-6 sm:p-8 lg:p-9">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full border border-white/25 bg-white/15 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-white backdrop-blur-md">{wisataUtama.category}</span>
+                    {typeof wisataUtama.distanceKm === 'number' && (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-black/25 px-3 py-1.5 text-[10.5px] font-bold text-white backdrop-blur-md"><Car className="w-3.5 h-3.5" /> {wisataUtama.distanceKm} km</span>
+                    )}
+                  </div>
+
+                  <h3 className="mt-4 max-w-xl text-[27px] sm:text-[34px] font-black leading-[1.08] tracking-[-0.025em] text-white">{wisataUtama.name}</h3>
+                  {wisataUtama.city && (
+                    <p className="mt-2 flex items-center gap-1.5 text-[11.5px] font-semibold text-white/75"><MapPin className="w-3.5 h-3.5" /> {wisataUtama.city}</p>
+                  )}
+                  <p className="mt-3 max-w-xl text-[12.5px] sm:text-[13px] leading-relaxed text-white/80 line-clamp-2">{wisataUtama.ringkas}</p>
+
+                  <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
+                    {wisataUtama.duration && (
+                      <span className="inline-flex items-center gap-2 text-[11.5px] font-bold text-white"><Clock className="w-4 h-4 text-emerald-300" /> {wisataUtama.duration} {t.beranda.dariBandara}</span>
+                    )}
+                    <span className="ml-auto inline-flex w-10 h-10 items-center justify-center rounded-full bg-white text-emerald-800 transition-transform group-hover:translate-x-1"><ArrowRight className="w-4 h-4" /></span>
+                  </div>
+                </div>
+              </Link>
+            </motion.article>
+
+            <div className="lg:col-span-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4 sm:gap-5">
+              {wisataLain.map((spot) => {
+                const meta = TOURISM_CAT_META[spot.category as TourismCategory] ?? { color: '#475569', bg: '#f1f5f9' };
+
+                return (
+                  <motion.article key={spot.slug} variants={rise} whileHover={{ y: -3 }}>
+                    <Link href="/tourism#destinasi" className="group relative grid min-h-[148px] h-full grid-cols-[112px_minmax(0,1fr)] sm:grid-cols-1 lg:grid-cols-[150px_minmax(0,1fr)] overflow-hidden rounded-3xl bg-white shadow-[0_8px_30px_rgba(15,23,42,0.06)] transition-shadow hover:shadow-[0_14px_38px_rgba(15,23,42,0.11)]">
+                      <div className="relative min-h-[148px] overflow-hidden" style={{ background: `linear-gradient(145deg, ${meta.color}, #0b1e5b)` }}>
+                        {spot.cover ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={spot.cover} alt={spot.name} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                        ) : (
+                          <Palmtree className="absolute inset-0 m-auto w-14 h-14 text-white/20" strokeWidth={1.2} />
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+                      </div>
+
+                      <div className="flex min-w-0 flex-col justify-center p-4 lg:p-5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[9.5px] font-black uppercase tracking-[0.13em]" style={{ color: meta.color }}>{spot.category}</span>
+                          {typeof spot.distanceKm === 'number' && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold tabular-nums text-slate-500"><Car className="w-3 h-3" /> {spot.distanceKm} km</span>
+                          )}
+                        </div>
+                        <h4 className="mt-1.5 text-[14px] sm:text-[15px] font-black leading-snug text-slate-900 group-hover:text-emerald-700 transition-colors">{spot.name}</h4>
+                        {spot.city && <p className="mt-1 text-[10.5px] text-slate-500 line-clamp-1">{spot.city}</p>}
+                        <div className="mt-3 flex items-center justify-between gap-2">
+                          {spot.duration ? (
+                            <span className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold text-slate-600"><Clock className="w-3.5 h-3.5" style={{ color: meta.color }} /> {spot.duration}</span>
+                          ) : <span />}
+                          <ArrowRight className="w-4 h-4 text-slate-300 transition-all group-hover:text-emerald-600 group-hover:translate-x-0.5" />
+                        </div>
+                      </div>
+                    </Link>
+                  </motion.article>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
       </section>
 
       {/* ================= 9. AKSES MENUJU BANDARA ================= */}

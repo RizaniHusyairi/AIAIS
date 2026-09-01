@@ -115,12 +115,10 @@ export default function MitraLogos() {
         </p>
       </div>
 
-      <div className="relative mt-6 space-y-4">
+      <div className="relative mt-6 space-y-7">
         <BarisBerlabel label={t.beranda.mitraMaskapai}>
           <Jalur logos={maskapai} durasi={46} />
         </BarisBerlabel>
-
-        <div className="h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
 
         <BarisBerlabel label={t.beranda.mitraInstansi}>
           <Jalur logos={instansi} balik durasi={58} />
