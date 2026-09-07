@@ -83,6 +83,7 @@ function buatMenu(t: Kamus): MenuItem[] {
       icon: Info,
       children: [
         { name: n.profilBandara.nama, href: '/profile', icon: Info, desc: n.profilBandara.desc },
+        { name: 'Terminal 3D', href: '/terminal-3d', icon: Building2, desc: 'Jelajahi model eksterior terminal dari berbagai sudut' },
         { name: n.strukturOrganisasi.nama, href: '/profile#struktur', icon: Users, desc: n.strukturOrganisasi.desc },
         { name: n.pejabatBandara.nama, href: '/profile#pejabat', icon: UserRound, desc: n.pejabatBandara.desc },
         { name: n.fasilitasBandara.nama, href: '/facilities', icon: Building2, desc: n.fasilitasBandara.desc },

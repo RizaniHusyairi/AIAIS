@@ -148,6 +148,7 @@ const TERURUT = [...TABEL].sort((a, b) => b.publik.length - a.publik.length);
  * tidak ada yang perlu dialihkan ke mana pun.
  */
 export const KEEP_RESPONSIVE = [
+  '/terminal-3d',
   '/statistik',
   '/keuangan',
   '/posko-nataru',
