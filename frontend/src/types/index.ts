@@ -1219,3 +1219,94 @@ export interface InstagramStatus {
   visible_posts: number;
   display_limit: number;
 }
+
+/* ------------------------------------------------------------------ */
+/*  Lomba karaoke                                                      */
+/* ------------------------------------------------------------------ */
+
+/** Satu acara lomba. `status` `locked` menutup penilaian. */
+export interface KaraokeEvent {
+  id: number;
+  title: string;
+  held_on: string;
+  location: string | null;
+  status: 'open' | 'locked';
+  /** Turunan `withCount` pada daftar admin. */
+  judges_count?: number;
+  contestants_count?: number;
+}
+
+/**
+ * Seorang juri.
+ *
+ * TIDAK memuat `public_token` — backend menyembunyikannya, dan token hanya
+ * keluar lewat `GET /admin/karaoke/{id}/tokens` (lihat `KaraokeTautanJuri`).
+ */
+export interface KaraokeJudge {
+  id: number;
+  name: string;
+  position: number;
+}
+
+/** Tautan penilaian seorang juri, hanya dari endpoint token. */
+export interface KaraokeTautanJuri extends KaraokeJudge {
+  token: string;
+}
+
+export interface KaraokeContestant {
+  id: number;
+  name: string;
+  number: number | null;
+  song_title: string | null;
+}
+
+/** Bobot kriteria, selalu dari backend. Jangan menyalinnya ke frontend. */
+export interface KaraokeCriterion {
+  key: string;
+  weight: number;
+}
+
+/** Nilai mentah seorang juri atas seorang peserta. */
+export interface KaraokeScore {
+  id: number;
+  karaoke_judge_id: number;
+  karaoke_contestant_id: number;
+  teknik_vokal: number | null;
+  ketepatan_irama: number | null;
+  penjiwaan: number | null;
+  penampilan_panggung: number | null;
+  kesan_keseluruhan: number | null;
+  /** Turunan `$appends`: Σ(nilai × bobot) ÷ 100. */
+  weighted_total: number;
+  /** Turunan `$appends`: benar bila kelima kriteria sudah terisi. */
+  is_complete: boolean;
+}
+
+/** Rekap seorang peserta: subtotal tiap juri dan rata-ratanya. */
+export interface KaraokeTotal {
+  contestant_id: number;
+  final_score: number;
+  is_complete: boolean;
+  by_judge: { judge_id: number; total: number; is_complete: boolean }[];
+}
+
+/** Muatan bersama papan skor, papan juri, dan panel admin. */
+export interface KaraokeRekap {
+  event: KaraokeEvent;
+  judges: KaraokeJudge[];
+  contestants: KaraokeContestant[];
+  criteria: KaraokeCriterion[];
+  totals: KaraokeTotal[];
+}
+
+/** Papan seorang juri: rekap + identitasnya + nilai miliknya sendiri. */
+export interface KaraokePapanJuri extends KaraokeRekap {
+  judge: KaraokeJudge;
+  /** Dikunci pada id peserta. */
+  my_scores: Record<string, KaraokeScore>;
+}
+
+/** Detail acara di panel admin: rekap + seluruh nilai mentah. */
+export interface KaraokeDetailAdmin extends KaraokeRekap {
+  scores: KaraokeScore[];
+}

@@ -18,7 +18,7 @@ import {
   Search, SearchX, Sun, Moon,
   CalendarClock, DoorOpen, Radio, Globe, ClipboardList, Users, UserCircle, UserRound, HelpCircle, MapPin, BarChart3, Gauge, MessageSquare, CalendarRange, Wallet, School, BadgeCheck, Gavel, HardHat, PartyPopper,
   PlaneTakeoff, Clock3, GraduationCap, Boxes, Wrench, Mail, CalendarCheck,
-  PackageSearch, Bell,
+  PackageSearch, Bell, Mic,
 } from 'lucide-react';
 
 /**
@@ -100,6 +100,9 @@ const NAV: { section: string; items: NavItem[] }[] = [
             { name: 'Persuratan', href: '/admin/persuratan', icon: Mail },
       { name: 'Absensi Rapat', href: '/admin/rapat', icon: CalendarCheck },
       { name: 'Suku Cadang', href: '/admin/spare-parts', icon: Wrench },
+      // Acara kepegawaian, bukan konten portal — papan skornya di `/karaoke`
+      // sengaja tidak didaftarkan di menu publik maupun sitemap.
+      { name: 'Lomba Karaoke', href: '/admin/karaoke', icon: Mic },
     ],
   },
   {

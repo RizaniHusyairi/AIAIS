@@ -32,9 +32,14 @@ export default function robots(): MetadataRoute.Robots {
            * pernah tertempel di satu halaman publik mana pun akan diikuti
            * perayap dan berakhir di indeks — dan sesudah itu tidak lagi
            * rahasia. Papan Posko dan daftar hadir rapat termasuk di sini.
+           *
+           * `/karaoke` dilarang seluruhnya, bukan hanya `/karaoke/<token>`:
+           * papan skornya melayani acara kepegawaian, bukan pengunjung
+           * bandara, dan tidak ada gunanya ia muncul di hasil pencarian.
            */
           '/absensi/',
           '/posko/',
+          '/karaoke',
 
           // Bukan halaman: proksi API milik frontend.
           '/api/',

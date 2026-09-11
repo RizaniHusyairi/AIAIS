@@ -84,6 +84,8 @@ const STATIS: { path: string; priority: number; changeFrequency: MetadataRoute.S
  *                    perayapnya kembali.
  *   /akun/**, /masuk, /daftar   — ruang pemohon, sudah ditolak robots.txt.
  *   /absensi/[token], /posko/** — tautan bertoken.
+ *   /karaoke/**    — papan nilai lomba kepegawaian. Tautan jurinya bertoken,
+ *                    dan papan skornya tidak melayani pengunjung bandara.
  *   /app/**        — layar PWA. Alamat kanoniknya adalah lintasan publik di
  *                    atas; lihat `app/app/layout.tsx`.
  */

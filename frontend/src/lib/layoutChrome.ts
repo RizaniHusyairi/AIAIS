@@ -23,8 +23,16 @@
  *                     latarnya `fixed`; navbar terang serta footer portal
  *                     memotong keduanya dan mematahkan ilusi itu. Halaman ini
  *                     memasang bilah kembalinya sendiri.
+ * - `/karaoke`     → papan nilai lomba, dengan dua alasan sekaligus. Papan
+ *                     jurinya sekali-pakai seperti `/absensi`: juri datang
+ *                     lewat tautan bertoken untuk satu acara, dan navbar
+ *                     portal beserta pintu masuk akun di dalamnya hanya
+ *                     mengundangnya keluar di tengah penampilan. Papan
+ *                     skornya ditayangkan ke proyektor ruang acara, tempat
+ *                     navbar terang dan footer portal memakan tinggi yang
+ *                     justru dibutuhkan tabel peringkat.
  */
-export const OWN_CHROME_ROUTES = ['/app', '/admin', '/aplikasi', '/posko-nataru', '/absensi', '/tourism'] as const;
+export const OWN_CHROME_ROUTES = ['/app', '/admin', '/aplikasi', '/posko-nataru', '/absensi', '/tourism', '/karaoke'] as const;
 
 /**
  * Benar bila rute ini menyediakan chrome-nya sendiri.

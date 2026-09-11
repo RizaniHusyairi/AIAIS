@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\ImmediateInformationController;
 use App\Http\Controllers\Api\InformationRequestController;
 use App\Http\Controllers\Api\InstagramController;
 use App\Http\Controllers\Api\InventoryController;
+use App\Http\Controllers\Api\KaraokeController;
 use App\Http\Controllers\Api\LetterController;
 use App\Http\Controllers\Api\LostReportController;
 use App\Http\Controllers\Api\OfficialController;
@@ -263,6 +264,29 @@ Route::prefix(config('api.version'))->group(function () {
         ->middleware('throttle:30,1');
     Route::post('/absensi/{token}', [MeetingController::class, 'storeByToken'])
         ->middleware('throttle:20,1');
+
+    // Papan nilai lomba karaoke.
+    //
+    // Endpoint tulis KEEMPAT yang berjalan tanpa autentikasi. Alasannya sama
+    // dengan daftar hadir di atas: juri lomba bukan pemegang akun panel — pada
+    // lomba peringatan hari besar mereka kerap pegawai instansi lain — dan
+    // mensyaratkan akun berarti papan nilainya tidak terisi sama sekali.
+    //
+    // Penjaganya: token acak-aman 48 aksara MILIK MASING-MASING JURI yang
+    // tidak pernah ikut respons, penolakan bila penilaian sudah dikunci
+    // panitia, dan pembatasan laju di bawah.
+    //
+    // Batas tulisnya jauh lebih longgar daripada absensi karena papan juri
+    // menyimpan otomatis setiap kali slidernya berhenti digeser; sisi klien
+    // sudah menahannya dengan debounce 600 ms.
+    //
+    // `/karaoke/live` didaftarkan LEBIH DULU — kalau tidak, ia tertelan
+    // `{token}` dan papan skor tidak pernah terbuka.
+    Route::get('/karaoke/live', [KaraokeController::class, 'live']);
+    Route::get('/karaoke/{token}', [KaraokeController::class, 'showByToken'])
+        ->middleware('throttle:60,1');
+    Route::post('/karaoke/{token}/scores', [KaraokeController::class, 'storeByToken'])
+        ->middleware('throttle:240,1');
 
     // Kunjungan portal. `POST /visits` adalah satu-satunya endpoint publik
     // yang menulis tanpa autentikasi, jadi lajunya dibatasi. Statistiknya
@@ -678,6 +702,26 @@ Route::prefix(config('api.version'))->group(function () {
             Route::delete('/meetings/{id}', [MeetingController::class, 'destroy'])->whereNumber('id');
             Route::get('/attendances/{id}/signature', [MeetingController::class, 'downloadSignature'])->whereNumber('id');
             Route::delete('/attendances/{id}', [MeetingController::class, 'destroyAttendance'])->whereNumber('id');
+
+            // Lomba karaoke. Tautan penilaian tiap juri hanya keluar lewat
+            // endpoint `tokens`, tidak pernah ikut pada daftar acara — alasan
+            // yang sama dengan token rapat di atas.
+            Route::get('/karaoke', [KaraokeController::class, 'adminIndex']);
+            Route::post('/karaoke', [KaraokeController::class, 'store']);
+            Route::get('/karaoke/{id}', [KaraokeController::class, 'adminShow'])->whereNumber('id');
+            Route::get('/karaoke/{id}/tokens', [KaraokeController::class, 'tokens'])->whereNumber('id');
+            Route::put('/karaoke/{id}', [KaraokeController::class, 'update'])->whereNumber('id');
+            Route::put('/karaoke/{id}/toggle', [KaraokeController::class, 'toggle'])->whereNumber('id');
+            Route::delete('/karaoke/{id}', [KaraokeController::class, 'destroy'])->whereNumber('id');
+
+            Route::post('/karaoke/{id}/judges', [KaraokeController::class, 'storeJudge'])->whereNumber('id');
+            Route::put('/karaoke-judges/{id}', [KaraokeController::class, 'updateJudge'])->whereNumber('id');
+            Route::post('/karaoke-judges/{id}/rotate-token', [KaraokeController::class, 'rotateToken'])->whereNumber('id');
+            Route::delete('/karaoke-judges/{id}', [KaraokeController::class, 'destroyJudge'])->whereNumber('id');
+
+            Route::post('/karaoke/{id}/contestants', [KaraokeController::class, 'storeContestant'])->whereNumber('id');
+            Route::put('/karaoke-contestants/{id}', [KaraokeController::class, 'updateContestant'])->whereNumber('id');
+            Route::delete('/karaoke-contestants/{id}', [KaraokeController::class, 'destroyContestant'])->whereNumber('id');
 
             // Persuratan — surat dinas dan rantai verifikasinya.
             //

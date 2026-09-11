@@ -146,6 +146,10 @@ const TERURUT = [...TABEL].sort((a, b) => b.publik.length - a.publik.length);
  * ada satu pun jalan dari beranda menuju daftar hadir rapatnya. Layarnya
  * sendiri sudah dibangun untuk ponsel (lihat `app/absensi/[token]`), jadi
  * tidak ada yang perlu dialihkan ke mana pun.
+ *
+ * `/karaoke` masuk dengan alasan yang sama persis seperti `/absensi`: token
+ * jurinya ada di dalam URL, dan papan nilainya memang dirancang untuk dipegang
+ * satu tangan di ruang acara.
  */
 export const KEEP_RESPONSIVE = [
   '/terminal-3d',
@@ -154,6 +158,7 @@ export const KEEP_RESPONSIVE = [
   '/posko-nataru',
   '/peta-rute',
   '/absensi',
+  '/karaoke',
 ] as const;
 
 /** Benar bila rute ini harus disajikan apa adanya, tanpa pengalihan ke PWA. */
