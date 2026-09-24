@@ -54,10 +54,20 @@ class SecureInformationRequestFiles extends Command
     ];
 
     /**
+     * Direktori unggahan v1 per kolom, relatif terhadap cakram `legacy`
+     * (`public/uploads`). Diperiksa langsung di server produksi. Dipakai bila
+     * kolomnya hanya menyimpan nama berkas tanpa direktori.
+     */
+    private const DIR_V1 = [
+        'ktp_path' => 'documents/public_info/ktp',
+        'statement_path' => 'documents/public_info/surat_pertanggungjawaban',
+    ];
+
+    /**
      * Cakram tempat berkas v1 mungkin berada, berurutan dari yang paling
      * mungkin. Semuanya cakram yang dilayani web — itulah masalahnya.
      */
-    private const SUMBER = ['public', 'legacy', 'legacy_public'];
+    private const SUMBER = ['legacy', 'public', 'legacy_public'];
 
     public function handle(): int
     {
@@ -90,7 +100,7 @@ class SecureInformationRequestFiles extends Command
                             continue;
                         }
 
-                        $lokasi = $this->temukan($nilai);
+                        $lokasi = $this->temukan($nilai, self::DIR_V1[$kolom]);
 
                         if ($lokasi === null) {
                             $hitung['hilang']++;
@@ -135,7 +145,7 @@ class SecureInformationRequestFiles extends Command
      *
      * @return array{disk: string, path: string}|null
      */
-    private function temukan(string $nilai): ?array
+    private function temukan(string $nilai, string $dirV1): ?array
     {
         $lintasan = $nilai;
 
@@ -150,6 +160,7 @@ class SecureInformationRequestFiles extends Command
             Str::after($lintasan, 'storage/'),
             Str::after($lintasan, 'public/'),
             Str::after($lintasan, 'uploads/'),
+            $dirV1.'/'.basename($lintasan),
         ]));
 
         foreach (self::SUMBER as $disk) {
