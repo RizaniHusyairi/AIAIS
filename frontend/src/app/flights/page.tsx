@@ -13,8 +13,8 @@ import { metaHalaman } from '@/lib/seo';
  * ringkasan sendiri sama sekali.
  */
 export const metadata: Metadata = metaHalaman({
-  title: "Jadwal Penerbangan Samarinda Hari Ini | Bandara APT Pranoto (AAP)",
-  description: "Jadwal keberangkatan dan kedatangan pesawat Bandara APT Pranoto Samarinda hari ini, langsung dari layar FIDS bandara — nomor penerbangan, maskapai, gate, konter check-in, dan status terkini.",
+  title: "Jadwal Penerbangan Samarinda | Bandara APT Pranoto (AAP)",
+  description: "Jadwal keberangkatan dan kedatangan pesawat Bandara APT Pranoto Samarinda dari layar FIDS bandara — lengkap dengan tanggal penerbangan, nomor, maskapai, gate, konter check-in, dan status.",
   path: '/flights',
 });
 

@@ -55,11 +55,18 @@ class InformationRequest extends Model
         'statement_path',
     ];
 
+    protected $appends = ['has_statement'];
+
     protected $casts = [
         'responded_at' => 'datetime',
         'due_date' => 'date',
         'is_extended' => 'boolean',
     ];
+
+    public function getHasStatementAttribute(): bool
+    {
+        return !empty($this->statement_path);
+    }
 
     /**
      * Bentuk ringkas untuk pelacakan publik.

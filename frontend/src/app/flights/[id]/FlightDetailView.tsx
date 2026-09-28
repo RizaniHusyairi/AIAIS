@@ -78,7 +78,7 @@ export default function FlightDetailView() {
           <SearchX className="w-12 h-12 text-slate-300 mx-auto" />
           <h1 className="mt-4 text-2xl font-black text-slate-900">Penerbangan tidak ditemukan</h1>
           <p className="mt-2 text-[13.5px] text-slate-500 leading-relaxed">
-            Jadwal penerbangan hanya memuat hari berjalan, sehingga tautan lama bisa menjadi
+            Jadwal penerbangan yang tersedia dapat berganti, sehingga tautan lama bisa menjadi
             tidak berlaku setelah pergantian hari.
           </p>
           <Link

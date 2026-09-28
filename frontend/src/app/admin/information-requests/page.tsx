@@ -11,8 +11,8 @@
  *      dapat diperpanjang 7 hari kerja. Sisa waktunya ditonjolkan, dan yang
  *      lewat tenggat diberi tanda merah — angka itu hak hukum pemohon, bukan
  *      sekadar target internal.
- *   2. **Berkas syarat.** Scan KTP dan surat pernyataan tidak punya URL
- *      publik; keduanya diambil sebagai blob bertoken lewat `adminDownload`.
+ *   2. **Berkas syarat.** Scan KTP dan surat pernyataan pada arsip lama tidak
+ *      punya URL publik; petugas mengambilnya lewat `adminDownload`.
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
@@ -277,7 +277,7 @@ export default function AdminInformationRequestsPage() {
                     <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-[var(--adm-dim)] font-bold">
                       <Icon className="w-3 h-3" /> {f.label}
                     </p>
-                    <p className="text-[12px] text-[var(--adm-body)] mt-1 break-words">{f.value}</p>
+                    <p className="text-[12px] text-[var(--adm-body)] mt-1 break-words">{f.value || '—'}</p>
                   </div>
                 );
               })}
@@ -299,12 +299,14 @@ export default function AdminInformationRequestsPage() {
                 >
                   <Download className="w-3.5 h-3.5" /> Scan KTP
                 </button>
-                <button
-                  onClick={() => unduh(active, 'surat-pernyataan')}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--adm-hover)] border border-[var(--adm-line)] text-[var(--adm-body)] hover:bg-[var(--adm-hover)] text-[11.5px] font-bold transition-colors cursor-pointer"
-                >
-                  <Download className="w-3.5 h-3.5" /> Surat Pernyataan
-                </button>
+                {active.has_statement && (
+                  <button
+                    onClick={() => unduh(active, 'surat-pernyataan')}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--adm-hover)] border border-[var(--adm-line)] text-[var(--adm-body)] hover:bg-[var(--adm-hover)] text-[11.5px] font-bold transition-colors cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5" /> Surat Pernyataan
+                  </button>
+                )}
               </div>
             </div>
 

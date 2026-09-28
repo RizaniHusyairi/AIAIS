@@ -149,8 +149,13 @@ Route::prefix(config('api.version'))->group(function () {
     // Sengaja terbuka tanpa autentikasi: mengajukan permohonan informasi
     // publik adalah hak setiap orang dan tidak boleh mensyaratkan akun.
     // Berkas syaratnya tersimpan di cakram privat — lihat controllernya.
-    Route::post('/information-requests', [InformationRequestController::class, 'store']);
-    Route::get('/information-requests/track/{ticket}', [InformationRequestController::class, 'track']);
+    // Pengajuan dibatasi karena tiap permintaan menulis unggahan hingga 2 MB
+    // ke cakram; pelacakan dibatasi karena nomor tiketnya sama pendeknya
+    // dengan tiket pengaduan dan mudah ditebak beruntun.
+    Route::post('/information-requests', [InformationRequestController::class, 'store'])
+        ->middleware('throttle:5,1');
+    Route::get('/information-requests/track/{ticket}', [InformationRequestController::class, 'track'])
+        ->middleware('throttle:20,1');
 
     // Downloads
     Route::get('/documents', [DocumentController::class, 'index']);

@@ -15,17 +15,19 @@ use Illuminate\Support\Str;
 /**
  * Permohonan Informasi Publik — UU 14/2008.
  *
- * Aturan validasi, daftar pilihan, dan pesan kesalahannya mengikuti
- * aptpairport.id. Tiga hal sengaja BERBEDA, dan ketiganya perbaikan:
+ * Daftar pilihan mengikuti aptpairport.id. Perbedaan dari v1 yang perlu
+ * dipertahankan:
  *
  *   1. Identitas pemohon benar-benar disimpan. Di v1, `nama`, `alamat`,
  *      `no_hp`, dan `email` dikirim ke `create()` padahal bukan kolom tabel
  *      dan bukan `$fillable`, jadi diam-diam dibuang.
- *   2. Berkas disimpan pada cakram PRIVAT. Di v1 keduanya ditaruh di cakram
+ *   2. Berkas disimpan pada cakram PRIVAT. Di v1 berkas syarat ditaruh di cakram
  *      `public`, sehingga scan KTP warga dapat dibuka siapa saja yang tahu
  *      atau menebak URL-nya. Di sini hanya petugas bertoken yang bisa.
  *   3. Pemohon menerima nomor tiket dan dapat melacak statusnya sendiri,
  *      mengikuti pola `ComplaintController` yang sudah ada di portal ini.
+ *   4. Surat pernyataan tidak lagi menjadi syarat pengajuan baru; berkas
+ *      permohonan lama tetap dapat diunduh petugas dari arsip privat.
  */
 class InformationRequestController extends Controller
 {
@@ -33,7 +35,6 @@ class InformationRequestController extends Controller
     private const DISK = 'local';
 
     private const DIR_KTP = 'permohonan-informasi/ktp';
-    private const DIR_STATEMENT = 'permohonan-informasi/surat-pernyataan';
 
     /** Pilihan sah, disalin apa adanya dari formulir v1. */
     private const OBTAIN_METHODS = [
@@ -64,14 +65,22 @@ class InformationRequestController extends Controller
 
     public function store(Request $request)
     {
+        // Orang lazim mengetik nomor dengan pemisah ("0812-3456-7890",
+        // "+62 812 3456 7890"). Pemisahnya dibuang sebelum validasi supaya
+        // nomor yang sah tidak ditolak dan yang tersimpan seragam.
+        if (is_string($request->input('phone'))) {
+            $request->merge(['phone' => preg_replace('/[\s\-.()]/', '', $request->input('phone'))]);
+        }
+
         $validated = $request->validate([
             'ktp' => 'required|file|mimes:jpg,jpeg,png,pdf|max:2048',
-            'statement' => 'required|file|mimes:jpg,jpeg,png,pdf|max:2048',
             'request_from' => 'required|string|max:255',
             'name' => 'required|string|max:255',
             'address' => 'required|string',
             'occupation' => 'required|string|max:255',
-            'npwp' => 'required|string|max:100',
+            // Opsional: KTP sudah cukup sebagai identitas, dan pemohon tanpa
+            // NPWP (pelajar, mahasiswa) tetap berhak mengajukan.
+            'npwp' => 'nullable|string|max:100',
             'phone' => 'required|string|regex:/^\+?\d{10,13}$/|max:20',
             'email' => 'required|email|max:255',
             'information_details' => 'required|string',
@@ -84,14 +93,10 @@ class InformationRequestController extends Controller
             'ktp.required' => 'Scan KTP wajib diunggah.',
             'ktp.mimes' => 'Scan KTP harus berformat JPG, PNG, atau PDF.',
             'ktp.max' => 'Ukuran file KTP tidak boleh melebihi 2MB.',
-            'statement.required' => 'Surat pernyataan pertanggung jawaban wajib diunggah.',
-            'statement.mimes' => 'Surat pernyataan harus berformat JPG, PNG, atau PDF.',
-            'statement.max' => 'Ukuran file surat pernyataan tidak boleh melebihi 2MB.',
             'request_from.required' => 'Asal surat permintaan wajib diisi.',
             'name.required' => 'Nama lengkap wajib diisi.',
             'address.required' => 'Alamat wajib diisi.',
             'occupation.required' => 'Pekerjaan wajib diisi.',
-            'npwp.required' => 'Nomor NPWP wajib diisi.',
             'phone.required' => 'Nomor HP/WA wajib diisi.',
             'phone.regex' => 'Nomor HP/WA tidak valid.',
             'email.required' => 'Email wajib diisi.',
@@ -110,7 +115,6 @@ class InformationRequestController extends Controller
         ]);
 
         $ktpPath = null;
-        $statementPath = null;
 
         try {
             // Nama berkas diacak, bukan memakai nama asli unggahan. Nama asli
@@ -122,23 +126,16 @@ class InformationRequestController extends Controller
                 self::DISK,
             );
 
-            $statementPath = $request->file('statement')->storeAs(
-                self::DIR_STATEMENT,
-                Str::uuid() . '.' . $request->file('statement')->extension(),
-                self::DISK,
-            );
-
             $now = Carbon::now();
 
             $record = InformationRequest::create([
                 'ticket_number' => 'PIP-' . $now->format('Ymd') . '-' . strtoupper(Str::random(4)),
                 'ktp_path' => $ktpPath,
-                'statement_path' => $statementPath,
                 'request_from' => $validated['request_from'],
                 'name' => $validated['name'],
                 'address' => $validated['address'],
                 'occupation' => $validated['occupation'],
-                'npwp' => $validated['npwp'],
+                'npwp' => $validated['npwp'] ?? null,
                 'phone' => $validated['phone'],
                 'email' => $validated['email'],
                 'information_details' => $validated['information_details'],
@@ -163,10 +160,8 @@ class InformationRequestController extends Controller
             // hapus lagi supaya scan KTP tidak menumpuk tanpa pemilik. Inilah
             // yang terjadi di v1: berkas diunggah lebih dulu, lalu insert-nya
             // selalu gagal karena `user_id` NOT NULL.
-            foreach ([$ktpPath, $statementPath] as $path) {
-                if ($path) {
-                    Storage::disk(self::DISK)->delete($path);
-                }
+            if ($ktpPath) {
+                Storage::disk(self::DISK)->delete($ktpPath);
             }
 
             Log::error('Gagal menyimpan permohonan informasi publik', ['error' => $e->getMessage()]);

@@ -861,8 +861,8 @@ export interface LostReportTracking {
  * Permohonan Informasi Publik (UU 14/2008).
  *
  * `ktp_path` dan `statement_path` sengaja TIDAK ada di sini: keduanya
- * disembunyikan model backend supaya lokasi scan KTP pemohon tidak pernah
- * ikut terkirim. Berkasnya diambil lewat `adminDownload`.
+ * disembunyikan model backend supaya lokasi berkas pribadi tidak pernah
+ * ikut terkirim. Arsip surat lama hanya ditandai lewat `has_statement`.
  */
 export interface InformationRequest {
   id: number;
@@ -871,7 +871,7 @@ export interface InformationRequest {
   name: string;
   address: string;
   occupation: string;
-  npwp: string;
+  npwp: string | null;
   phone: string;
   email: string;
   information_details: string;
@@ -885,7 +885,24 @@ export interface InformationRequest {
   /** Batas jawaban PPID: 10 hari kerja, dapat diperpanjang 7 hari kerja. */
   due_date?: string | null;
   is_extended: boolean;
+  has_statement: boolean;
   created_at: string;
+}
+
+/**
+ * Hasil pelacakan tiket publik — cermin `InformationRequest::publicView()`.
+ * Sengaja tanpa identitas pemohon: siapa pun yang menebak tiket tidak boleh
+ * memperoleh data pribadi orang lain.
+ */
+export interface InformationRequestTracking {
+  ticket_number: string;
+  status: InformationRequest['status'];
+  submitted_at: string;
+  due_date: string | null;
+  is_extended: boolean;
+  responded_at: string | null;
+  admin_response: string | null;
+  response_link: string | null;
 }
 
 export interface DocumentItem {

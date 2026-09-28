@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ChevronLeft, Share2, Search, Inbox, LoaderCircle } from 'lucide-react';
+import { ChevronLeft, Share2, Search, Inbox, LoaderCircle, Headset } from 'lucide-react';
 import { TABS_PWA, tabAktif } from './nav';
 import { useTeks } from '@/lib/kamus';
 
@@ -149,7 +149,7 @@ export function BottomNav() {
   return (
     <nav
       aria-label={kamus.pwa.navigasiUtama}
-      className="md:hidden flex-shrink-0 relative bg-white/92 backdrop-blur-xl border-t border-slate-100 px-1 pt-1.5"
+      className="md:hidden flex-shrink-0 relative bg-white border-t border-slate-100 px-1 pt-1.5 shadow-[0_-8px_24px_-16px_rgba(15,23,42,0.25)]"
       style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
     >
       <div className="flex items-end justify-around">
@@ -168,11 +168,11 @@ export function BottomNav() {
               >
                 <motion.span
                   whileTap={{ scale: 0.88 }}
-                  className={`-mt-7 w-14 h-14 rounded-full ring-4 ring-white flex items-center justify-center ${KILAU_UTAMA}`}
+                  className="-mt-7 w-14 h-14 rounded-full bg-blue-600 shadow-lg shadow-blue-600/30 ring-4 ring-white flex items-center justify-center"
                 >
-                  <Icon className="w-[26px] h-[26px] text-white" strokeWidth={2.2} />
+                  <Headset className="w-[26px] h-[26px] text-white" strokeWidth={2.2} aria-hidden="true" />
                 </motion.span>
-                <span className={`text-[10.5px] font-bold ${aktif ? 'text-blue-700' : 'text-blue-600'}`}>
+                <span className={`text-[10.5px] font-bold ${aktif ? 'text-blue-700' : 'text-slate-500'}`}>
                   {kamus.pwa[t.kunci]}
                 </span>
               </Link>

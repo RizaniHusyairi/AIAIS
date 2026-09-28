@@ -7,11 +7,12 @@ import { fetchApi } from '@/lib/api';
 import { Flight } from '@/types';
 import SkyParticles from '@/components/effects/SkyParticles';
 import {
-  AirlineLogo, splitPlace, shortTime, statusTheme, labelStatus, gateLabel, counterLabel,
+  AirlineLogo, splitPlace, shortTime, statusTheme, labelStatus, gateLabel, counterLabel, fmtFlightDate,
 } from '@/components/flights/shared';
+import { flightDateStatus } from '@/lib/flightDate';
 import {
   Plane, PlaneTakeoff, PlaneLanding, Search, RefreshCw, Clock,
-  MapPin, DoorOpen, SearchX, Radio, Map as MapIcon, Luggage, ClipboardList,
+  MapPin, DoorOpen, SearchX, Radio, Map as MapIcon, Luggage, ClipboardList, CalendarDays,
 } from 'lucide-react';
 import { useTeks } from '@/lib/kamus';
 import { useBahasa } from '@/lib/bahasa';
@@ -81,6 +82,11 @@ export default function FlightsView() {
     arrival: flights.filter((f) => f.flight_type === 'arrival').length,
     attention: flights.filter((f) => f.status === 'delayed' || f.status === 'cancelled').length,
   }), [flights]);
+
+  const datedFlights = now ? flights.map((flight) => flightDateStatus(flight.flight_date, now)) : [];
+  const hasPastFlights = datedFlights.some((status) => status === 'yesterday' || status === 'older');
+  const hasTodayFlights = datedFlights.includes('today');
+  const onlyYesterday = datedFlights.length > 0 && datedFlights.every((status) => status === 'yesterday');
 
   const clock = now ? new Intl.DateTimeFormat(KODE_LOKAL[bahasa], FMT_CLOCK).format(now) : '--:--:--';
   const today = now ? new Intl.DateTimeFormat(KODE_LOKAL[bahasa], FMT_DATE).format(now) : ' ';
@@ -248,6 +254,19 @@ export default function FlightsView() {
       {/*  Daftar penerbangan                                               */}
       {/* ---------------------------------------------------------------- */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 mt-6">
+        {hasPastFlights && (
+          <div role="status" className="mb-5 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950">
+            <CalendarDays className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-700" />
+            <p className="text-[13px] leading-relaxed">
+              <strong>Perhatikan tanggal penerbangan.</strong>{' '}
+              {hasTodayFlights
+                ? 'Sebagian jadwal yang ditampilkan berasal dari hari sebelumnya. Tanggal setiap penerbangan tertera di bawah jam.'
+                : onlyYesterday
+                  ? 'Ini jadwal kemarin; jadwal hari ini belum tersedia. Tanggal setiap penerbangan tertera di bawah jam.'
+                  : 'Sebagian jadwal yang ditampilkan berasal dari hari sebelumnya; jadwal hari ini belum tersedia. Tanggal setiap penerbangan tertera di bawah jam.'}
+            </p>
+          </div>
+        )}
         <div className="flex items-center justify-between mb-3 px-1">
           <h2 className="text-[13px] font-bold text-slate-500 uppercase tracking-wider">
             {typeFilter === 'departure' ? t.penerbangan.judulKeberangkatan
@@ -284,7 +303,7 @@ export default function FlightsView() {
             variants={{ hidden: {}, show: { transition: { staggerChildren: 0.04 } } }}
             className="space-y-2.5"
           >
-            {filtered.map((f) => <FlightRow key={f.id} flight={f} />)}
+            {filtered.map((f) => <FlightRow key={f.id} flight={f} now={now} bahasa={bahasa} />)}
           </motion.div>
         )}
       </div>
@@ -349,12 +368,13 @@ function DeskFact({
   );
 }
 
-function FlightRow({ flight: f }: { flight: Flight }) {
+function FlightRow({ flight: f, now, bahasa }: { flight: Flight; now: Date | null; bahasa: ReturnType<typeof useBahasa> }) {
   const kamus = useTeks();
   const departing = f.flight_type === 'departure';
   const from = splitPlace(f.origin);
   const to = splitPlace(f.destination);
   const st = statusTheme(f.status);
+  const dateStatus = now ? flightDateStatus(f.flight_date, now) : 'unknown';
 
   return (
     <motion.article
@@ -416,6 +436,10 @@ function FlightRow({ flight: f }: { flight: Flight }) {
               {shortTime(f.scheduled_time)}
             </p>
             <p className="text-[11px] text-slate-400 mt-1">{kamus.penerbangan.terjadwal}</p>
+            <p className={`mt-1 text-[11px] font-semibold ${dateStatus === 'yesterday' || dateStatus === 'older' ? 'text-amber-700' : 'text-slate-500'}`}>
+              {dateStatus === 'yesterday' ? 'Kemarin · ' : dateStatus === 'older' ? 'Jadwal lama · ' : ''}
+              {f.flight_date ? fmtFlightDate(f.flight_date, bahasa) : 'Tanggal belum tersedia'}
+            </p>
           </div>
           {f.estimated_time && (
             <div className="lg:mt-2">

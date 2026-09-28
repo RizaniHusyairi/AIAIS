@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useTeks } from '@/lib/kamus';
 import { useBahasa } from '@/lib/bahasa';
+import { flightDateStatus } from '@/lib/flightDate';
 
 const FMT_CLOCK = { timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit', hour12: false } as const;
 
@@ -43,11 +44,16 @@ export default function PenerbanganScreen() {
   /* Daftar apa adanya dari API. Bila kosong, tampilkan keadaan kosong —
      jangan diisi data contoh yang tampak seperti jadwal sungguhan. */
   const rows = useMemo(() => flights.filter((f) => f.flight_type === tab), [flights, tab]);
+  const dateStatuses = now ? rows.map((flight) => flightDateStatus(flight.flight_date, now)) : [];
+  const hasPastFlights = dateStatuses.some((status) => status === 'yesterday' || status === 'older');
+  const hasTodayFlights = dateStatuses.includes('today');
+  const onlyYesterday = dateStatuses.length > 0 && dateStatuses.every((status) => status === 'yesterday');
+  const dates = [...new Set(rows.map((flight) => flight.flight_date).filter(Boolean))];
 
   const clock = now ? new Intl.DateTimeFormat('id-ID', FMT_CLOCK).format(now) : '--:--';
 
   /** Tanggal yang dicakup data FIDS saat ini (bila dikirim). */
-  const dataDate = flights.find((f) => f.flight_date)?.flight_date ?? null;
+  const dataDate = rows.length > 0 && rows.every((flight) => flight.flight_date === dates[0]) && dates.length === 1 ? dates[0] : null;
 
   return (
     <div className="min-h-full bg-slate-50">
@@ -71,7 +77,7 @@ export default function PenerbanganScreen() {
                   {rows.length} <span className="text-[15px] font-bold text-blue-100/90">penerbangan</span>
                 </p>
                 <p className="mt-1.5 text-[12px] text-blue-100/80">
-                  {tab === 'departure' ? 'Keberangkatan hari ini' : 'Kedatangan hari ini'}
+                  {tab === 'departure' ? 'Keberangkatan' : 'Kedatangan'}
                 </p>
               </div>
 
@@ -104,20 +110,29 @@ export default function PenerbanganScreen() {
           ]}
         />
 
-        {/* Tanggal yang benar-benar dicakup data. FIDS bandara hanya
-            menerbitkan jadwal hari berjalan, jadi tidak ada pilihan hari lain.
-            Sebelumnya di sini ada tiga tombol tanggal yang dipatok mati dan
-            tidak memfilter apa pun. */}
+        {/* Satu tanggal hanya ditampilkan bila seluruh baris pada tab yang aktif
+            memang memiliki tanggal yang sama. */}
         {dataDate && (
           <div className="flex items-center gap-2 text-[12px] text-slate-600">
             <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-2 rounded-xl font-semibold">
               <Calendar className="w-3.5 h-3.5 text-blue-600" />
               {fmtFlightDate(dataDate, bahasa)}
             </span>
-            <span className="text-[11px] text-slate-400">Jadwal hari ini</span>
+            <span className="text-[11px] text-slate-400">Tanggal data</span>
           </div>
         )}
       </div>
+
+      {hasPastFlights && (
+        <div role="status" className="mx-4 mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[12px] leading-relaxed text-amber-950">
+          <strong>Perhatikan tanggal penerbangan.</strong>{' '}
+          {hasTodayFlights
+            ? 'Sebagian jadwal berasal dari hari sebelumnya. Periksa tanggal pada setiap kartu.'
+            : onlyYesterday
+              ? 'Ini jadwal kemarin; jadwal hari ini belum tersedia. Periksa tanggal pada setiap kartu.'
+              : 'Sebagian jadwal berasal dari hari sebelumnya; jadwal hari ini belum tersedia. Periksa tanggal pada setiap kartu.'}
+        </div>
+      )}
 
       {/* ---------------------------------------------------------------- */}
       {/*  Daftar penerbangan                                               */}
@@ -142,7 +157,7 @@ export default function PenerbanganScreen() {
         >
           {rows.map((f) => (
             <motion.div key={f.id} variants={listItem}>
-              <FlightCard flight={f} />
+              <FlightCard flight={f} now={now} bahasa={bahasa} />
             </motion.div>
           ))}
         </motion.div>
@@ -155,12 +170,13 @@ export default function PenerbanganScreen() {
 /*  Kartu penerbangan bergaya boarding pass                            */
 /* ------------------------------------------------------------------ */
 
-function FlightCard({ flight: f }: { flight: Flight }) {
+function FlightCard({ flight: f, now, bahasa }: { flight: Flight; now: Date | null; bahasa: ReturnType<typeof useBahasa> }) {
   const kamus = useTeks();
   const departing = f.flight_type === 'departure';
   const from = splitPlace(f.origin);
   const to = splitPlace(f.destination);
   const st = statusTheme(f.status);
+  const dateStatus = now ? flightDateStatus(f.flight_date, now) : 'unknown';
 
   return (
     <Link
@@ -210,11 +226,16 @@ function FlightCard({ flight: f }: { flight: Flight }) {
       </div>
 
       {/* kaki kartu: jam, gate, terminal */}
-      <div className="flex items-center gap-4 border-t border-dashed border-slate-200 bg-slate-50/70 pl-4 pr-3 py-2.5">
+      <div className="flex flex-wrap items-center gap-3 border-t border-dashed border-slate-200 bg-slate-50/70 pl-4 pr-3 py-2.5">
         <div className="flex items-baseline gap-1.5">
           <span className="text-[15px] font-black text-slate-900 tabular-nums">{shortTime(f.scheduled_time)}</span>
           <span className="text-[10px] text-slate-400 font-medium">WITA</span>
         </div>
+
+        <span className={`text-[10px] font-semibold ${dateStatus === 'yesterday' || dateStatus === 'older' ? 'text-amber-700' : 'text-slate-500'}`}>
+          {dateStatus === 'yesterday' ? 'Kemarin · ' : dateStatus === 'older' ? 'Jadwal lama · ' : ''}
+          {f.flight_date ? fmtFlightDate(f.flight_date, bahasa) : 'Tanggal belum tersedia'}
+        </span>
 
         {f.estimated_time && (
           <span className={`text-[11px] font-bold tabular-nums ${st.text}`}>
