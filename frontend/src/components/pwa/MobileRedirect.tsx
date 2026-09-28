@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { toAppRoute, toDesktopRoute, keepResponsive, adalahPerayap } from '@/lib/pwaRoutes';
+import { toAppRoute, toDesktopRoute, keepResponsive, adalahPerayap, simpanQuery } from '@/lib/pwaRoutes';
 
 function hasDesktopPref(): boolean {
   return typeof document !== 'undefined' && document.cookie.includes('aptView=desktop');
@@ -54,17 +54,28 @@ export default function MobileRedirect() {
     const isApp = pathname.startsWith('/app');
     const wide = window.matchMedia('(min-width: 768px)');
 
+    /*
+     * Query ikut dibawa untuk rute ber-`simpanQuery`, sama seperti di
+     * proxy.ts. Sebelumnya hanya proxy yang menghormatinya, sehingga
+     * pengalihan di sisi klien — jendela yang disempitkan, atau peramban
+     * yang lolos dari proxy — membuang `?mode=hilang` dan `?tiket=…` dari
+     * tautan bukti permohonan.
+     */
+    const denganQuery = (tujuan: string, rutePublik: string) =>
+      simpanQuery(rutePublik) ? tujuan + window.location.search : tujuan;
+
     const sync = () => {
       if (hasDesktopPref()) return;
 
       if (!isApp && !wide.matches) {
         // Halaman publik menyempit ke ukuran ponsel -> masuk ke aplikasi.
         sessionStorage.setItem(AUTO_KEY, '1');
-        router.replace(toAppRoute(pathname));
+        router.replace(denganQuery(toAppRoute(pathname), pathname));
       } else if (isApp && wide.matches && sessionStorage.getItem(AUTO_KEY) === '1') {
         // Hanya yang kita alihkan sendiri yang dikembalikan saat dilebarkan.
         sessionStorage.removeItem(AUTO_KEY);
-        router.replace(toDesktopRoute(pathname));
+        const publik = toDesktopRoute(pathname);
+        router.replace(denganQuery(publik, publik));
       }
     };
 

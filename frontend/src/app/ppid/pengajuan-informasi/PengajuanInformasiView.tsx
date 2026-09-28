@@ -33,6 +33,7 @@ import PasPermohonan, { AlurSesudah, KelengkapanRingkas } from './PasPermohonan'
 import LacakPermohonan, { PembacaTiketTautan, useLacak } from './LacakPermohonan';
 import { GalatUmum, IsiLangkah, KartuTiket, SYARAT } from './langkah';
 import { usePermohonan } from './usePermohonan';
+import TiketSaya from './TiketSaya';
 import DialogTinggalkan from '@/components/ui/DialogTinggalkan';
 
 const rise = {
@@ -51,7 +52,7 @@ export default function PengajuanInformasiView() {
   /** Isi kolom lacak dengan tiket baru, langsung cari, lalu gulir ke sana. */
   /** Dibuka dari tautan di surel/WhatsApp bukti: langsung tampilkan statusnya. */
   const bukaTiketDariTautan = (tiket: string) => {
-    lacak.cari(tiket);
+    lacak.cari(tiket, { simpan: true });
     setTimeout(() => document.getElementById('lacak')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
   };
 
@@ -209,7 +210,13 @@ export default function PengajuanInformasiView() {
       {/*  PELACAKAN                                                   */}
       {/* ============================================================ */}
       <section id="lacak" className="max-w-[1400px] mx-auto px-4 sm:px-6 pb-16 scroll-mt-24">
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-3xl mx-auto space-y-5">
+          <TiketSaya
+            onPilih={(t) => {
+              lacak.cari(t);
+              lacakInput.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }}
+          />
           <LacakPermohonan ref={lacakInput} lacak={lacak} />
         </div>
       </section>

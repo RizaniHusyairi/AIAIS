@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Services\Notifikasi\KonfigurasiSurel;
 use Carbon\Carbon;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\Facades\DB;
@@ -25,6 +26,20 @@ class AppServiceProvider extends ServiceProvider
         $this->guardIrreplaceableData();
         $this->arahkanTautanResetKePortal();
         $this->setelBahasaTanggal();
+        $this->pakaiSurelDariPanel();
+    }
+
+    /**
+     * Server surel dari panel admin (tabel `mail_configs`) menimpa `MAIL_*`.
+     *
+     * Dipasang pada saat `mail.manager` pertama kali dibutuhkan, bukan di
+     * sini secara langsung: kebanyakan permintaan tidak mengirim surel sama
+     * sekali dan tidak perlu menanyai basis data. Berlaku untuk SEMUA surel —
+     * bukti permohonan ke warga maupun tautan reset kata sandi petugas.
+     */
+    private function pakaiSurelDariPanel(): void
+    {
+        $this->app->resolving('mail.manager', fn () => KonfigurasiSurel::terapkan());
     }
 
     /**

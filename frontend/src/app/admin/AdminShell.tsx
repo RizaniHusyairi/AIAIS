@@ -16,7 +16,7 @@ import {
   LayoutDashboard, Newspaper, Megaphone, Building2, Store, FileText, MessageSquareWarning,
   LogOut, ExternalLink, ShieldCheck, Menu, Radar, ChevronRight, ImageIcon, ScrollText, Scale, Landmark,
   Search, SearchX, Sun, Moon,
-  CalendarClock, DoorOpen, Radio, Globe, ClipboardList, Users, UserCircle, UserRound, HelpCircle, MapPin, BarChart3, Gauge, MessageSquare, CalendarRange, Wallet, School, BadgeCheck, Gavel, HardHat, PartyPopper,
+  CalendarClock, DoorOpen, Radio, Globe, ClipboardList, Users, UserCircle, UserRound, HelpCircle, MapPin, BarChart3, Gauge, MessageSquare, AtSign, CalendarRange, Wallet, School, BadgeCheck, Gavel, HardHat, PartyPopper,
   PlaneTakeoff, Clock3, GraduationCap, Boxes, Wrench, Mail, CalendarCheck,
   PackageSearch, Bell, Mic,
 } from 'lucide-react';
@@ -139,6 +139,10 @@ const NAV: { section: string; items: NavItem[] }[] = [
       // karena piket harian memang dipegang staf; kunci gatewaynya sendiri
       // hanya dapat disimpan admin — rutenya di backend pun dijaga `role:admin`.
       { name: 'WhatsApp', href: '/admin/whatsapp', icon: MessageSquare },
+      // Kanal kedua, server SMTP. Hanya admin — berbeda dengan WhatsApp, tidak
+      // ada bagian harian yang dipegang staf, dan isinya kredensial kotak surel
+      // dinas; rutenya di backend seluruhnya `role:admin`.
+      { name: 'Email', href: '/admin/surel', icon: AtSign, roles: ['admin'] },
       // Manajemen akun hanya untuk admin; rutenya di backend pun `role:admin`.
       { name: 'Pengguna', href: '/admin/users', icon: Users, roles: ['admin'] },
       // Profil sendiri terbuka bagi semua yang boleh masuk panel — mengganti

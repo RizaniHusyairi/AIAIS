@@ -12,6 +12,7 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { API_BASE_URL } from '@/lib/api';
 import { usePenjagaNavigasi } from '@/lib/usePenjagaNavigasi';
+import { simpanTiket } from '@/lib/tiketSaya';
 import {
   ATURAN, HARI_KERJA_JAWABAN, KOLOM_LANGKAH, KOSONG,
   hariIniWita, rapikanTelepon, salinTeks, salinanDiizinkan, tambahHariKerja, validasiLangkah,
@@ -202,6 +203,8 @@ export function usePermohonan(formTop: RefObject<HTMLDivElement | null>) {
       if (res.ok && json?.data?.ticket_number) {
         // Tujuan kabar disimpan sebelum isian dikosongkan, untuk layar tiket.
         setTiket({ ...json.data, tujuan: { email: form.email.trim(), phone: rapikanTelepon(form.phone) } });
+        // Riwayat "Tiket Saya" di perangkat ini — nomor dan tanggal saja.
+        simpanTiket(json.data.ticket_number, json.data.submitted_at);
         setForm(KOSONG);
         setSalinanDilepas([]);
         setDisentuh({});

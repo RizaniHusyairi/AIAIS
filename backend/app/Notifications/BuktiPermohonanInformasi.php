@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\InformationRequest;
+use App\Services\Notifikasi\KonfigurasiSurel;
 use App\Support\CetakanPdf;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -61,7 +62,7 @@ class BuktiPermohonanInformasi extends Notification implements ShouldQueue
 
         return (new MailMessage())
             ->subject("Bukti Permohonan Informasi Publik — {$data['tiket']}")
-            ->from(config('mail.from.address'), 'PPID Bandara APT Pranoto Samarinda')
+            ->from(config('mail.from.address'), KonfigurasiSurel::namaPengirim())
             ->view(
                 ['html' => 'emails.bukti-permohonan-informasi', 'text' => 'emails.bukti-permohonan-informasi-teks'],
                 $data,

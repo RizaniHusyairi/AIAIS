@@ -33,6 +33,8 @@ import PasPermohonan, { AlurSesudah, useKelengkapan } from '@/app/ppid/pengajuan
 import LacakPermohonan, { PembacaTiketTautan, useLacak } from '@/app/ppid/pengajuan-informasi/LacakPermohonan';
 import { GalatUmum, IsiLangkah, KartuTiket, SYARAT } from '@/app/ppid/pengajuan-informasi/langkah';
 import { usePermohonan } from '@/app/ppid/pengajuan-informasi/usePermohonan';
+import TiketSaya from '@/app/ppid/pengajuan-informasi/TiketSaya';
+import { useTiketSaya } from '@/lib/tiketSaya';
 import DialogTinggalkan from '@/components/ui/DialogTinggalkan';
 
 type Tab = 'ajukan' | 'lacak';
@@ -68,6 +70,7 @@ export default function PermohonanInformasiScreen() {
   const formTop = useRef<HTMLDivElement>(null);
   const p = usePermohonan(formTop);
   const lacak = useLacak();
+  const tiketSaya = useTiketSaya();
   const lacakInput = useRef<HTMLInputElement>(null);
   const puncak = useRef<HTMLDivElement>(null);
   const [tab, setTab] = useState<Tab>('ajukan');
@@ -81,7 +84,7 @@ export default function PermohonanInformasiScreen() {
 
   /** Dibuka dari tautan di surel/WhatsApp bukti: langsung ke tab Lacak. */
   const bukaTiketDariTautan = (tiket: string) => {
-    lacak.cari(tiket);
+    lacak.cari(tiket, { simpan: true });
     setTab('lacak');
   };
 
@@ -167,7 +170,9 @@ export default function PermohonanInformasiScreen() {
           onChange={gantiTab}
           options={[
             { value: 'ajukan', label: 'Ajukan', icon: <Send className="w-3.5 h-3.5" /> },
-            { value: 'lacak', label: 'Lacak Tiket', icon: <Ticket className="w-3.5 h-3.5" /> },
+            // Jumlah tiket tersimpan ikut di label, supaya pemohon yang kembali
+            // tahu riwayatnya menunggu di tab ini.
+            { value: 'lacak', label: tiketSaya.length ? `Lacak Tiket (${tiketSaya.length})` : 'Lacak Tiket', icon: <Ticket className="w-3.5 h-3.5" /> },
           ]}
         />
       </div>
@@ -183,6 +188,12 @@ export default function PermohonanInformasiScreen() {
               exit={{ opacity: 0, x: 24 }}
               className="mx-auto w-full max-w-2xl space-y-3"
             >
+              <TiketSaya
+                onPilih={(t) => {
+                  lacak.cari(t);
+                  lacakInput.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }}
+              />
               <LacakPermohonan ref={lacakInput} lacak={lacak} tautanKeberatan={SOP_PWA} />
               <p className="flex items-start gap-2.5 rounded-2xl bg-white ring-1 ring-slate-200/70 px-4 py-3 text-[11.5px] text-slate-500 leading-relaxed">
                 <Search className="w-4 h-4 text-blue-600 flex-shrink-0 mt-px" />

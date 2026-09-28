@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\EvergreenInformationController;
 use App\Http\Controllers\Api\ExtendAdvanceController;
 use App\Http\Controllers\Api\AirportStatController;
 use App\Http\Controllers\Api\WaController;
+use App\Http\Controllers\Api\SurelController;
 use App\Http\Controllers\Api\ExternalLinkController;
 use App\Http\Controllers\Api\FacilityController;
 use App\Http\Controllers\Api\FaqController;
@@ -829,6 +830,20 @@ Route::prefix(config('api.version'))->group(function () {
                  */
                 Route::post('/wa/credential', [WaController::class, 'simpanKredensial']);
                 Route::delete('/wa/credential', [WaController::class, 'hapusKredensial']);
+
+                /*
+                 * Notifikasi surel — server SMTP dan pengirim.
+                 *
+                 * Admin saja, seluruhnya: berbeda dengan WhatsApp, tidak ada
+                 * bagian harian yang dipegang staf, dan isinya kredensial
+                 * kotak surel dinas. Kiriman uji dibatasi laju supaya panel
+                 * tidak menjadi alat kirim surel massal bila satu akun admin
+                 * disalahgunakan.
+                 */
+                Route::get('/surel', [SurelController::class, 'status']);
+                Route::post('/surel', [SurelController::class, 'simpan']);
+                Route::delete('/surel', [SurelController::class, 'hapus']);
+                Route::post('/surel/uji', [SurelController::class, 'uji'])->middleware('throttle:5,1');
 
                 Route::get('/information-requests', [InformationRequestController::class, 'index']);
                 Route::put('/information-requests/{id}/respond', [InformationRequestController::class, 'respond']);

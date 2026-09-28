@@ -6,9 +6,10 @@ import { motion } from 'framer-motion';
 import { fetchApi } from '@/lib/api';
 import { Flight } from '@/types';
 import SkyParticles from '@/components/effects/SkyParticles';
-import { StatusBar, AppHeader, ShareButton, Segmented, listContainer, listItem } from '@/components/pwa/ui';
+import { StatusBar, AppHeader, ShareButton, Segmented, KotakCari, listContainer, listItem } from '@/components/pwa/ui';
 import {
   AirlineLogo, splitPlace, shortTime, statusTheme, labelStatus, gateLabel, fmtFlightDate,
+  cocokCariPenerbangan,
 } from '@/components/flights/shared';
 import {
   Plane, PlaneTakeoff, PlaneLanding, Calendar, ChevronRight, DoorOpen, SearchX,
@@ -16,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useTeks } from '@/lib/kamus';
 import { useBahasa } from '@/lib/bahasa';
-import { flightDateStatus } from '@/lib/flightDate';
+import { flightDateStatus, saringHari, todayWita, type PilihanHari } from '@/lib/flightDate';
 
 const FMT_CLOCK = { timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit', hour12: false } as const;
 
@@ -24,6 +25,9 @@ export default function PenerbanganScreen() {
   const bahasa = useBahasa();
   const [flights, setFlights] = useState<Flight[]>([]);
   const [tab, setTab] = useState<'departure' | 'arrival'>('departure');
+  const [cari, setCari] = useState('');
+  // null = pengunjung belum memilih; saringHari() yang menentukan bawaannya.
+  const [pilihanHari, setPilihanHari] = useState<PilihanHari | null>(null);
   const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
@@ -43,7 +47,13 @@ export default function PenerbanganScreen() {
 
   /* Daftar apa adanya dari API. Bila kosong, tampilkan keadaan kosong —
      jangan diisi data contoh yang tampak seperti jadwal sungguhan. */
-  const rows = useMemo(() => flights.filter((f) => f.flight_type === tab), [flights, tab]);
+  const tabRows = useMemo(() => flights.filter((f) => f.flight_type === tab), [flights, tab]);
+  const today = now ? todayWita(now) : null;
+  const filterHari = useMemo(() => saringHari(tabRows, today, pilihanHari), [tabRows, today, pilihanHari]);
+  const rows = filterHari.daftar;
+  /* Penanda tanggal & jumlah di hero tetap dihitung dari seluruh hari yang
+     dipilih, bukan hasil cari — kata kunci tidak mengubah jadwal hari itu. */
+  const tampil = useMemo(() => rows.filter((f) => cocokCariPenerbangan(f, cari)), [rows, cari]);
   const dateStatuses = now ? rows.map((flight) => flightDateStatus(flight.flight_date, now)) : [];
   const hasPastFlights = dateStatuses.some((status) => status === 'yesterday' || status === 'older');
   const hasTodayFlights = dateStatuses.includes('today');
@@ -110,6 +120,20 @@ export default function PenerbanganScreen() {
           ]}
         />
 
+        {filterHari.aktif && (
+          <Segmented
+            layoutId="fids-hari"
+            value={filterHari.hari}
+            onChange={(v) => setPilihanHari(v)}
+            options={[
+              { value: 'today', label: `Hari ini · ${filterHari.jumlah.today}` },
+              { value: 'yesterday', label: `Kemarin · ${filterHari.jumlah.yesterday}` },
+            ]}
+          />
+        )}
+
+        <KotakCari value={cari} onChange={setCari} placeholder="Cari nomor, maskapai, atau kota…" />
+
         {/* Satu tanggal hanya ditampilkan bila seluruh baris pada tab yang aktif
             memang memiliki tanggal yang sama. */}
         {dataDate && (
@@ -123,7 +147,16 @@ export default function PenerbanganScreen() {
         )}
       </div>
 
-      {hasPastFlights && (
+      {filterHari.aktif ? (
+        filterHari.hari === 'yesterday' && (
+          <div role="status" className="mx-4 mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[12px] leading-relaxed text-amber-950">
+            <strong>Ini jadwal kemarin.</strong>{' '}
+            {filterHari.jumlah.today > 0
+              ? 'Pilih "Hari ini" untuk penerbangan yang masih berjalan.'
+              : 'Jadwal hari ini belum tersedia dari sistem FIDS.'}
+          </div>
+        )
+      ) : hasPastFlights && (
         <div role="status" className="mx-4 mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[12px] leading-relaxed text-amber-950">
           <strong>Perhatikan tanggal penerbangan.</strong>{' '}
           {hasTodayFlights
@@ -137,25 +170,37 @@ export default function PenerbanganScreen() {
       {/* ---------------------------------------------------------------- */}
       {/*  Daftar penerbangan                                               */}
       {/* ---------------------------------------------------------------- */}
-      {rows.length === 0 ? (
+      {tampil.length === 0 ? (
         <div className="px-4 py-16 text-center">
           <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto">
             <SearchX className="w-6 h-6 text-slate-400" />
           </div>
-          <p className="mt-4 text-[15px] font-bold text-slate-800">Belum ada jadwal</p>
-          <p className="mt-1 text-[13px] text-slate-500">
-            Jadwal {tab === 'departure' ? 'keberangkatan' : 'kedatangan'} belum tersedia.
-          </p>
+          {rows.length > 0 ? (
+            <>
+              <p className="mt-4 text-[15px] font-bold text-slate-800">Tidak ada yang cocok</p>
+              <p className="mt-1 text-[13px] text-slate-500">
+                Tidak ada {tab === 'departure' ? 'keberangkatan' : 'kedatangan'} untuk &ldquo;{cari.trim()}&rdquo;.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="mt-4 text-[15px] font-bold text-slate-800">Belum ada jadwal</p>
+              <p className="mt-1 text-[13px] text-slate-500">
+                Jadwal {tab === 'departure' ? 'keberangkatan' : 'kedatangan'}
+                {filterHari.aktif ? (filterHari.hari === 'today' ? ' hari ini' : ' kemarin') : ''} belum tersedia.
+              </p>
+            </>
+          )}
         </div>
       ) : (
         <motion.div
-          key={tab}
+          key={`${tab}-${filterHari.hari}`}
           variants={listContainer}
           initial="hidden"
           animate="show"
           className="p-4 space-y-3"
         >
-          {rows.map((f) => (
+          {tampil.map((f) => (
             <motion.div key={f.id} variants={listItem}>
               <FlightCard flight={f} now={now} bahasa={bahasa} />
             </motion.div>

@@ -8,8 +8,9 @@ import { Flight } from '@/types';
 import SkyParticles from '@/components/effects/SkyParticles';
 import {
   AirlineLogo, splitPlace, shortTime, statusTheme, labelStatus, gateLabel, counterLabel, fmtFlightDate,
+  cocokCariPenerbangan,
 } from '@/components/flights/shared';
-import { flightDateStatus } from '@/lib/flightDate';
+import { flightDateStatus, saringHari, todayWita, type PilihanHari } from '@/lib/flightDate';
 import {
   Plane, PlaneTakeoff, PlaneLanding, Search, RefreshCw, Clock,
   MapPin, DoorOpen, SearchX, Radio, Map as MapIcon, Luggage, ClipboardList, CalendarDays,
@@ -31,6 +32,8 @@ export default function FlightsView() {
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   const [airlineFilter, setAirlineFilter] = useState<string>('all');
   const [search, setSearch] = useState<string>('');
+  // null = pengunjung belum memilih; saringHari() yang menentukan bawaannya.
+  const [pilihanHari, setPilihanHari] = useState<PilihanHari | null>(null);
   const [now, setNow] = useState<Date | null>(null);
 
   const loadFlights = async () => {
@@ -56,32 +59,33 @@ export default function FlightsView() {
     return () => clearInterval(tick);
   }, []);
 
+  // Tanggal WITA sebagai teks: hanya berganti tengah malam, jadi saringan di
+  // bawah tidak dihitung ulang setiap detik jam berdetak.
+  const hariIniWita = now ? todayWita(now) : null;
+  const filterHari = useMemo(
+    () => saringHari(flights, hariIniWita, pilihanHari),
+    [flights, hariIniWita, pilihanHari],
+  );
+  // Semua angka ringkasan dan daftar maskapai mengikuti hari yang dipilih.
+  const dayFlights = filterHari.daftar;
+
   const airlines = useMemo(
-    () => Array.from(new Set(flights.map((f) => f.airline))).sort(),
-    [flights],
+    () => Array.from(new Set(dayFlights.map((f) => f.airline))).sort(),
+    [dayFlights],
   );
 
-  const filtered = useMemo(() => flights.filter((f) => {
+  const filtered = useMemo(() => dayFlights.filter((f) => {
     if (typeFilter !== 'all' && f.flight_type !== typeFilter) return false;
     if (airlineFilter !== 'all' && f.airline !== airlineFilter) return false;
-    if (search) {
-      const q = search.toLowerCase();
-      return (
-        f.flight_number.toLowerCase().includes(q) ||
-        f.airline.toLowerCase().includes(q) ||
-        f.origin.toLowerCase().includes(q) ||
-        f.destination.toLowerCase().includes(q)
-      );
-    }
-    return true;
-  }), [flights, typeFilter, airlineFilter, search]);
+    return cocokCariPenerbangan(f, search);
+  }), [dayFlights, typeFilter, airlineFilter, search]);
 
   const stats = useMemo(() => ({
-    total: flights.length,
-    departure: flights.filter((f) => f.flight_type === 'departure').length,
-    arrival: flights.filter((f) => f.flight_type === 'arrival').length,
-    attention: flights.filter((f) => f.status === 'delayed' || f.status === 'cancelled').length,
-  }), [flights]);
+    total: dayFlights.length,
+    departure: dayFlights.filter((f) => f.flight_type === 'departure').length,
+    arrival: dayFlights.filter((f) => f.flight_type === 'arrival').length,
+    attention: dayFlights.filter((f) => f.status === 'delayed' || f.status === 'cancelled').length,
+  }), [dayFlights]);
 
   const datedFlights = now ? flights.map((flight) => flightDateStatus(flight.flight_date, now)) : [];
   const hasPastFlights = datedFlights.some((status) => status === 'yesterday' || status === 'older');
@@ -203,7 +207,41 @@ export default function FlightsView() {
             />
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-3">
+            {filterHari.aktif && (
+              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl" role="group" aria-label="Hari penerbangan">
+                {([
+                  { key: 'today', label: 'Hari ini', count: filterHari.jumlah.today },
+                  { key: 'yesterday', label: 'Kemarin', count: filterHari.jumlah.yesterday },
+                ] as const).map((opt) => {
+                  const active = filterHari.hari === opt.key;
+                  return (
+                    <button
+                      key={opt.key}
+                      onClick={() => setPilihanHari(opt.key)}
+                      aria-pressed={active}
+                      className={`relative flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[13px] font-semibold transition-colors cursor-pointer ${
+                        active ? 'text-white' : 'text-slate-500 hover:text-slate-700'
+                      }`}
+                    >
+                      {active && (
+                        <motion.span
+                          layoutId="fids-day-pill"
+                          className="absolute inset-0 rounded-lg bg-blue-600 shadow-sm shadow-blue-600/30"
+                          transition={{ type: 'spring', stiffness: 480, damping: 34 }}
+                        />
+                      )}
+                      <span className="relative flex items-center gap-1.5">
+                        <CalendarDays className="w-3.5 h-3.5" />
+                        {opt.label}
+                        <span className={`tabular-nums text-[11px] ${active ? 'text-blue-100' : 'text-slate-400'}`}>{opt.count}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
             <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
               {([
                 { key: 'all', label: t.penerbangan.semua, icon: Plane },
@@ -254,7 +292,19 @@ export default function FlightsView() {
       {/*  Daftar penerbangan                                               */}
       {/* ---------------------------------------------------------------- */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 mt-6">
-        {hasPastFlights && (
+        {filterHari.aktif ? (
+          filterHari.hari === 'yesterday' && (
+            <div role="status" className="mb-5 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950">
+              <CalendarDays className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-700" />
+              <p className="text-[13px] leading-relaxed">
+                <strong>Ini jadwal kemarin.</strong>{' '}
+                {filterHari.jumlah.today > 0
+                  ? 'Pilih "Hari ini" untuk penerbangan yang masih berjalan.'
+                  : 'Jadwal hari ini belum tersedia dari sistem FIDS.'}
+              </p>
+            </div>
+          )
+        ) : hasPastFlights && (
           <div role="status" className="mb-5 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-950">
             <CalendarDays className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-700" />
             <p className="text-[13px] leading-relaxed">
@@ -294,10 +344,10 @@ export default function FlightsView() {
             {Array.from({ length: 6 }).map((_, i) => <RowSkeleton key={i} />)}
           </div>
         ) : filtered.length === 0 ? (
-          <EmptyState hasFlights={flights.length > 0} />
+          <EmptyState hasFlights={dayFlights.length > 0} />
         ) : (
           <motion.div
-            key={`${typeFilter}-${airlineFilter}`}
+            key={`${filterHari.hari}-${typeFilter}-${airlineFilter}`}
             initial="hidden"
             animate="show"
             variants={{ hidden: {}, show: { transition: { staggerChildren: 0.04 } } }}

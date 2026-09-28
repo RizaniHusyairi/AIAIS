@@ -18,10 +18,11 @@ import {
 } from 'lucide-react';
 import { API_BASE_URL } from '@/lib/api';
 import type { InformationRequestTracking } from '@/types';
+import { simpanTiket } from '@/lib/tiketSaya';
 import { fmtTanggal, sisaHariKerja, tanggalWita } from './aturan';
 import { TENGGAT } from './PasPermohonan';
 
-const LABEL_STATUS: Record<InformationRequestTracking['status'], { text: string; cls: string }> = {
+export const LABEL_STATUS: Record<InformationRequestTracking['status'], { text: string; cls: string }> = {
   submitted: { text: 'Diterima, menunggu diproses', cls: 'bg-blue-50 text-blue-700 ring-blue-200' },
   in_progress: { text: 'Sedang diproses', cls: 'bg-amber-50 text-amber-700 ring-amber-200' },
   fulfilled: { text: 'Sudah dijawab', cls: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
@@ -39,7 +40,13 @@ export function useLacak() {
   const [hasil, setHasil] = useState<InformationRequestTracking | null>(null);
   const [galat, setGalat] = useState<string | null>(null);
 
-  const cari = useCallback(async (masukan?: string) => {
+  /**
+   * `simpan`: catat ke "Tiket Saya" bila tiketnya ditemukan. Hanya dipakai
+   * untuk tautan dari surel/WhatsApp bukti — tiket milik pemohon sendiri.
+   * Nomor yang sekadar diketik di kolom lacak tidak dicatat, supaya daftar
+   * itu tidak terisi tiket orang lain yang kebetulan dicek dari perangkat ini.
+   */
+  const cari = useCallback(async (masukan?: string, opsi?: { simpan?: boolean }) => {
     const t = (masukan ?? nomor).trim().toUpperCase();
     if (!t) return;
     setNomor(t);
@@ -52,7 +59,10 @@ export function useLacak() {
         cache: 'no-store',
       });
       const json = await res.json();
-      if (res.ok && json?.data) setHasil(json.data as InformationRequestTracking);
+      if (res.ok && json?.data) {
+        setHasil(json.data as InformationRequestTracking);
+        if (opsi?.simpan) simpanTiket(t, json.data.submitted_at);
+      }
       else if (res.status === 429) setGalat('Terlalu banyak percobaan. Tunggu sebentar lalu coba lagi.');
       else setGalat(json?.message || 'Nomor tiket tidak ditemukan.');
     } catch {

@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 // lucide-react membuang seluruh ikon merek; lambang Instagram digambar sendiri.
 import InstagramGlyph from '@/components/icons/InstagramGlyph';
+import KartuPermohonanInformasi from '@/components/pwa/KartuPermohonanInformasi';
 import { useTeks } from '@/lib/kamus';
 
 /* Enam pintasan. "Peta Bandara" diganti "Pusat Bantuan": layar peta memuat
@@ -461,6 +462,12 @@ export default function BerandaScreen() {
           })}
         </div>
       </section>
+
+      {/* ===== PERMOHONAN INFORMASI PUBLIK =====
+          Hak warga menurut UU 14/2008 — tenggat, langkah, dan lacak tiket
+          kilat. Seluruh isinya dibaca dari sumber berprovenans; lihat
+          komponennya. */}
+      <KartuPermohonanInformasi />
 
       <section className="mx-4 mt-4 rounded-3xl border border-white bg-white p-4 shadow-[0_12px_30px_-20px_rgba(15,23,42,0.28)] md:mx-5">
         <div className="mb-3 flex items-center justify-between gap-2">

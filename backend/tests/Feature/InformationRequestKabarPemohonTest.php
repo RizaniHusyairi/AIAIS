@@ -48,6 +48,18 @@ class InformationRequestKabarPemohonTest extends TestCase
         Storage::fake('local');
         Notification::fake();
         Queue::fake();
+        // Seolah server punya SMTP sungguhan; phpunit.xml memakai `array`, yang
+        // oleh KonfigurasiSurel::siap() dianggap tidak mengirim apa pun.
+        config(['mail.default' => 'smtp']);
+    }
+
+    public function test_surel_tidak_dijanjikan_tanpa_server_smtp(): void
+    {
+        config(['mail.default' => 'log']);
+
+        $this->kirim()->assertCreated()->assertJsonPath('data.kabar.email', false);
+
+        Notification::assertNothingSent();
     }
 
     private function kirim(array $tambahan = [], string $email = 'pemohon@example.test')

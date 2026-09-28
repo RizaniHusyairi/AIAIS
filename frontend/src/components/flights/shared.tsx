@@ -137,6 +137,21 @@ export function AirlineLogo({
  */
 export { splitPlace, shortTime } from '@/lib/place';
 
+/**
+ * Apakah penerbangan cocok dengan kata kunci pencarian.
+ *
+ * Kota ikut dicari, bukan hanya `origin`/`destination`: FIDS menamai bandara
+ * ("SOEKARNO-HATTA (CGK)"), sedangkan penumpang lazim mengetik kotanya
+ * ("Jakarta"). Dipakai bersama oleh papan desktop dan layar PWA supaya hasil
+ * pencarian keduanya sama.
+ */
+export function cocokCariPenerbangan(f: Flight, kataKunci: string): boolean {
+  const q = kataKunci.trim().toLowerCase();
+  if (!q) return true;
+  return [f.flight_number, f.airline, f.origin, f.destination, f.origin_city, f.destination_city]
+    .some((v) => (v ?? '').toLowerCase().includes(q));
+}
+
 /** Tanggal penerbangan FIDS (YYYY-MM-DD) -> "Senin, 27 Juli 2026". */
 export function fmtFlightDate(date: string | null | undefined, bahasa: Bahasa): string {
   if (!date) return '';

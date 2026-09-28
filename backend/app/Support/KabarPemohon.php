@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Jobs\KirimWhatsApp;
 use App\Models\InformationRequest;
 use App\Notifications\BuktiPermohonanInformasi;
+use App\Services\Notifikasi\KonfigurasiSurel;
 use App\Services\Notifikasi\WhatsAppGateway;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -43,7 +44,10 @@ class KabarPemohon
         $hasil = ['email' => false, 'whatsapp' => false];
         $bukti = new BuktiPermohonanInformasi($permohonan);
 
-        if ($email && filled($permohonan->email) && self::jatah('email', $permohonan->email)) {
+        // Hanya bila surel benar-benar keluar (panel atau .env ber-SMTP): mailer
+        // log/array menulis ke berkas saja, dan layar tiket tidak boleh
+        // menjanjikan surel yang tidak akan pernah tiba.
+        if ($email && filled($permohonan->email) && KonfigurasiSurel::siap() && self::jatah('email', $permohonan->email)) {
             try {
                 Notification::route('mail', $permohonan->email)->notify($bukti);
                 $hasil['email'] = true;
