@@ -19,7 +19,7 @@
  * berkas bersama, yang tenggatnya bersumber `lib/ppidData.ts`.
  */
 
-import React, { useRef, useState } from 'react';
+import React, { Suspense, useRef, useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -30,9 +30,10 @@ import { StatusBar, AppHeader, Segmented } from '@/components/pwa/ui';
 import { HARI_KERJA_JAWABAN, fmtTanggal } from '@/app/ppid/pengajuan-informasi/aturan';
 import { LANGKAH, Stepper } from '@/app/ppid/pengajuan-informasi/bagianFormulir';
 import PasPermohonan, { AlurSesudah, useKelengkapan } from '@/app/ppid/pengajuan-informasi/PasPermohonan';
-import LacakPermohonan, { useLacak } from '@/app/ppid/pengajuan-informasi/LacakPermohonan';
+import LacakPermohonan, { PembacaTiketTautan, useLacak } from '@/app/ppid/pengajuan-informasi/LacakPermohonan';
 import { GalatUmum, IsiLangkah, KartuTiket, SYARAT } from '@/app/ppid/pengajuan-informasi/langkah';
 import { usePermohonan } from '@/app/ppid/pengajuan-informasi/usePermohonan';
+import DialogTinggalkan from '@/components/ui/DialogTinggalkan';
 
 type Tab = 'ajukan' | 'lacak';
 
@@ -78,6 +79,12 @@ export default function PermohonanInformasiScreen() {
     puncak.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
+  /** Dibuka dari tautan di surel/WhatsApp bukti: langsung ke tab Lacak. */
+  const bukaTiketDariTautan = (tiket: string) => {
+    lacak.cari(tiket);
+    setTab('lacak');
+  };
+
   const lacakSekarang = () => {
     if (!p.tiket) return;
     lacak.cari(p.tiket.ticket_number);
@@ -87,6 +94,10 @@ export default function PermohonanInformasiScreen() {
 
   return (
     <div className="min-h-full bg-slate-50 flex flex-col">
+      <Suspense fallback={null}>
+        <PembacaTiketTautan onTiket={bukaTiketDariTautan} />
+      </Suspense>
+
       {/* ---------------------------------------------------------- */}
       {/*  Kepala                                                    */}
       {/* ---------------------------------------------------------- */}
@@ -336,6 +347,12 @@ export default function PermohonanInformasiScreen() {
           </div>
         </div>
       )}
+
+      <DialogTinggalkan
+        buka={!!p.penjaga.tujuan}
+        onTetap={p.penjaga.tetap}
+        onTinggalkan={p.penjaga.tinggalkan}
+      />
     </div>
   );
 }

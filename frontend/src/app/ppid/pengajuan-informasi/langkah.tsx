@@ -10,10 +10,13 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Check, ChevronDown, Clock, Copy, IdCard, ClipboardList, Info, Lightbulb, Pencil,
-  ShieldCheck, TriangleAlert, UserRound, Ticket,
+  ShieldCheck, TriangleAlert, UserRound, Ticket, Send,
   Handshake, Truck, Mail, Printer, AtSign, MessageCircle,
 } from 'lucide-react';
-import { COPY_METHODS, OBTAIN_METHODS, fmtTanggal, rapikanTelepon } from './aturan';
+import {
+  CARA_HARD, CARA_SOFT, COPY_METHODS, DUKUNGAN_SALINAN, KET_CARA, OBTAIN_METHODS,
+  fmtTanggal, perluSalinan, rapikanTelepon, salinanDiizinkan,
+} from './aturan';
 import { CheckGroup, Field, FileField, Penghitung, inputCls } from './bagianFormulir';
 import { AlurSesudah, TENGGAT } from './PasPermohonan';
 import type { Permohonan } from './usePermohonan';
@@ -123,8 +126,34 @@ function LangkahBerkas({ p }: { p: Permohonan }) {
   );
 }
 
+/** Mengapa sebuah cara salinan tidak dapat dicentang. */
+function alasanNonaktif(metode: string, caraMemperoleh: string[]): string {
+  if (caraMemperoleh.length === 0) return 'Pilih cara memperoleh dulu';
+  if (!perluSalinan(caraMemperoleh)) return 'Tidak diperlukan';
+  if (DUKUNGAN_SALINAN[CARA_HARD].includes(metode)) return 'Khusus hard copy';
+  if (DUKUNGAN_SALINAN[CARA_SOFT].includes(metode)) return 'Khusus soft copy';
+  return 'Tidak sesuai';
+}
+
 function LangkahData({ p }: { p: Permohonan }) {
   const { form, errors, set, sentuh, lolos } = p;
+
+  const sudahPilihCara = form.obtain_method.length > 0;
+  const izin = salinanDiizinkan(form.obtain_method);
+  const perlu = izin.length > 0;
+  const nonaktifSalinan = Object.fromEntries(
+    COPY_METHODS.filter((m) => !izin.includes(m)).map((m) => [m, alasanNonaktif(m, form.obtain_method)]),
+  );
+  const catatanSalinan = !sudahPilihCara ? (
+    <span className="inline-flex items-center gap-1.5"><Info className="w-3.5 h-3.5 text-blue-500" />Pilih cara memperoleh informasi terlebih dahulu.</span>
+  ) : !perlu ? (
+    <span className="inline-flex items-center gap-1.5 text-emerald-700 font-semibold"><Check className="w-3.5 h-3.5" />Melihat/membaca tidak memerlukan salinan — bagian ini boleh dilewati.</span>
+  ) : p.salinanDilepas.length > 0 ? (
+    <span className="inline-flex items-start gap-1.5 text-amber-700 font-semibold">
+      <TriangleAlert className="w-3.5 h-3.5 flex-shrink-0 mt-px" />
+      {p.salinanDilepas.join(', ')} dilepas karena tidak sesuai dengan cara memperoleh yang dipilih.
+    </span>
+  ) : null;
   const [tipsBuka, setTipsBuka] = useState(false);
 
   return (
@@ -240,6 +269,8 @@ function LangkahData({ p }: { p: Permohonan }) {
         options={OBTAIN_METHODS}
         value={form.obtain_method}
         error={errors.obtain_method}
+        cols="grid-cols-1"
+        keterangan={KET_CARA}
         kolom="obtain_method"
         onToggle={(v) => p.toggle('obtain_method', v)}
       />
@@ -252,6 +283,9 @@ function LangkahData({ p }: { p: Permohonan }) {
           error={errors.copy_method}
           cols="grid-cols-2 sm:grid-cols-3"
           ikon={IKON_SALINAN}
+          nonaktif={nonaktifSalinan}
+          wajib={!sudahPilihCara || perlu}
+          catatan={catatanSalinan}
           kolom="copy_method"
           onToggle={(v) => p.toggle('copy_method', v)}
         />
@@ -274,6 +308,71 @@ function LangkahData({ p }: { p: Permohonan }) {
         </AnimatePresence>
       </div>
     </motion.div>
+  );
+}
+
+/** Sakelar hidup/mati bergaya iOS; `role="switch"` supaya terbaca pembaca layar. */
+function Sakelar({ nyala, onUbah, label }: { nyala: boolean; onUbah: (v: boolean) => void; label: string }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={nyala}
+      aria-label={label}
+      onClick={() => onUbah(!nyala)}
+      className={`relative w-11 h-6 rounded-full flex-shrink-0 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
+        nyala ? 'bg-blue-600' : 'bg-slate-300'
+      }`}
+    >
+      <motion.span
+        className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow"
+        animate={{ x: nyala ? 20 : 0 }}
+        transition={{ type: 'spring', stiffness: 500, damping: 32 }}
+      />
+    </button>
+  );
+}
+
+/**
+ * Pilihan kanal salinan bukti. Ditaruh di langkah tinjau, bukan di samping
+ * kolom kontak, supaya pemohon melihat alamat tujuannya persis seperti yang
+ * akan dipakai — dan menyetujuinya — tepat sebelum menekan Kirim.
+ */
+function KirimBuktiKe({ p }: { p: Permohonan }) {
+  const { form, set } = p;
+  const kanal = [
+    { kunci: 'kabar_email' as const, ikon: Mail, nama: 'Email', tujuan: form.email.trim() },
+    { kunci: 'kabar_whatsapp' as const, ikon: MessageCircle, nama: 'WhatsApp', tujuan: rapikanTelepon(form.phone) },
+  ];
+
+  return (
+    <div className="rounded-2xl ring-1 ring-slate-200 overflow-hidden">
+      <div className="bg-slate-50 px-4 py-2.5">
+        <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">Kirim Salinan Bukti ke</p>
+      </div>
+      <div className="divide-y divide-dashed divide-slate-200 px-4">
+        {kanal.map((k) => {
+          const Ikon = k.ikon;
+          const nyala = form[k.kunci];
+          return (
+            <div key={k.kunci} className="flex items-center gap-3 py-3">
+              <span className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${nyala ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-400'}`}>
+                <Ikon className="w-4 h-4" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[12.5px] font-bold text-slate-800">{k.nama}</p>
+                <p className="text-[11.5px] text-slate-500 truncate">{k.tujuan || '—'}</p>
+              </div>
+              <Sakelar nyala={nyala} onUbah={(v) => set(k.kunci, v)} label={`Kirim salinan bukti lewat ${k.nama}`} />
+            </div>
+          );
+        })}
+      </div>
+      <p className="px-4 pb-3 text-[11px] text-slate-400 leading-relaxed">
+        Berisi nomor tiket, batas jawaban, dan tautan pelacakan — tanpa rincian permohonan.
+        Pesan WhatsApp dikirim melalui layanan gateway pihak ketiga.
+      </p>
+    </div>
   );
 }
 
@@ -307,7 +406,10 @@ function LangkahTinjau({ p, tampilkanAlur, tautanSop }: { p: Permohonan; tampilk
         { label: 'Rincian informasi', value: form.information_details },
         { label: 'Tujuan penggunaan', value: form.information_purpose },
         { label: 'Cara memperoleh', value: form.obtain_method.join(', ') },
-        { label: 'Cara mendapat salinan', value: form.copy_method.join(', ') },
+        {
+          label: 'Cara mendapat salinan',
+          value: perluSalinan(form.obtain_method) ? form.copy_method.join(', ') : 'Tidak diperlukan',
+        },
       ],
     },
   ];
@@ -343,6 +445,8 @@ function LangkahTinjau({ p, tampilkanAlur, tautanSop }: { p: Permohonan; tampilk
           </dl>
         </div>
       ))}
+
+      <KirimBuktiKe p={p} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <p className="flex items-start gap-2.5 bg-amber-50 ring-1 ring-amber-200/70 text-slate-600 rounded-xl px-4 py-3 text-[12px] leading-relaxed">
@@ -441,6 +545,25 @@ export function KartuTiket({ p, onLacak }: { p: Permohonan; onLacak: () => void 
           <p className="mt-2 text-[12.5px] text-slate-500 leading-relaxed">
             Simpan nomor ini — misalnya dengan tangkapan layar. Anda memerlukannya untuk melacak status permohonan.
           </p>
+
+          {(tiket.kabar?.email || tiket.kabar?.whatsapp) && (
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35 }}
+              className="mt-3 flex items-start gap-2.5 rounded-xl bg-emerald-50 ring-1 ring-emerald-200/70 px-4 py-3"
+            >
+              <Send className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+              <div className="min-w-0 text-[12px] text-slate-600 leading-relaxed">
+                <p className="font-bold text-emerald-800">Salinan bukti sedang dikirim</p>
+                <ul className="mt-0.5 space-y-0.5 break-words">
+                  {tiket.kabar?.email && <li>Email → {tiket.tujuan?.email}</li>}
+                  {tiket.kabar?.whatsapp && <li>WhatsApp → {tiket.tujuan?.phone}</li>}
+                </ul>
+                <p className="mt-1 text-[11px] text-slate-500">Biasanya tiba dalam beberapa menit. Periksa juga folder spam.</p>
+              </div>
+            </motion.div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-dashed border-slate-200">

@@ -7,12 +7,39 @@
  * sumber aturan yang sama.
  */
 
-export const OBTAIN_METHODS = [
-  'Melihat/Membaca/Mendengarkan/Mencatat',
-  'Mendapatkan Copy Salinan (Hard Copy)',
-];
+export const CARA_LIHAT = 'Melihat/Membaca/Mendengarkan/Mencatat';
+export const CARA_HARD = 'Mendapatkan Copy Salinan (Hard Copy)';
+export const CARA_SOFT = 'Mendapatkan Copy Salinan (Soft Copy)';
+
+export const OBTAIN_METHODS = [CARA_LIHAT, CARA_HARD, CARA_SOFT];
 
 export const COPY_METHODS = ['Langsung', 'Kurir', 'Pos', 'Fax', 'Email', 'Whatsapp'];
+
+/**
+ * Cara salinan yang cocok untuk tiap cara memperoleh — cermin
+ * SALINAN_PER_CARA di controller. Salinan kertas hanya lewat jalur fisik,
+ * salinan digital hanya lewat jalur digital, dan melihat/membaca tidak
+ * memerlukan salinan.
+ */
+export const DUKUNGAN_SALINAN: Record<string, string[]> = {
+  [CARA_LIHAT]: [],
+  [CARA_HARD]: ['Langsung', 'Kurir', 'Pos', 'Fax'],
+  [CARA_SOFT]: ['Email', 'Whatsapp'],
+};
+
+/** Keterangan pendek per cara memperoleh, tampil di bawah labelnya. */
+export const KET_CARA: Record<string, string> = {
+  [CARA_LIHAT]: 'Datang dan melihat langsung, tanpa salinan',
+  [CARA_HARD]: 'Salinan kertas · langsung, kurir, pos, atau fax',
+  [CARA_SOFT]: 'Salinan digital · email atau WhatsApp',
+};
+
+/** Cara salinan yang sah untuk gabungan cara memperoleh yang dipilih. */
+export const salinanDiizinkan = (caraMemperoleh: string[]): string[] =>
+  COPY_METHODS.filter((m) => caraMemperoleh.some((c) => DUKUNGAN_SALINAN[c]?.includes(m)));
+
+/** Apakah pilihan cara memperoleh ini memerlukan cara salinan. */
+export const perluSalinan = (caraMemperoleh: string[]) => salinanDiizinkan(caraMemperoleh).length > 0;
 
 export const MAX_FILE_BYTES = 2 * 1024 * 1024;
 export const ACCEPT = 'image/jpeg,image/png,application/pdf';
@@ -34,6 +61,9 @@ export type Form = {
   information_purpose: string;
   obtain_method: string[];
   copy_method: string[];
+  /** Persetujuan menerima salinan bukti (nomor tiket) lewat surel / WhatsApp. */
+  kabar_email: boolean;
+  kabar_whatsapp: boolean;
 };
 
 export type Kolom = keyof Form;
@@ -43,6 +73,7 @@ export const KOSONG: Form = {
   name: '', address: '', occupation: '', npwp: '', phone: '', email: '',
   information_details: '', information_purpose: '',
   obtain_method: [], copy_method: [],
+  kabar_email: true, kabar_whatsapp: true,
 };
 
 /** Kolom per langkah; urutannya juga urutan fokus saat ada galat. */
@@ -81,6 +112,8 @@ export const ATURAN: Record<Kolom, (f: Form) => string | undefined> = {
   address: (f) => wajib(f.address, 'Alamat wajib diisi.'),
   occupation: (f) => wajib(f.occupation, 'Pekerjaan wajib diisi.'),
   npwp: () => undefined,
+  kabar_email: () => undefined,
+  kabar_whatsapp: () => undefined,
   phone: (f) => {
     if (!f.phone.trim()) return 'Nomor HP/WA wajib diisi.';
     if (!/^\+?\d{10,13}$/.test(rapikanTelepon(f.phone))) return 'Nomor HP/WA tidak valid (10–13 digit).';
@@ -94,7 +127,17 @@ export const ATURAN: Record<Kolom, (f: Form) => string | undefined> = {
   information_details: (f) => wajib(f.information_details, 'Rincian informasi wajib diisi.'),
   information_purpose: (f) => wajib(f.information_purpose, 'Tujuan penggunaan informasi wajib diisi.'),
   obtain_method: (f) => (f.obtain_method.length ? undefined : 'Cara memperoleh informasi wajib dipilih.'),
-  copy_method: (f) => (f.copy_method.length ? undefined : 'Cara mendapat salinan informasi wajib dipilih.'),
+  copy_method: (f) => {
+    // Belum bisa dinilai sebelum cara memperoleh dipilih — dan belum lengkap:
+    // tanpa baris ini formulir kosong terhitung "1/11 kolom wajib".
+    if (f.obtain_method.length === 0) return 'Pilih cara memperoleh informasi terlebih dahulu.';
+    const izin = salinanDiizinkan(f.obtain_method);
+    if (izin.length === 0) return undefined; // tidak memerlukan salinan
+    if (f.copy_method.length === 0) return 'Cara mendapat salinan informasi wajib dipilih.';
+    const salah = f.copy_method.find((m) => !izin.includes(m));
+    if (salah) return `Salinan lewat ${salah} tidak sesuai dengan cara memperoleh yang dipilih.`;
+    return undefined;
+  },
 };
 
 export const validasiLangkah = (f: Form, langkah: number): Partial<Record<Kolom, string>> => {
@@ -106,6 +149,31 @@ export const validasiLangkah = (f: Form, langkah: number): Partial<Record<Kolom,
   return e;
 };
 
+/*
+ * Tanggal kalender dihitung dalam WITA, bukan zona waktu perangkat — sama
+ * dengan controller (`CetakanPdf::ZONA`). Pemohon yang membuka formulir dari
+ * luar Kalimantan Timur, atau ponsel yang jamnya keliru zona, tetap melihat
+ * tenggat yang sama dengan yang ditetapkan server.
+ *
+ * Satu tanggal kalender diwakili Date pukul 12:00 UTC (20:00 WITA) dan semua
+ * aritmetikanya memakai metode UTC, sehingga tidak ada zona perangkat yang
+ * bisa menggesernya ke hari lain.
+ */
+const ZONA = 'Asia/Makassar';
+
+/** YYYY-MM-DD menurut WITA. Sama dengan `todayWita()` di lib/flightDate.ts. */
+const ymdWita = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: ZONA }).format(d);
+
+const kalender = (ymd: string) => new Date(`${ymd}T12:00:00Z`);
+
+/** Hari ini menurut kalender Samarinda. */
+export const hariIniWita = () => kalender(ymdWita(new Date()));
+
+/** Tanggal kalender Samarinda dari cap waktu atau tanggal ISO dari API. */
+export const tanggalWita = (iso: string) => kalender(ymdWita(new Date(iso)));
+
+const hariKerja = (d: Date) => d.getUTCDay() !== 0 && d.getUTCDay() !== 6;
+
 /**
  * Tambah hari kerja dengan melompati Sabtu–Minggu — cermin
  * `addWorkingDays()` di controller, sehingga perkiraan di layar sama dengan
@@ -114,24 +182,20 @@ export const validasiLangkah = (f: Form, langkah: number): Partial<Record<Kolom,
 export const tambahHariKerja = (mulai: Date, hari: number): Date => {
   const d = new Date(mulai);
   while (hari > 0) {
-    d.setDate(d.getDate() + 1);
-    const w = d.getDay();
-    if (w !== 0 && w !== 6) hari--;
+    d.setUTCDate(d.getUTCDate() + 1);
+    if (hariKerja(d)) hari--;
   }
   return d;
 };
 
-/** Hari kerja dari hari ini sampai `sampai`; negatif bila sudah lewat. */
-export const sisaHariKerja = (sampai: Date, dari = new Date()): number => {
-  const a = new Date(dari.getFullYear(), dari.getMonth(), dari.getDate());
-  const b = new Date(sampai.getFullYear(), sampai.getMonth(), sampai.getDate());
-  const arah = b >= a ? 1 : -1;
+/** Hari kerja dari hari ini (WITA) sampai `sampai`; negatif bila sudah lewat. */
+export const sisaHariKerja = (sampai: Date, dari = hariIniWita()): number => {
+  const arah = sampai >= dari ? 1 : -1;
   let n = 0;
-  const d = new Date(a);
-  while (d.getTime() !== b.getTime()) {
-    d.setDate(d.getDate() + arah);
-    const w = d.getDay();
-    if (w !== 0 && w !== 6) n += arah;
+  const d = new Date(dari);
+  while (d.toISOString().slice(0, 10) !== sampai.toISOString().slice(0, 10)) {
+    d.setUTCDate(d.getUTCDate() + arah);
+    if (hariKerja(d)) n += arah;
   }
   return n;
 };
@@ -141,7 +205,7 @@ export const fmtTanggal = (iso?: string | Date | null) => {
   const d = iso instanceof Date ? iso : new Date(iso);
   return Number.isNaN(d.getTime())
     ? '—'
-    : d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    : d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', timeZone: ZONA });
 };
 
 /**

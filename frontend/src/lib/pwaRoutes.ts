@@ -112,7 +112,9 @@ const TABEL: PetaRute[] = [
   // PPID. Lintasan PWA-nya lebih pendek daripada lintasan publik; nama panjang
   // versi desktop berasal dari struktur menu v1 dan tidak perlu ditiru di
   // layar selebar ponsel.
-  { publik: '/ppid/pengajuan-informasi', app: '/app/ppid/permohonan' },
+  // `simpanQuery`: tautan lacak di surel/WhatsApp bukti permohonan membawa
+  // `?tiket=…`; tanpa ini pemohon di ponsel mendarat di formulir kosong.
+  { publik: '/ppid/pengajuan-informasi', app: '/app/ppid/permohonan', simpanQuery: true },
   { publik: '/ppid/informasi-berkala', app: '/app/ppid/berkala' },
   { publik: '/ppid/informasi-serta-merta', app: '/app/ppid/serta-merta' },
   { publik: '/ppid/informasi-setiap-saat', app: '/app/ppid/setiap-saat' },

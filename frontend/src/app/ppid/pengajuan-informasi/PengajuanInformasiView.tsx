@@ -22,7 +22,7 @@
  * layar PWA (app/app/ppid/permohonan) yang punya kerangkanya sendiri.
  */
 
-import React, { useRef } from 'react';
+import React, { Suspense, useRef } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import PpidHero, { FlightArc } from '@/components/ppid/PpidHero';
@@ -30,9 +30,10 @@ import { useSetting } from '@/lib/settings';
 import { Check, ArrowRight, ArrowLeft, Loader2, Search } from 'lucide-react';
 import { Stepper } from './bagianFormulir';
 import PasPermohonan, { AlurSesudah, KelengkapanRingkas } from './PasPermohonan';
-import LacakPermohonan, { useLacak } from './LacakPermohonan';
+import LacakPermohonan, { PembacaTiketTautan, useLacak } from './LacakPermohonan';
 import { GalatUmum, IsiLangkah, KartuTiket, SYARAT } from './langkah';
 import { usePermohonan } from './usePermohonan';
+import DialogTinggalkan from '@/components/ui/DialogTinggalkan';
 
 const rise = {
   hidden: { opacity: 0, y: 20 },
@@ -48,6 +49,12 @@ export default function PengajuanInformasiView() {
   const lacakInput = useRef<HTMLInputElement>(null);
 
   /** Isi kolom lacak dengan tiket baru, langsung cari, lalu gulir ke sana. */
+  /** Dibuka dari tautan di surel/WhatsApp bukti: langsung tampilkan statusnya. */
+  const bukaTiketDariTautan = (tiket: string) => {
+    lacak.cari(tiket);
+    setTimeout(() => document.getElementById('lacak')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+  };
+
   const lacakSekarang = () => {
     if (!p.tiket) return;
     lacak.cari(p.tiket.ticket_number);
@@ -57,6 +64,10 @@ export default function PengajuanInformasiView() {
 
   return (
     <div className="bg-slate-50">
+      <Suspense fallback={null}>
+        <PembacaTiketTautan onTiket={bukaTiketDariTautan} />
+      </Suspense>
+
       <PpidHero
         title="Pengajuan"
         accent="Informasi Publik"
@@ -232,6 +243,12 @@ export default function PengajuanInformasiView() {
           </div>
         </div>
       </section>
+
+      <DialogTinggalkan
+        buka={!!p.penjaga.tujuan}
+        onTetap={p.penjaga.tetap}
+        onTinggalkan={p.penjaga.tinggalkan}
+      />
     </div>
   );
 }

@@ -9,15 +9,16 @@
  * tidak diketahui pemohon, padahal tenggatnya ikut berjalan.
  */
 
-import React, { forwardRef, useCallback, useState } from 'react';
+import React, { forwardRef, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
   ArrowRight, Check, Clock, ExternalLink, Loader2, Scale, Search, Ticket, TriangleAlert, X,
 } from 'lucide-react';
 import { API_BASE_URL } from '@/lib/api';
 import type { InformationRequestTracking } from '@/types';
-import { fmtTanggal, sisaHariKerja } from './aturan';
+import { fmtTanggal, sisaHariKerja, tanggalWita } from './aturan';
 import { TENGGAT } from './PasPermohonan';
 
 const LABEL_STATUS: Record<InformationRequestTracking['status'], { text: string; cls: string }> = {
@@ -62,6 +63,28 @@ export function useLacak() {
   }, [nomor]);
 
   return { nomor, setNomor, muat, hasil, galat, cari };
+}
+
+/**
+ * Baca `?tiket=` dari tautan di surel/WhatsApp bukti permohonan, lalu serahkan
+ * ke `onTiket` sekali.
+ *
+ * Sengaja komponen kecil tersendiri yang dibungkus <Suspense> oleh
+ * pemakainya: `useSearchParams` membuat pohon hingga batas Suspense terdekat
+ * dirender di klien saja. Dipasang langsung di view, seluruh halaman — hero,
+ * persyaratan, formulir — akan hilang dari HTML yang dibaca mesin pencari.
+ */
+export function PembacaTiketTautan({ onTiket }: { onTiket: (tiket: string) => void }) {
+  const tiket = useSearchParams().get('tiket');
+  const onTiketRef = useRef(onTiket);
+  useEffect(() => { onTiketRef.current = onTiket; });
+
+  useEffect(() => {
+    const bersih = tiket?.trim().toUpperCase();
+    if (bersih && /^PIP-\d{8}-[A-Z0-9]{4,12}$/.test(bersih)) onTiketRef.current(bersih);
+  }, [tiket]);
+
+  return null;
 }
 
 type Lacak = ReturnType<typeof useLacak>;
@@ -114,7 +137,7 @@ function Lintasan({ h }: { h: InformationRequestTracking }) {
 
 function SisaWaktu({ h }: { h: InformationRequestTracking }) {
   if (!h.due_date || h.status === 'fulfilled' || h.status === 'rejected') return null;
-  const sisa = sisaHariKerja(new Date(h.due_date));
+  const sisa = sisaHariKerja(tanggalWita(h.due_date));
   const lewat = sisa < 0;
   return (
     <p className={`mt-4 flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-[12px] font-bold ring-1 ${
@@ -140,7 +163,7 @@ const LacakPermohonan = forwardRef<HTMLInputElement, {
   const status = hasil ? LABEL_STATUS[hasil.status] ?? LABEL_STATUS.submitted : null;
   const tawarkanKeberatan = hasil && (
     hasil.status === 'rejected'
-    || (hasil.status !== 'fulfilled' && hasil.due_date && sisaHariKerja(new Date(hasil.due_date)) < 0)
+    || (hasil.status !== 'fulfilled' && hasil.due_date && sisaHariKerja(tanggalWita(hasil.due_date)) < 0)
   );
 
   return (

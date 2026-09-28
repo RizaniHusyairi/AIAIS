@@ -79,6 +79,79 @@ class WhatsAppGateway
             && $this->tujuan() !== [];
     }
 
+    /**
+     * Siap mengirim ke nomor WARGA (mis. bukti permohonan ke pemohon).
+     *
+     * Tidak mensyaratkan daftar nomor piket seperti `siap()`: tujuannya nomor
+     * yang diberikan pemohon sendiri, bukan `wa_recipients`. Sakelar panel dan
+     * kunci API tetap wajib — mematikan WhatsApp di panel mematikan keduanya.
+     */
+    public function siapKeWarga(): bool
+    {
+        return $this->aktif() && filled($this->token());
+    }
+
+    /**
+     * Normalisasi nomor Indonesia ke bentuk gateway: 62xxxxxxxxxx.
+     * "0812…", "812…", "+62 812…", dan "62812…" menjadi "62812…".
+     */
+    public static function nomorInternasional(string $nomor): ?string
+    {
+        $angka = preg_replace('/[^0-9]/', '', $nomor) ?? '';
+
+        if (str_starts_with($angka, '62')) {
+            $hasil = $angka;
+        } elseif (str_starts_with($angka, '0')) {
+            $hasil = '62' . substr($angka, 1);
+        } elseif (str_starts_with($angka, '8')) {
+            $hasil = '62' . $angka;
+        } else {
+            return null;
+        }
+
+        return strlen($hasil) >= 10 ? $hasil : null;
+    }
+
+    /**
+     * Kirim satu teks ke satu nomor warga. Menghabiskan kuota harian yang sama
+     * dengan notifikasi petugas, dan — seperti `kirim()` — TIDAK pernah melempar.
+     */
+    public function kirimKe(string $nomor, string $teks): bool
+    {
+        $tujuan = self::nomorInternasional($nomor);
+
+        if ($tujuan === null || ! $this->siapKeWarga()) {
+            return false;
+        }
+
+        if ($this->sisaKuota() <= 0) {
+            Log::warning('Kuota WhatsApp harian habis; pesan ke warga dilewati.', [
+                'kuota' => $this->pagarHarian(),
+            ]);
+
+            return false;
+        }
+
+        if (! $this->kirimSatu($tujuan, $teks)) {
+            return false;
+        }
+
+        $this->catatTerkirim();
+
+        return true;
+    }
+
+    private function catatTerkirim(): void
+    {
+        Cache::put(
+            self::KUNCI_HITUNG . date('Ymd'),
+            $this->terpakaiHariIni() + 1,
+            // Kedaluwarsa lewat tengah malam; penghitungnya memang
+            // hanya berlaku untuk hari berjalan.
+            now()->endOfDay()->addMinutes(5),
+        );
+    }
+
     private function aktif(): bool
     {
         $panel = $this->setelan('wa_enabled');
@@ -217,13 +290,7 @@ class WhatsAppGateway
 
             if ($this->kirimSatu($nomor, $teks)) {
                 $terkirim++;
-                Cache::put(
-                    self::KUNCI_HITUNG . date('Ymd'),
-                    $this->terpakaiHariIni() + 1,
-                    // Kedaluwarsa lewat tengah malam; penghitungnya memang
-                    // hanya berlaku untuk hari berjalan.
-                    now()->endOfDay()->addMinutes(5),
-                );
+                $this->catatTerkirim();
             }
         }
 

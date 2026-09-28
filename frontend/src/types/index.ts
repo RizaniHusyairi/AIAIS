@@ -877,7 +877,8 @@ export interface InformationRequest {
   information_details: string;
   information_purpose: string;
   obtain_method: string;
-  copy_method: string;
+  /** Kosong bila pemohon hanya ingin melihat/membaca, tanpa salinan. */
+  copy_method: string | null;
   status: 'submitted' | 'in_progress' | 'fulfilled' | 'rejected';
   admin_response?: string | null;
   response_link?: string | null;

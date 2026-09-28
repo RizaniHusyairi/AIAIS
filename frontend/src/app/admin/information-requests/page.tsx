@@ -327,7 +327,7 @@ export default function AdminInformationRequestsPage() {
                 </div>
                 <div>
                   <p className="text-[10px] uppercase tracking-wider text-[var(--adm-dim)] font-bold">Cara Mendapat Salinan</p>
-                  <p className="mt-1 text-[12px] text-[var(--adm-body)]">{active.copy_method}</p>
+                  <p className="mt-1 text-[12px] text-[var(--adm-body)]">{active.copy_method || 'Tidak diperlukan'}</p>
                 </div>
               </div>
             </div>

@@ -15,7 +15,7 @@ import { motion } from 'framer-motion';
 import { ArrowRight, Check, CircleDashed, Clock, Plane, Scale, Ticket } from 'lucide-react';
 import { SOP_PROSEDUR } from '@/lib/ppidData';
 import {
-  ATURAN, HARI_KERJA_JAWABAN, KOLOM_WAJIB, fmtTanggal, tambahHariKerja, type Form,
+  ATURAN, HARI_KERJA_JAWABAN, KOLOM_WAJIB, fmtTanggal, hariIniWita, perluSalinan, tambahHariKerja, type Form,
 } from './aturan';
 
 const sop = (slug: string) => SOP_PROSEDUR.find((p) => p.slug === slug);
@@ -46,9 +46,11 @@ export function useKelengkapan(form: Form) {
 
 export default function PasPermohonan({ form, tautanSop }: { form: Form; tautanSop?: string }) {
   const { lengkap, total, persen } = useKelengkapan(form);
-  const perkiraan = useMemo(() => tambahHariKerja(new Date(), HARI_KERJA_JAWABAN), []);
+  const perkiraan = useMemo(() => tambahHariKerja(hariIniWita(), HARI_KERJA_JAWABAN), []);
   const asal = form.request_from.trim();
   const nama = form.name.trim();
+  // Hanya melihat/membaca: tidak ada salinan yang perlu dikirim.
+  const tanpaSalinan = form.obtain_method.length > 0 && !perluSalinan(form.obtain_method);
 
   return (
     <div className="space-y-5">
@@ -103,8 +105,8 @@ export default function PasPermohonan({ form, tautanSop }: { form: Form; tautanS
           />
           <Baris
             label="Salinan via"
-            value={form.copy_method.join(', ') || 'Belum dipilih'}
-            isi={form.copy_method.length > 0}
+            value={tanpaSalinan ? 'Tidak diperlukan' : form.copy_method.join(', ') || 'Belum dipilih'}
+            isi={tanpaSalinan || form.copy_method.length > 0}
           />
         </div>
 

@@ -7,7 +7,8 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
 /**
- * Kirim satu pesan WhatsApp ke nomor piket, di luar siklus permintaan.
+ * Kirim satu pesan WhatsApp ke nomor piket — atau ke satu nomor warga bila
+ * `$nomor` diisi — di luar siklus permintaan.
  *
  * Diantrekan supaya panggilan ke server gateway tidak pernah menahan respons
  * untuk warga: gateway pihak ketiga bisa lambat atau mati, dan pengunjung yang
@@ -45,11 +46,22 @@ class KirimWhatsApp implements ShouldQueue
     public function __construct(
         public readonly string $teks,
         public readonly ?string $jenis = null,
+        /**
+         * Nomor WARGA tujuan tunggal, mis. bukti permohonan ke pemohonnya.
+         * Bila diisi, daftar nomor piket tidak disentuh sama sekali.
+         */
+        public readonly ?string $nomor = null,
     ) {
     }
 
     public function handle(WhatsAppGateway $gateway): void
     {
+        if ($this->nomor !== null) {
+            $gateway->kirimKe($this->nomor, $this->teks);
+
+            return;
+        }
+
         $gateway->kirim($this->teks, $this->jenis);
     }
 }

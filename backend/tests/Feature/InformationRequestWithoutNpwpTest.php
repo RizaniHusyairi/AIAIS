@@ -54,7 +54,7 @@ class InformationRequestWithoutNpwpTest extends TestCase
             'email' => 'pemohon@example.test',
             'information_details' => 'Informasi uji',
             'information_purpose' => 'Keperluan uji',
-            'obtain_method' => ['Melihat/Membaca/Mendengarkan/Mencatat'],
+            'obtain_method' => ['Mendapatkan Copy Salinan (Soft Copy)'],
             'copy_method' => ['Email'],
         ], ['Accept' => 'application/json']);
 

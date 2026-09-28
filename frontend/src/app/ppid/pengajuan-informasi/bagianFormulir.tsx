@@ -242,49 +242,91 @@ export function FileField({
 }
 
 export function CheckGroup({
-  label, options, value, error, cols = 'grid-cols-1 sm:grid-cols-2', ikon, kolom, onToggle,
+  label, options, value, error, cols = 'grid-cols-1 sm:grid-cols-2', ikon, keterangan, nonaktif,
+  wajib = true, catatan, kolom, onToggle,
 }: {
   label: string; options: string[]; value: string[]; error?: string;
-  cols?: string; ikon?: Record<string, LucideIcon>; kolom: Kolom;
+  cols?: string; ikon?: Record<string, LucideIcon>;
+  /** Teks kecil di bawah label tiap pilihan. */
+  keterangan?: Record<string, string>;
+  /** Pilihan yang tidak dapat dicentang, beserta alasannya. */
+  nonaktif?: Record<string, string>;
+  wajib?: boolean;
+  /** Pesan di bawah judul kelompok, mis. mengapa semua pilihan nonaktif. */
+  catatan?: React.ReactNode;
+  kolom: Kolom;
   onToggle: (v: string) => void;
 }) {
   const idGalat = useId();
+  // Fokus galat jatuh ke pilihan pertama yang masih bisa dicentang.
+  const pertamaAktif = options.find((o) => !nonaktif?.[o]);
+
   return (
     <fieldset aria-describedby={error ? idGalat : undefined}>
       <legend className="text-[12.5px] font-bold text-slate-700">
-        {label}<span className="text-rose-500 ml-0.5" aria-hidden="true">*</span>
+        {label}
+        {wajib
+          ? <span className="text-rose-500 ml-0.5" aria-hidden="true">*</span>
+          : <span className="ml-1.5 text-[10.5px] font-semibold text-slate-400">(tidak diperlukan)</span>}
         <span className="ml-1.5 text-[10.5px] font-semibold text-slate-400">boleh lebih dari satu</span>
       </legend>
 
+      <AnimatePresence initial={false}>
+        {catatan && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="mt-2 text-[11.5px] text-slate-500 leading-relaxed">{catatan}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className={`mt-2 grid ${cols} gap-2`}>
-        {options.map((opt, i) => {
+        {options.map((opt) => {
           const on = value.includes(opt);
+          const alasan = nonaktif?.[opt];
+          const mati = !!alasan && !on;
           const Ikon = ikon?.[opt];
+          const ket = mati ? alasan : keterangan?.[opt];
           return (
             <motion.label
               key={opt}
-              whileTap={{ scale: 0.98 }}
-              className={`flex items-center gap-2.5 rounded-xl px-3.5 py-3 cursor-pointer ring-1 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-blue-500 ${
-                on ? 'bg-blue-50 ring-blue-300' : error ? 'bg-white ring-rose-200' : 'bg-white ring-slate-200 hover:ring-slate-300'
+              whileTap={mati ? undefined : { scale: 0.98 }}
+              animate={{ opacity: mati ? 0.5 : 1 }}
+              title={mati ? alasan : undefined}
+              className={`flex items-center gap-2.5 rounded-xl px-3.5 py-3 ring-1 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-blue-500 ${
+                mati ? 'bg-slate-50 ring-slate-200 cursor-not-allowed'
+                : on ? 'bg-blue-50 ring-blue-300 cursor-pointer'
+                : error ? 'bg-white ring-rose-200 cursor-pointer'
+                : 'bg-white ring-slate-200 hover:ring-slate-300 cursor-pointer'
               }`}
             >
               <input
                 type="checkbox"
                 checked={on}
+                disabled={mati}
                 onChange={() => onToggle(opt)}
-                data-kolom={i === 0 ? kolom : undefined}
+                data-kolom={opt === pertamaAktif ? kolom : undefined}
                 className="sr-only"
               />
               <span
                 className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 ring-1 transition-colors ${
-                  on ? 'bg-blue-600 ring-blue-600 text-white' : 'bg-white ring-slate-300 text-transparent'
+                  on ? 'bg-blue-600 ring-blue-600 text-white'
+                  : mati ? 'bg-slate-100 ring-slate-200 text-transparent'
+                  : 'bg-white ring-slate-300 text-transparent'
                 }`}
                 aria-hidden="true"
               >
                 <Check className="w-3.5 h-3.5" />
               </span>
               {Ikon && <Ikon className={`w-4 h-4 flex-shrink-0 ${on ? 'text-blue-600' : 'text-slate-400'}`} aria-hidden="true" />}
-              <span className="text-[12.5px] text-slate-700 leading-snug">{opt}</span>
+              <span className="min-w-0">
+                <span className={`block text-[12.5px] leading-snug ${mati ? 'text-slate-400' : 'text-slate-700'}`}>{opt}</span>
+                {ket && <span className="block mt-0.5 text-[10.5px] text-slate-400 leading-snug">{ket}</span>}
+              </span>
             </motion.label>
           );
         })}

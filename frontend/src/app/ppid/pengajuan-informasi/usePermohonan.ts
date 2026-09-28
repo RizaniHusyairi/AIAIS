@@ -11,9 +11,10 @@
 
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { API_BASE_URL } from '@/lib/api';
+import { usePenjagaNavigasi } from '@/lib/usePenjagaNavigasi';
 import {
   ATURAN, HARI_KERJA_JAWABAN, KOLOM_LANGKAH, KOSONG,
-  rapikanTelepon, salinTeks, tambahHariKerja, validasiLangkah,
+  hariIniWita, rapikanTelepon, salinTeks, salinanDiizinkan, tambahHariKerja, validasiLangkah,
   type Form, type Kolom,
 } from './aturan';
 
@@ -22,6 +23,9 @@ export type Tiket = {
   due_date: string;
   submitted_at?: string;
   response_working_days?: number;
+  /** Kanal yang benar-benar diantrekan server — bukan sekadar yang dipilih. */
+  kabar?: { email: boolean; whatsapp: boolean };
+  tujuan?: { email: string; phone: string };
 };
 
 export type Galat = Partial<Record<Kolom, string>>;
@@ -52,6 +56,8 @@ export function usePermohonan(formTop: RefObject<HTMLDivElement | null>) {
   const [galatUmum, setGalatUmum] = useState<string | null>(null);
   const [tiket, setTiket] = useState<Tiket | null>(null);
   const [disalin, setDisalin] = useState<'ya' | 'gagal' | null>(null);
+  /** Cara salinan yang baru saja dilepas otomatis karena tak lagi cocok. */
+  const [salinanDilepas, setSalinanDilepas] = useState<string[]>([]);
 
   // Fokus ke galat pertama. Kolomnya baru ada di DOM setelah animasi
   // pergantian langkah selesai, jadi fokus dipasang lewat efek + jeda,
@@ -74,18 +80,19 @@ export function usePermohonan(formTop: RefObject<HTMLDivElement | null>) {
     getar([20, 40, 20]);
   };
 
-  // Formulir panjang yang hilang karena salah ketuk tautan itu menyakitkan;
-  // peramban diminta mengonfirmasi dulu selama ada isian yang belum dikirim.
+  // Formulir panjang yang hilang karena salah ketuk tautan itu menyakitkan.
+  // Selama ada isian yang belum dikirim, setiap jalan keluar — tautan,
+  // tombol kembali, tutup tab — ditahan dulu dengan dialog konfirmasi.
+  // Kerangka (desktop/PWA) merender <DialogTinggalkan> dari `penjaga`.
   const adaIsian = !tiket && (Object.keys(KOSONG) as Kolom[]).some((k) => {
     const v = form[k];
-    return Array.isArray(v) ? v.length > 0 : typeof v === 'string' ? v.trim() !== '' : v !== null;
+    if (Array.isArray(v)) return v.length > 0;
+    if (typeof v === 'string') return v.trim() !== '';
+    // Sakelar persetujuan bawaannya menyala; itu bukan isian pemohon.
+    if (typeof v === 'boolean') return false;
+    return v !== null;
   });
-  useEffect(() => {
-    if (!adaIsian) return;
-    const cegah = (e: BeforeUnloadEvent) => { e.preventDefault(); };
-    window.addEventListener('beforeunload', cegah);
-    return () => window.removeEventListener('beforeunload', cegah);
-  }, [adaIsian]);
+  const penjaga = usePenjagaNavigasi(adaIsian);
 
   const set = <K extends Kolom>(k: K, v: Form[K]) => {
     const baru = { ...form, [k]: v };
@@ -107,8 +114,30 @@ export function usePermohonan(formTop: RefObject<HTMLDivElement | null>) {
   const lolos = (k: Kolom) => !!disentuh[k] && !ATURAN[k](form);
 
   const toggle = (k: 'obtain_method' | 'copy_method', v: string) => {
-    set(k, form[k].includes(v) ? form[k].filter((x) => x !== v) : [...form[k], v]);
-    setDisentuh((d) => ({ ...d, [k]: true }));
+    const daftar = form[k].includes(v) ? form[k].filter((x) => x !== v) : [...form[k], v];
+
+    if (k === 'copy_method') {
+      set('copy_method', daftar);
+      setDisentuh((d) => ({ ...d, copy_method: true }));
+      return;
+    }
+
+    // Cara memperoleh berubah: cara salinan yang tidak lagi cocok dilepas
+    // otomatis, dan pemohon diberi tahu mana saja — pilihan yang hilang
+    // diam-diam lebih membingungkan daripada yang dijelaskan.
+    const izin = salinanDiizinkan(daftar);
+    const dilepas = form.copy_method.filter((m) => !izin.includes(m));
+    const baru = { ...form, obtain_method: daftar, copy_method: form.copy_method.filter((m) => izin.includes(m)) };
+    setForm(baru);
+    setSalinanDilepas(dilepas);
+    setDisentuh((d) => ({ ...d, obtain_method: true }));
+    setErrors((e) => ({
+      ...e,
+      obtain_method: ATURAN.obtain_method(baru),
+      // Galat salinan dinilai ulang hanya bila sudah pernah tampil, supaya
+      // memilih cara memperoleh tidak langsung memarahi kolom di bawahnya.
+      copy_method: e.copy_method || disentuh.copy_method ? ATURAN.copy_method(baru) : undefined,
+    }));
   };
 
   const pilihKtp = (f: File | null) => {
@@ -160,6 +189,8 @@ export function usePermohonan(formTop: RefObject<HTMLDivElement | null>) {
         .forEach((k) => fd.append(k, k === 'phone' ? rapikanTelepon(form[k]) : form[k].trim()));
       form.obtain_method.forEach((v) => fd.append('obtain_method[]', v));
       form.copy_method.forEach((v) => fd.append('copy_method[]', v));
+      fd.append('kabar_email', form.kabar_email ? '1' : '0');
+      fd.append('kabar_whatsapp', form.kabar_whatsapp ? '1' : '0');
 
       const res = await fetch(`${API_BASE_URL}/information-requests`, {
         method: 'POST',
@@ -169,8 +200,10 @@ export function usePermohonan(formTop: RefObject<HTMLDivElement | null>) {
       const json = await res.json().catch(() => null);
 
       if (res.ok && json?.data?.ticket_number) {
-        setTiket(json.data);
+        // Tujuan kabar disimpan sebelum isian dikosongkan, untuk layar tiket.
+        setTiket({ ...json.data, tujuan: { email: form.email.trim(), phone: rapikanTelepon(form.phone) } });
         setForm(KOSONG);
+        setSalinanDilepas([]);
         setDisentuh({});
         setDisalin(null);
         getar(40);
@@ -229,10 +262,10 @@ export function usePermohonan(formTop: RefObject<HTMLDivElement | null>) {
     return null;
   }).filter(Boolean) as string[];
 
-  const perkiraan = tambahHariKerja(new Date(), HARI_KERJA_JAWABAN);
+  const perkiraan = tambahHariKerja(hariIniWita(), HARI_KERJA_JAWABAN);
 
   return {
-    step, form, errors, kirim, galatUmum, tiket, disalin, perkiraan, tujuanSalinan,
+    step, form, errors, kirim, galatUmum, tiket, disalin, perkiraan, tujuanSalinan, salinanDilepas, penjaga,
     set, sentuh, lolos, toggle, pilihKtp, isiIndividu, maju, keLangkah, submit, salinTiket, ajukanLagi,
   };
 }

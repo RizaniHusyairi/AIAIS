@@ -5,12 +5,15 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Helpers\ApiResponse;
 use App\Models\InformationRequest;
+use App\Support\CetakanPdf;
+use App\Support\KabarPemohon;
 use App\Support\Notifikasi;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 /**
  * Permohonan Informasi Publik — UU 14/2008.
@@ -36,13 +39,34 @@ class InformationRequestController extends Controller
 
     private const DIR_KTP = 'permohonan-informasi/ktp';
 
-    /** Pilihan sah, disalin apa adanya dari formulir v1. */
-    private const OBTAIN_METHODS = [
-        'Melihat/Membaca/Mendengarkan/Mencatat',
-        'Mendapatkan Copy Salinan (Hard Copy)',
+    /**
+     * Cara memperoleh informasi beserta cara mendapat salinan yang cocok.
+     *
+     * Dua pilihan pertama disalin apa adanya dari formulir v1; "Soft Copy"
+     * ditambahkan di v2. Di v1 keenam cara salinan boleh dipadukan dengan
+     * cara memperoleh apa pun, sehingga pemohon bisa meminta salinan kertas
+     * lewat email. Di sini salinan kertas hanya lewat jalur fisik, salinan
+     * digital hanya lewat jalur digital, dan "melihat/membaca" tidak
+     * memerlukan salinan sama sekali.
+     *
+     * HARUS selaras dengan DUKUNGAN_SALINAN di
+     * frontend/src/app/ppid/pengajuan-informasi/aturan.ts.
+     */
+    private const SALINAN_PER_CARA = [
+        'Melihat/Membaca/Mendengarkan/Mencatat' => [],
+        'Mendapatkan Copy Salinan (Hard Copy)' => ['Langsung', 'Kurir', 'Pos', 'Fax'],
+        'Mendapatkan Copy Salinan (Soft Copy)' => ['Email', 'Whatsapp'],
     ];
 
-    private const COPY_METHODS = ['Langsung', 'Kurir', 'Pos', 'Fax', 'Email', 'Whatsapp'];
+    /** Cara salinan yang sah untuk gabungan cara memperoleh yang dipilih. */
+    private static function salinanDiizinkan(array $caraMemperoleh): array
+    {
+        $izin = [];
+        foreach ($caraMemperoleh as $cara) {
+            $izin = array_merge($izin, self::SALINAN_PER_CARA[$cara] ?? []);
+        }
+        return array_values(array_unique($izin));
+    }
 
     /**
      * Tenggat jawaban menurut UU 14/2008 Pasal 22: 10 hari kerja sejak
@@ -72,6 +96,8 @@ class InformationRequestController extends Controller
             $request->merge(['phone' => preg_replace('/[\s\-.()]/', '', $request->input('phone'))]);
         }
 
+        $izinSalinan = self::salinanDiizinkan(array_filter((array) $request->input('obtain_method', []), 'is_string'));
+
         $validated = $request->validate([
             'ktp' => 'required|file|mimes:jpg,jpeg,png,pdf|max:2048',
             'request_from' => 'required|string|max:255',
@@ -86,9 +112,23 @@ class InformationRequestController extends Controller
             'information_details' => 'required|string',
             'information_purpose' => 'required|string',
             'obtain_method' => 'required|array|min:1',
-            'obtain_method.*' => ['required', 'string', 'in:' . implode(',', self::OBTAIN_METHODS)],
-            'copy_method' => 'required|array|min:1',
-            'copy_method.*' => ['required', 'string', 'in:' . implode(',', self::COPY_METHODS)],
+            'obtain_method.*' => ['required', 'string', Rule::in(array_keys(self::SALINAN_PER_CARA))],
+            // Wajib hanya bila cara memperoleh yang dipilih memang menghasilkan
+            // salinan; pemohon yang sekadar ingin melihat tidak ditanya.
+            'copy_method' => [Rule::requiredIf($izinSalinan !== []), 'array'],
+            // Persetujuan pemohon menerima salinan bukti lewat tiap kanal.
+            'kabar_email' => 'sometimes|boolean',
+            'kabar_whatsapp' => 'sometimes|boolean',
+            'copy_method.*' => [
+                'required', 'string',
+                function (string $attribute, mixed $value, \Closure $fail) use ($izinSalinan) {
+                    if ($izinSalinan === []) {
+                        $fail('Cara memperoleh yang dipilih tidak memerlukan salinan.');
+                    } elseif (!in_array($value, $izinSalinan, true)) {
+                        $fail("Salinan lewat {$value} tidak sesuai dengan cara memperoleh yang dipilih.");
+                    }
+                },
+            ],
         ], [
             'ktp.required' => 'Scan KTP wajib diunggah.',
             'ktp.mimes' => 'Scan KTP harus berformat JPG, PNG, atau PDF.',
@@ -110,8 +150,6 @@ class InformationRequestController extends Controller
             // bawaan berbahasa Inggris seperti "The selected … is invalid".
             'obtain_method.*.in' => 'Pilihan cara memperoleh informasi tidak dikenali.',
             'copy_method.required' => 'Cara mendapat salinan informasi wajib dipilih.',
-            'copy_method.min' => 'Pilih setidaknya satu cara mendapat salinan.',
-            'copy_method.*.in' => 'Pilihan cara mendapat salinan tidak dikenali.',
         ]);
 
         $ktpPath = null;
@@ -126,7 +164,12 @@ class InformationRequestController extends Controller
                 self::DISK,
             );
 
-            $now = Carbon::now();
+            // "Diterima" berarti tanggal di Samarinda, bukan tanggal UTC.
+            // `APP_TIMEZONE` sengaja UTC, sehingga permohonan pukul 00:00–07:59
+            // WITA dulu tercatat sebagai hari sebelumnya: awalan tiket mundur
+            // sehari dan tenggatnya maju satu hari kerja dari yang dijanjikan
+            // formulir. Cap waktu `created_at` tetap UTC seperti kolom lain.
+            $now = Carbon::now(CetakanPdf::ZONA);
 
             $record = InformationRequest::create([
                 'ticket_number' => 'PIP-' . $now->format('Ymd') . '-' . strtoupper(Str::random(4)),
@@ -141,12 +184,23 @@ class InformationRequestController extends Controller
                 'information_details' => $validated['information_details'],
                 'information_purpose' => $validated['information_purpose'],
                 'obtain_method' => implode(', ', $validated['obtain_method']),
-                'copy_method' => implode(', ', $validated['copy_method']),
+                'copy_method' => !empty($validated['copy_method']) ? implode(', ', $validated['copy_method']) : null,
                 'status' => 'submitted',
-                'due_date' => $this->addWorkingDays($now, self::RESPONSE_WORKING_DAYS),
+                // Disimpan sebagai tanggal polos supaya kolom DATE tidak
+                // menafsirkan ulang jamnya dalam zona lain.
+                'due_date' => $this->addWorkingDays($now, self::RESPONSE_WORKING_DAYS)->toDateString(),
             ]);
 
             Notifikasi::kirim('informasi', $record->ticket_number);
+
+            // Salinan bukti ke pemohon: jalan pemulihan bila tiket di layar
+            // tidak sempat dicatat. Pemohon memilih kanalnya di formulir;
+            // klien lama yang tidak mengirim pilihan mendapat keduanya.
+            $kabar = KabarPemohon::kirim(
+                $record,
+                $request->boolean('kabar_email', true),
+                $request->boolean('kabar_whatsapp', true),
+            );
 
             return ApiResponse::success([
                 'ticket_number' => $record->ticket_number,
@@ -154,6 +208,7 @@ class InformationRequestController extends Controller
                 'submitted_at' => $record->created_at,
                 'due_date' => $record->due_date,
                 'response_working_days' => self::RESPONSE_WORKING_DAYS,
+                'kabar' => $kabar,
             ], 'Permohonan informasi publik berhasil dikirim. Simpan nomor tiket Anda.', null, 201);
         } catch (\Throwable $e) {
             // Berkas sudah telanjur tersimpan tetapi barisnya gagal dibuat —
