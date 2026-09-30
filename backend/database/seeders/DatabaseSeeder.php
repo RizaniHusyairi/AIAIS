@@ -58,6 +58,15 @@ class DatabaseSeeder extends Seeder
          * Aman diulang: seedernya memakai firstOrCreate atas tautan SK-nya.
          */
         $this->call(PpidProfileDocumentSeeder::class);
+
+        /*
+         * Dokumen bergambar Profil PPID — tiga gambar yang selama ini tayang,
+         * dipindahkan dari konstanta frontend. Isinya bukan karangan, jadi di
+         * basis data sungguhan jalankan tersendiri:
+         *
+         *     php artisan db:seed --class=PpidImageDocumentSeeder
+         */
+        $this->call(PpidImageDocumentSeeder::class);
     }
 
     /**

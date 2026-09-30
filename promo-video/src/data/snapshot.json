@@ -1,0 +1,521 @@
+{
+  "fetchedAt": "2026-09-29T06:45:03.105Z",
+  "source": {
+    "flights": "http://127.0.0.1:8000/api/v2",
+    "ppid": "http://127.0.0.1:8000/api/v2",
+    "news": "https://aptpairport.id/api/v2",
+    "facilities": "https://aptpairport.id/api/v2",
+    "tourisms": "https://aptpairport.id/api/v2"
+  },
+  "flights": [
+    {
+      "type": "departure",
+      "number": "QG 461",
+      "airline": "Citilink",
+      "color": "#009a44",
+      "logo": "img/airline-QG.webp",
+      "city": "Surabaya",
+      "code": "SUB",
+      "time": "12:05 WITA",
+      "status": "Berangkat",
+      "date": "2026-09-29"
+    },
+    {
+      "type": "departure",
+      "number": "GA 581",
+      "airline": "Garuda Indonesia",
+      "color": "#005b9f",
+      "logo": "img/airline-GA.png",
+      "city": "Tangerang",
+      "code": "CGK",
+      "time": "12:20 WITA",
+      "status": "Berangkat",
+      "date": "2026-09-29"
+    },
+    {
+      "type": "departure",
+      "number": "IU 653",
+      "airline": "Super Air Jet",
+      "color": "#ffcc00",
+      "logo": "img/airline-IU.webp",
+      "city": "Surabaya",
+      "code": "SUB",
+      "time": "12:30 WITA",
+      "status": "Berangkat",
+      "date": "2026-09-29"
+    },
+    {
+      "type": "departure",
+      "number": "ID 6257",
+      "airline": "Batik Air",
+      "color": "#8f0000",
+      "logo": "img/airline-ID.png",
+      "city": "Tangerang",
+      "code": "CGK",
+      "time": "13:00 WITA",
+      "status": "Berangkat",
+      "date": "2026-09-29"
+    },
+    {
+      "type": "departure",
+      "number": "IW 1484",
+      "airline": "Wings Air",
+      "color": "#ed1b24",
+      "logo": "img/airline-IW.png",
+      "city": "Berau",
+      "code": "BEJ",
+      "time": "14:05 WITA",
+      "status": "Berangkat",
+      "date": "2026-09-29"
+    },
+    {
+      "type": "arrival",
+      "number": "QG 460",
+      "airline": "Citilink",
+      "color": "#009a44",
+      "logo": "img/airline-QG.webp",
+      "city": "Surabaya",
+      "code": "SUB",
+      "time": "11:15 WITA",
+      "status": "Mendarat",
+      "date": "2026-09-29"
+    },
+    {
+      "type": "arrival",
+      "number": "GA 580",
+      "airline": "Garuda Indonesia",
+      "color": "#005b9f",
+      "logo": "img/airline-GA.png",
+      "city": "Tangerang",
+      "code": "CGK",
+      "time": "11:20 WITA",
+      "status": "Mendarat",
+      "date": "2026-09-29"
+    },
+    {
+      "type": "arrival",
+      "number": "IU 652",
+      "airline": "Super Air Jet",
+      "color": "#ffcc00",
+      "logo": "img/airline-IU.webp",
+      "city": "Surabaya",
+      "code": "SUB",
+      "time": "11:50 WITA",
+      "status": "Mendarat",
+      "date": "2026-09-29"
+    },
+    {
+      "type": "arrival",
+      "number": "ID 6256",
+      "airline": "Batik Air",
+      "color": "#8f0000",
+      "logo": "img/airline-ID.png",
+      "city": "Tangerang",
+      "code": "CGK",
+      "time": "12:20 WITA",
+      "status": "Mendarat",
+      "date": "2026-09-29"
+    },
+    {
+      "type": "arrival",
+      "number": "IW 1485",
+      "airline": "Wings Air",
+      "color": "#ed1b24",
+      "logo": "img/airline-IW.png",
+      "city": "Berau",
+      "code": "BEJ",
+      "time": "13:35 WITA",
+      "status": "Mendarat",
+      "date": "2026-09-29"
+    }
+  ],
+  "news": [
+    {
+      "title": "Kemenhub Tingkatkan Kesiapsiagaan Hadapi Keadaan Darurat di Bandara A.P.T. Pranoto",
+      "category": "Berita Utama",
+      "date": "2026-09-21T02:49:48.000000Z",
+      "image": "img/news-43.jpg"
+    },
+    {
+      "title": "Bandara A.P.T. Pranoto Gelar Sosialisasi Keselamatan dan Keamanan Penerbangan di SMA Negeri 12 Samarinda",
+      "category": "Kegiatan",
+      "date": "2026-09-14T05:28:35.000000Z",
+      "image": "img/news-42.jpg"
+    },
+    {
+      "title": "Ditkampen Lakukan Audit Maskapai Smart Aviation di Bandara A.P.T. Pranoto Samarinda",
+      "category": "Kegiatan",
+      "date": "2026-09-11T06:04:20.000000Z",
+      "image": "img/news-41.jpg"
+    },
+    {
+      "title": "Bandara A.P.T. Pranoto Jadi Basis Operasi Helikopter Waterbombing Tangani Karhutla Samarinda",
+      "category": "Operasional",
+      "date": "2026-09-09T00:40:46.000000Z",
+      "image": "img/news-40.jpg"
+    }
+  ],
+  "facilities": [
+    {
+      "id": 1,
+      "name": "Runway",
+      "category": "Sisi Udara",
+      "details": [
+        "Ukuran: 2.250 m x 45 m\r",
+        "Daya Dukung: PCN 50 F/C/X/T"
+      ],
+      "location": null,
+      "image": "img/fac-1.jpg"
+    },
+    {
+      "id": 2,
+      "name": "Apron",
+      "category": "Sisi Udara",
+      "details": [
+        "Ukuran: 300 m x 123 m\r",
+        "8 Parking Stand\r",
+        "Daya Dukung: PCN 63 F/C/X/T"
+      ],
+      "location": null,
+      "image": "img/fac-2.jpg"
+    },
+    {
+      "id": 3,
+      "name": "Garbarata",
+      "category": "Sisi Udara",
+      "details": [
+        "Tersedia: 2 Unit\r",
+        "Memudahkan akses ke pesawat."
+      ],
+      "location": null,
+      "image": "img/fac-3.jpg"
+    },
+    {
+      "id": 4,
+      "name": "Runway Light",
+      "category": "Sisi Udara",
+      "details": [
+        "Runway Light\r",
+        "Taxiway Light\r",
+        "Apron Light\r",
+        "P.A.P.I (Precision Approch Path Indicator\r",
+        "Flood Light"
+      ],
+      "location": null,
+      "image": "img/fac-4.jpg"
+    },
+    {
+      "id": 5,
+      "name": "Terminal Penumpang",
+      "category": "Sisi Darat",
+      "details": [
+        "Luas: 12.700 mÂ²\r",
+        "Kapasitas: 1.5 Juta Penumpang/Tahun"
+      ],
+      "location": null,
+      "image": "img/fac-5.jpg"
+    },
+    {
+      "id": 6,
+      "name": "Terminal Kargo lini I",
+      "category": "Sisi Darat",
+      "details": [
+        "Luas: 1.148 mÂ²\r",
+        "Mendukung logistik & pengiriman barang."
+      ],
+      "location": null,
+      "image": "img/fac-6.jpg"
+    },
+    {
+      "id": 7,
+      "name": "Terminal Kargo lini II",
+      "category": "Sisi Darat",
+      "details": [
+        "Luas: 1.623,9 mÂ²\r",
+        "Mendukung logistik & pengiriman barang."
+      ],
+      "location": null,
+      "image": "img/fac-7.jpg"
+    },
+    {
+      "id": 8,
+      "name": "Hangar",
+      "category": "Sisi Darat",
+      "details": [
+        "Luas: 3,632,40 mÂ²"
+      ],
+      "location": null,
+      "image": "img/fac-8.jpg"
+    },
+    {
+      "id": 9,
+      "name": "Gedung VVIP",
+      "category": "Sisi Darat",
+      "details": [
+        "Luas: 743,60 mÂ²\r",
+        "Kenyamanan eksklusif untuk tamu penting."
+      ],
+      "location": null,
+      "image": "img/fac-9.jpg"
+    },
+    {
+      "id": 10,
+      "name": "Parkir & Landscape",
+      "category": "Sisi Darat",
+      "details": [
+        "Luas: 30.000 mÂ²\r",
+        "Kapasitas luas untuk kendaraan."
+      ],
+      "location": null,
+      "image": "img/fac-10.jpg"
+    },
+    {
+      "id": 11,
+      "name": "Gedung Meteorologi",
+      "category": "Sisi Darat",
+      "details": [
+        "Luas: 251,14 mÂ²"
+      ],
+      "location": null,
+      "image": "img/fac-11.jpg"
+    },
+    {
+      "id": 12,
+      "name": "Gedung Administrasi",
+      "category": "Sisi Darat",
+      "details": [
+        "Luas: 1.253 mÂ²\r",
+        "Pusat administrasi dan operasional."
+      ],
+      "location": null,
+      "image": "img/fac-12.jpg"
+    },
+    {
+      "id": 13,
+      "name": "Airport Maintenance",
+      "category": "Sisi Darat",
+      "details": [
+        "Luas: 311,70 mÂ²"
+      ],
+      "location": null,
+      "image": "img/fac-13.jpg"
+    },
+    {
+      "id": 14,
+      "name": "ATC & Office",
+      "category": "Sisi Darat",
+      "details": [
+        "Luas: 688,55 mÂ²"
+      ],
+      "location": null,
+      "image": "img/fac-14.jpg"
+    },
+    {
+      "id": 15,
+      "name": "Fire Station (ARFF)",
+      "category": "Sisi Darat",
+      "details": [
+        "Luas: 455,52 mÂ²\r",
+        "Kategori 6 ARFF."
+      ],
+      "location": null,
+      "image": "img/fac-15.jpg"
+    },
+    {
+      "id": 16,
+      "name": "Power Station",
+      "category": "Sisi Darat",
+      "details": [
+        "Luas: 803 mÂ²\r",
+        "Menjamin pasokan listrik bandara."
+      ],
+      "location": null,
+      "image": "img/fac-16.jpg"
+    },
+    {
+      "id": 17,
+      "name": "Kantin Bandara",
+      "category": "Sisi Darat",
+      "details": [
+        "Luas: 372,12 mÂ²",
+        "Menyediakan aneka kuliner."
+      ],
+      "location": null,
+      "image": null
+    },
+    {
+      "id": 18,
+      "name": "Check-in Counter",
+      "category": "Umum",
+      "details": [
+        "Tersedia: 16 Counter\r",
+        "Proses check-in yang cepat dan efisien."
+      ],
+      "location": null,
+      "image": "img/fac-18.jpg"
+    },
+    {
+      "id": 19,
+      "name": "Mushola",
+      "category": "Umum",
+      "details": [
+        "Ruang ibadah yang bersih dan nyaman bagi umat Muslim."
+      ],
+      "location": null,
+      "image": "img/fac-19.jpg"
+    },
+    {
+      "id": 20,
+      "name": "Smoking Room",
+      "category": "Umum",
+      "details": [
+        "Tersedia dilantai 2 Keberangkatan"
+      ],
+      "location": null,
+      "image": "img/fac-20.jpg"
+    },
+    {
+      "id": 21,
+      "name": "Working Space",
+      "category": "Umum",
+      "details": [
+        "Tersedia 2 Unit Personal Computer"
+      ],
+      "location": null,
+      "image": "img/fac-21.jpg"
+    },
+    {
+      "id": 22,
+      "name": "Game Box",
+      "category": "Umum",
+      "details": [
+        "Tersedia 2 Unit Play Station 5"
+      ],
+      "location": null,
+      "image": "img/fac-22.jpg"
+    },
+    {
+      "id": 24,
+      "name": "Self Check-In",
+      "category": "Umum",
+      "details": [
+        "Tersedia 2 unit mesin self-check-in yang dapat memudahkan penumpang jika tidak membawa bagasi"
+      ],
+      "location": null,
+      "image": "img/fac-24.jpg"
+    },
+    {
+      "id": 25,
+      "name": "Stasiun Pengisian Kendaraan Listrik Umum (SPKLU)",
+      "category": "Umum",
+      "details": [
+        "Fasilitas pengisian daya untuk kendaraan listrik, baik mobil maupun motor, yang berfungsi serupa dengan SPBU untuk kendaraan konvensional."
+      ],
+      "location": null,
+      "image": "img/fac-25.jpg"
+    },
+    {
+      "id": 26,
+      "name": "Nursery Room",
+      "category": "Umum",
+      "details": [
+        "Fasilitas nursery room tersedia pada lantai 1 dan 2"
+      ],
+      "location": null,
+      "image": "img/fac-26.png"
+    },
+    {
+      "id": 27,
+      "name": "Gedung EOC",
+      "category": "Sisi Darat",
+      "details": [
+        "Gedung Emergency Operation Center (EOC) adalah pusat kendali dan koordinasi penanganan keadaan darurat di Bandara APT Pranoto Samarinda."
+      ],
+      "location": null,
+      "image": "img/fac-27.png"
+    },
+    {
+      "id": 28,
+      "name": "Taxiway",
+      "category": "Sisi Udara",
+      "details": [
+        "Taxiway Alpha 173,5 m x 23 m\r",
+        "Taxiway Bravo 148 m x 18 m\r",
+        "Paralel Taxi 527 m x 18 m"
+      ],
+      "location": null,
+      "image": "img/fac-28.jpg"
+    },
+    {
+      "id": 29,
+      "name": "Parkir Inap",
+      "category": "Umum",
+      "details": [
+        "Fasilitas Parkir Inap Berbayar"
+      ],
+      "location": null,
+      "image": "img/fac-29.jpg"
+    }
+  ],
+  "tourisms": [
+    {
+      "name": "Desa Budaya Pampang",
+      "category": "Budaya",
+      "city": null,
+      "duration": null,
+      "image": "img/wisata-desa-budaya-pampang.jpg",
+      "illustration": false
+    },
+    {
+      "name": "Masjid Islamic Center Samarinda",
+      "category": "Religi",
+      "city": null,
+      "duration": null,
+      "image": "img/wisata-masjid-islamic-center-samarinda.jpg",
+      "illustration": false
+    },
+    {
+      "name": "Teras Samarinda",
+      "category": "Alam",
+      "city": null,
+      "duration": null,
+      "image": "img/wisata-teras-samarinda.jpg",
+      "illustration": false
+    }
+  ],
+  "ppid": {
+    "berkala": {
+      "count": 10,
+      "sample": [
+        "Data Statistik Kepegawaian",
+        "LAKIP",
+        "Laporan Keuangan"
+      ]
+    },
+    "sertaMerta": {
+      "count": 22,
+      "sample": [
+        "Membangun Kesadaran, Mewujudkan Penerbangan yang Selamat, Aman dan Nyaman",
+        "Ada perubahan aturan bagasi gratis Garuda Indonesia mulai 1 September 2026"
+      ]
+    },
+    "setiapSaat": {
+      "count": 9,
+      "sample": [
+        "Inventaris BMN",
+        "Persuratan",
+        "SOP Pelayanan Publik"
+      ]
+    }
+  },
+  "home": {
+    "heroBg": "img/home-bg.jpg",
+    "ig": [
+      {
+        "image": "img/ig-0.jpg",
+        "video": true,
+        "caption": ""
+      }
+    ]
+  }
+}

@@ -15,7 +15,13 @@
  *
  * Video Profil bukan tabel melainkan dua kunci pada `settings`, sama seperti
  * video profil beranda. Panelnya punya tombol simpan sendiri karena ia menulis
- * ke endpoint yang berbeda dari daftar dokumen di bawahnya.
+ * ke endpoint yang berbeda dari daftar dokumen di bawahnya. Sampulnya dapat
+ * diunggah langsung: sampul dimuat sebelum pengunjung menekan putar, jadi ia
+ * harus gambar milik portal — bukan tautan Drive yang menyeret pengunjung ke
+ * server Google (dan yang memang tidak dapat dirender `<img>`).
+ *
+ * Dokumen Bergambar (struktur, maklumat, biaya layanan) dikelola di
+ * `PanelDokumenGambar`.
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
@@ -34,6 +40,7 @@ import {
   PlayCircle, Scale, Link as LinkIcon, Star,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import PanelDokumenGambar, { tautanDrive } from './PanelDokumenGambar';
 
 /** Harus sama persis dengan PpidProfileDocument::TYPES di backend. */
 const TYPES = ['SK PPID', 'Laporan Bulanan'] as const;
@@ -65,6 +72,7 @@ export default function AdminProfilPpidPage() {
   const [video, setVideo] = useState<Record<string, string>>({ ppid_video_url: '', ppid_video_gambar: '' });
   const [videoAwal, setVideoAwal] = useState<Record<string, string>>({ ppid_video_url: '', ppid_video_gambar: '' });
   const [simpanVideo, setSimpanVideo] = useState(false);
+  const [unggahSampul, setUnggahSampul] = useState(false);
 
   /* ---------------- Dokumen ---------------- */
   const [items, setItems] = useState<PpidProfileDocument[]>([]);
@@ -142,6 +150,11 @@ export default function AdminProfilPpidPage() {
       return;
     }
 
+    if (tautanDrive(video.ppid_video_gambar ?? '')) {
+      setToast({ text: 'Tautan Google Drive tidak dapat dipakai sebagai sampul. Unggah gambarnya.', kind: 'error' });
+      return;
+    }
+
     setSimpanVideo(true);
     const res = await adminFetch<Record<string, string>>('/settings', { method: 'POST', body: video });
     setSimpanVideo(false);
@@ -150,6 +163,30 @@ export default function AdminProfilPpidPage() {
       setVideoAwal(video);
       invalidateSettings();
       setToast({ text: 'Video profil PPID disimpan', kind: 'success' });
+    } else setToast({ text: res.message, kind: 'error' });
+  };
+
+  /**
+   * Sampul diunggah dan disimpan seketika, terpisah dari tombol Simpan Video:
+   * berkasnya sudah tertulis di server begitu dipilih, dan menahan URL-nya
+   * sampai Simpan ditekan hanya meninggalkan berkas yatim bila petugas batal.
+   */
+  const unggahGambarSampul = async (berkas: File | undefined) => {
+    if (!berkas) return;
+
+    const fd = new FormData();
+    fd.append('ppid_video_gambar', berkas);
+
+    setUnggahSampul(true);
+    const res = await adminUpload<Record<string, string>>('/settings', fd);
+    setUnggahSampul(false);
+
+    if (res.ok && res.data) {
+      const url = res.data.ppid_video_gambar ?? '';
+      setVideo((v) => ({ ...v, ppid_video_gambar: url }));
+      setVideoAwal((v) => ({ ...v, ppid_video_gambar: url }));
+      invalidateSettings();
+      setToast({ text: 'Sampul video diunggah', kind: 'success' });
     } else setToast({ text: res.message, kind: 'error' });
   };
 
@@ -252,7 +289,7 @@ export default function AdminProfilPpidPage() {
       <PageHeader
         icon={ShieldCheck}
         title="Profil PPID"
-        subtitle="SK Tim PPID, Laporan Bulanan, dan Video Profil yang tampil di halaman /ppid"
+        subtitle="SK Tim PPID, Laporan Bulanan, Video Profil, dan Dokumen Bergambar yang tampil di halaman /ppid"
         action={
           <div className="flex gap-2">
             <Btn variant="ghost" onClick={load}><RefreshCw className="w-4 h-4" /> Muat Ulang</Btn>
@@ -290,12 +327,30 @@ export default function AdminProfilPpidPage() {
               onChange={(v) => setVideo({ ...video, ppid_video_url: v })}
               placeholder="https://www.youtube.com/watch?v=..."
             />
-            <Field
-              label="Gambar Sampul"
-              value={video.ppid_video_gambar ?? ''}
-              onChange={(v) => setVideo({ ...video, ppid_video_gambar: v })}
-              placeholder="https://... atau /ppid/sampul-video.jpg"
-            />
+            <div>
+              <Field
+                label="Gambar Sampul"
+                value={video.ppid_video_gambar ?? ''}
+                onChange={(v) => setVideo({ ...video, ppid_video_gambar: v })}
+                placeholder="Unggah di bawah, atau https://.../gambar.jpg"
+                error={tautanDrive(video.ppid_video_gambar ?? '')
+                  ? 'Tautan Google Drive adalah halaman, bukan gambar — tidak dapat ditampilkan. Unduh gambarnya lalu unggah.'
+                  : undefined}
+              />
+              <label className="mt-2 inline-flex items-center gap-2 text-[12px] font-semibold text-[var(--adm-accent)] cursor-pointer">
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  disabled={unggahSampul}
+                  onChange={(e) => { unggahGambarSampul(e.target.files?.[0]); e.target.value = ''; }}
+                />
+                <span className="px-3 py-2 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 transition-colors">
+                  {unggahSampul ? 'Mengunggah...' : 'Unggah Gambar Sampul'}
+                </span>
+                <span className="text-[11px] font-normal text-[var(--adm-dim)]">JPG, PNG, WEBP · maks 5 MB · rasio 16:9</span>
+              </label>
+            </div>
             <InfoNote>
               Dikosongkan berarti bagian video <span className="text-[var(--adm-accent)] font-semibold">tidak dirender sama sekali</span> di
               halaman publik — bukan pemutar kosong. Pemutar YouTube baru dimuat setelah pengunjung menekan tombol putar,
@@ -329,6 +384,9 @@ export default function AdminProfilPpidPage() {
           </div>
         </div>
       </Panel>
+
+      {/* ============ DOKUMEN BERGAMBAR ============ */}
+      <PanelDokumenGambar />
 
       {/* ============ DAFTAR DOKUMEN ============ */}
       <Panel>

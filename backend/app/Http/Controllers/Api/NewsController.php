@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Helpers\ApiResponse;
 use App\Models\News;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -41,16 +42,49 @@ class NewsController extends Controller
         );
     }
 
-    public function show($slug)
+    public function show(Request $request, $slug)
     {
-        $news = News::where('slug', $slug)->first();
+        // Draf dijawab 404 seperti slug yang tidak ada: slug-nya sudah terbentuk
+        // sejak disimpan dan bisa bocor, sedangkan isinya belum tentu layak
+        // dibaca publik. Pratinjau petugas dirender dari form, bukan dari sini.
+        $news = News::where('slug', $slug)->where('status', 'published')->first();
         if (!$news) {
             return ApiResponse::error('Berita tidak ditemukan', null, 404);
         }
 
-        $news->increment('views_count');
+        // `track=0` dikirim server Next saat merakit metadata. Tanpa itu satu
+        // kunjungan desktop terhitung dua kali: sekali dari server, sekali lagi
+        // dari peramban yang memuat isi artikelnya.
+        if ($request->query('track') !== '0') {
+            $this->catatPembaca($request, $news);
+        }
 
         return ApiResponse::success($news, 'Detail berita');
+    }
+
+    /**
+     * Tambah satu pembaca — sekali per pengunjung per berita dalam 30 menit.
+     *
+     * `views_count` menentukan urutan "Terpopuler", jadi muat ulang halaman,
+     * pindah bolak-balik antar-artikel, dan perayap tidak boleh ikut
+     * menggelembungkannya. Pengunjung dikenali dari sidik IP + agen peramban
+     * yang di-hash: cukup untuk membedakan orang, tanpa menyimpan IP-nya.
+     */
+    private function catatPembaca(Request $request, News $news): void
+    {
+        $agen = (string) $request->userAgent();
+
+        if ($agen === '' || preg_match('/bot|crawl|spider|slurp|preview|facebookexternalhit|whatsapp|telegram/i', $agen)) {
+            return;
+        }
+
+        $kunci = 'news-view:'.$news->id.':'.hash('sha256', $request->ip().'|'.$agen);
+
+        // `add` hanya berhasil bila kuncinya belum ada, jadi permintaan kedua
+        // dalam jendela yang sama tidak menambah apa pun.
+        if (Cache::add($kunci, true, now()->addMinutes(30))) {
+            $news->increment('views_count');
+        }
     }
 
     public function store(Request $request)

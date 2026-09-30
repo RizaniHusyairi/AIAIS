@@ -77,8 +77,7 @@ export function tanggalPendek(iso?: string): string {
  *
  * `thumbnail_url` adalah medan turunan backend yang sudah menyelesaikan berkas
  * v2, berkas warisan v1, maupun URL milik server lain. `thumbnail` mentah hanya
- * dipakai sebagai jaring pengaman untuk data cadangan di `lib/newsData.ts`,
- * yang tidak melewati backend sama sekali.
+ * dipakai sebagai jaring pengaman bila medan turunannya tidak ikut terkirim.
  *
  * KENAPA STRING KOSONG IKUT DIBUANG. Sebagian baris `news` warisan v1 menyimpan
  * `''` pada kolom gambarnya, bukan NULL — dan `??` meloloskan string kosong.
@@ -91,8 +90,7 @@ export function tanggalPendek(iso?: string): string {
  * mana pun. Memundurkan diri ke lintasan mentah pada keadaan itu pasti
  * menghasilkan 404 — lintasan relatifnya akan dicari di alamat frontend, bukan
  * di server berkas. Lebih baik menampilkan penggantinya. Lintasan mentah hanya
- * dipakai bila medan turunannya memang tidak ada sama sekali (`undefined`),
- * yaitu pada data cadangan `lib/newsData.ts` yang tidak melewati backend.
+ * dipakai bila medan turunannya memang tidak ada sama sekali (`undefined`).
  */
 export function gambarBerita(n?: NewsItem | null): string | undefined {
   if (!n) return undefined;

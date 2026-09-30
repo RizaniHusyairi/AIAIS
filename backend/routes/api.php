@@ -35,6 +35,7 @@ use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\OjtController;
 use App\Http\Controllers\Api\PeriodicDocumentController;
 use App\Http\Controllers\Api\PersuratanController;
+use App\Http\Controllers\Api\PpidImageDocumentController;
 use App\Http\Controllers\Api\PpidProfileDocumentController;
 use App\Http\Controllers\Api\PpidRegulationController;
 use App\Http\Controllers\Api\RatingController;
@@ -179,6 +180,11 @@ Route::prefix(config('api.version'))->group(function () {
     // yang BELUM terbit tetap dikirim — keberadaannya wajib diumumkan menurut
     // UU 14/2008; lihat controllernya.
     Route::get('/ppid-profile-documents', [PpidProfileDocumentController::class, 'index']);
+
+    // Dokumen bergambar Profil PPID (struktur, maklumat, biaya layanan, dst.).
+    // Berbeda dari rute di atas, yang gambarnya hilang DISARING — kartu gambar
+    // tanpa gambar hanyalah kotak kosong.
+    Route::get('/ppid-image-documents', [PpidImageDocumentController::class, 'index']);
 
     // Isi PPID lainnya. Ketiganya menyaring baris yang tautannya kosong —
     // dokumennya berupa tautan luar, jadi tidak ada berkas yang diperiksa.
@@ -524,6 +530,13 @@ Route::prefix(config('api.version'))->group(function () {
             Route::post('/ppid-profile-documents/{id}', [PpidProfileDocumentController::class, 'update']);
             Route::put('/ppid-profile-documents/{id}', [PpidProfileDocumentController::class, 'update']);
             Route::delete('/ppid-profile-documents/{id}', [PpidProfileDocumentController::class, 'destroy']);
+
+            // Dokumen bergambar Profil PPID; `POST /{id}` untuk unggahan multipart.
+            Route::get('/ppid-image-documents', [PpidImageDocumentController::class, 'adminIndex']);
+            Route::post('/ppid-image-documents', [PpidImageDocumentController::class, 'store']);
+            Route::post('/ppid-image-documents/{id}', [PpidImageDocumentController::class, 'update']);
+            Route::put('/ppid-image-documents/{id}', [PpidImageDocumentController::class, 'update']);
+            Route::delete('/ppid-image-documents/{id}', [PpidImageDocumentController::class, 'destroy']);
 
             Route::get('/service-standards', [ServiceStandardController::class, 'adminIndex']);
             Route::post('/service-standards', [ServiceStandardController::class, 'store']);

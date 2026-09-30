@@ -1,5 +1,3 @@
-import { NEWS_FALLBACK, ANNOUNCEMENTS_FALLBACK } from '@/lib/newsData';
-
 /* ------------------------------------------------------------------ */
 /*  Alamat API                                                         */
 /*                                                                     */
@@ -273,9 +271,6 @@ export async function fetchApi<T>(endpoint: string, options: RequestInit = {}): 
   // berkata apa adanya "belum ada jadwal" — bukan menampilkan penerbangan
   // karangan yang tampak seperti jadwal hari ini.
 
-  const dummyNews = NEWS_FALLBACK;
-  const dummyAnnouncements = ANNOUNCEMENTS_FALLBACK;
-
   if (endpoint.startsWith('/flights')) {
     return {
       success: false,
@@ -284,21 +279,11 @@ export async function fetchApi<T>(endpoint: string, options: RequestInit = {}): 
     };
   }
 
-  // Fallback berita & pengumuman agar portal tetap tampil saat server tidak aktif
-  if (endpoint.startsWith('/news')) {
-    const slugMatch = endpoint.replace(/^\/news\/?/, '').split('?')[0];
-    if (slugMatch) {
-      const found = dummyNews.find((n) => n.slug === slugMatch);
-      return found
-        ? { success: true, data: found as unknown as T, message: 'Data contoh (server tidak aktif)' }
-        : { success: true, data: dummyNews[0] as unknown as T, message: 'Data contoh (server tidak aktif)' };
-    }
-    return { success: true, data: dummyNews as unknown as T, message: 'Data contoh (server tidak aktif)' };
-  }
-
-  if (endpoint.startsWith('/announcements')) {
-    return { success: true, data: dummyAnnouncements as unknown as T, message: 'Data contoh (server tidak aktif)' };
-  }
+  // Berita dan pengumuman juga tanpa data contoh, dengan alasan yang sama.
+  // Cadangan lama menjawab `success: true` berisi berita karangan — lengkap
+  // dengan kutipan yang diatasnamakan Kepala Kantor — dan menjawab slug apa
+  // pun dengan artikel pertamanya, sehingga tautan mati tampak seperti siaran
+  // resmi dan sitemap yang dibangun saat backend mati memuat slug fiktif.
 
   return {
     success: false,

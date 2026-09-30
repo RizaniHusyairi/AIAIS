@@ -5,11 +5,12 @@
  *
  * Teks tetapnya berasal dari `lib/ppidData.ts`; lihat provenans di sana.
  *
- * Tiga bagian TIDAK statis dan datang dari panel admin: SK Tim PPID, Video
- * Profil, dan Laporan Bulanan. SK dulu sebuah konstanta berisi tautan Google
- * Drive — menggantinya berarti menyunting kode dan merilis ulang portal,
- * padahal SK diperbarui tiap kali susunan tim berubah. Ketiganya dirakit di
- * `components/ppid/ProfilPpidSeksi`.
+ * Empat bagian TIDAK statis dan datang dari panel admin: SK Tim PPID, Video
+ * Profil, Laporan Bulanan, dan Dokumen Bergambar. SK dulu sebuah konstanta
+ * berisi tautan Google Drive — menggantinya berarti menyunting kode dan
+ * merilis ulang portal, padahal SK diperbarui tiap kali susunan tim berubah.
+ * Tiga yang pertama dirakit di `components/ppid/ProfilPpidSeksi`; Dokumen
+ * Bergambar dirender langsung di bawah.
  *
  * Nuansa penerbangan dipakai sebagai bahasa visual, bukan hiasan acak:
  *   - Hero memakai `SkyParticles` yang sama dengan /flights.
@@ -28,11 +29,11 @@ import { SeksiSkPpid, SeksiVideoPpid, PapanLaporanBulanan } from '@/components/p
 import { idYouTube } from '@/lib/tentang';
 import {
   PPID_ORG, PPID_LATAR, PPID_VISI, PPID_VISI_PILAR, PPID_MISI, PPID_TUGAS,
-  PPID_DOKUMEN, PPID_DASAR_HUKUM,
+  PPID_DASAR_HUKUM,
 } from '@/lib/ppidData';
 import { fetchApi } from '@/lib/api';
 import { useSetting } from '@/lib/settings';
-import type { PpidProfileDocument } from '@/types';
+import type { PpidImageDocument, PpidProfileDocument } from '@/types';
 import { CONTACT } from '@/lib/airportProfile';
 import {
   Quote, Target, ListChecks, FileText, ExternalLink,
@@ -59,6 +60,7 @@ export default function ProfilPpidView() {
   const [lightbox, setLightbox] = useState<LightboxImage | null>(null);
 
   const [dokumen, setDokumen] = useState<PpidProfileDocument[]>([]);
+  const [dokumenGambar, setDokumenGambar] = useState<PpidImageDocument[]>([]);
   const heroBg = useSetting('bg_ppid');
   const videoUrl = useSetting('ppid_video_url');
   const videoGambar = useSetting('ppid_video_gambar');
@@ -86,6 +88,12 @@ export default function ProfilPpidView() {
     fetchApi<PpidProfileDocument[]>('/ppid-profile-documents').then((res) => {
       if (batal) return;
       setDokumen(res.success && Array.isArray(res.data) ? res.data : []);
+    });
+
+    // Backend sudah menyaring kartu yang gambarnya hilang.
+    fetchApi<PpidImageDocument[]>('/ppid-image-documents').then((res) => {
+      if (batal) return;
+      setDokumenGambar(res.success && Array.isArray(res.data) ? res.data : []);
     });
 
     return () => { batal = true; };
@@ -332,6 +340,10 @@ export default function ProfilPpidView() {
       {/* ============================================================ */}
       {/*  DOKUMEN BERGAMBAR                                           */}
       {/* ============================================================ */}
+      {/* Daftarnya disusun petugas dari panel, bukan lagi konstanta. Tanpa
+          satu kartu pun, bagian ini tidak dirender — judul di atas kisi
+          kosong hanya membingungkan. */}
+      {dokumenGambar.length > 0 && (
       <section id="dokumen" className="max-w-[1400px] mx-auto px-4 sm:px-6 pb-20">
         <motion.div variants={container} initial="hidden" whileInView="show" viewport={{ once: true }}>
           <motion.span variants={rise} className="inline-block text-blue-600 text-[11px] font-bold uppercase tracking-[0.16em] bg-blue-50 px-3 py-1 rounded-full">
@@ -346,24 +358,25 @@ export default function ProfilPpidView() {
           </motion.p>
 
           <motion.div variants={container} className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {PPID_DOKUMEN.map((d) => (
+            {dokumenGambar.map((d) => (
               <motion.article
-                key={d.slug}
+                key={d.id}
                 variants={rise}
                 whileHover={{ y: -5 }}
                 className="bg-white rounded-2xl ring-1 ring-slate-200/70 p-4 transition-shadow hover:shadow-xl hover:shadow-blue-900/5"
               >
                 <LightboxThumb
-                  image={{ src: d.src, title: d.title, desc: d.desc, alt: d.title }}
+                  image={{ src: d.image_url ?? '', title: d.title, desc: d.description ?? undefined, alt: d.title }}
                   onOpen={setLightbox}
                 />
                 <h3 className="mt-4 text-[14.5px] font-black text-slate-900">{d.title}</h3>
-                <p className="mt-1 text-[12.5px] text-slate-500 leading-relaxed">{d.desc}</p>
+                {d.description && <p className="mt-1 text-[12.5px] text-slate-500 leading-relaxed">{d.description}</p>}
               </motion.article>
             ))}
           </motion.div>
         </motion.div>
       </section>
+      )}
 
       {/* ============================================================ */}
       {/*  AJAKAN — hubungi PPID                                       */}

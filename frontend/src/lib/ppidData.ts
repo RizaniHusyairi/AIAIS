@@ -80,43 +80,16 @@ export const PPID_TUGAS: string[] = [
  * dengan provenansnya.
  */
 
-export type PpidDoc = {
-  slug: string;
-  title: string;
-  desc: string;
-  src: string;
-  /** Dimensi asli berkas — dipakai agar tata letak tidak melompat saat memuat. */
-  width: number;
-  height: number;
-};
-
-/** Dokumen bergambar pada halaman Profil PPID. */
-export const PPID_DOKUMEN: PpidDoc[] = [
-  {
-    slug: 'struktur',
-    title: 'Struktur Organisasi PPID',
-    desc: 'Susunan tim pengelola informasi dan dokumentasi bandara.',
-    src: '/ppid/struktur-ppid.jpg',
-    width: 1280,
-    height: 905,
-  },
-  {
-    slug: 'maklumat',
-    title: 'Maklumat Pelayanan',
-    desc: 'Janji layanan PPID kepada masyarakat.',
-    src: '/ppid/maklumat-pelayanan.png',
-    width: 1280,
-    height: 905,
-  },
-  {
-    slug: 'biaya',
-    title: 'Standar Biaya Layanan',
-    desc: 'Rincian biaya penggandaan dan pengiriman informasi publik.',
-    src: '/ppid/standar-biaya-layanan.png',
-    width: 1280,
-    height: 905,
-  },
-];
+/*
+ * Dokumen bergambar (Struktur Organisasi, Maklumat Pelayanan, Standar Biaya
+ * Layanan) juga TIDAK lagi di sini.
+ *
+ * Ketiganya kini baris di tabel `ppid_image_documents`, dikelola dari
+ * /admin/profil-ppid — bagan struktur berubah tiap kali susunan tim berganti.
+ * `PpidImageDocumentSeeder` memindahkannya beserta provenansnya, dan berkas
+ * gambarnya tetap di `public/ppid/` sampai petugas mengunggah penggantinya.
+ * JANGAN hapus berkas-berkas itu selama baris hasil seeder masih menunjuknya.
+ */
 
 /* ------------------------------------------------------------------ */
 /*  SOP PPID                                                           */

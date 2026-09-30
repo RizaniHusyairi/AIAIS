@@ -35,12 +35,10 @@ type Hasil =
 /**
  * Ambil satu berita.
  *
- * Sengaja TIDAK lewat `fetchApi`. Pembungkus itu menelan perbedaan yang
- * justru menentukan di sini: untuk lintasan `/news/...` ia menjawab data
- * contoh dari `NEWS_FALLBACK` pada kegagalan APA PUN — termasuk 404 —
- * sehingga slug yang tidak pernah ada menjawab 200 berisi artikel karangan.
- * Google menyebut keadaan itu soft 404, dan menghukumnya: alamat yang tak
- * terbatas jumlahnya, semuanya "berhasil", semuanya berisi teks yang sama.
+ * Sengaja TIDAK lewat `fetchApi`. Pembungkus itu menyamakan seluruh
+ * kegagalan menjadi satu jawaban "gagal terhubung", padahal di sini 404 dan
+ * server mati harus dibedakan (lihat `Hasil`). Dulu ia bahkan menjawab slug
+ * apa pun dengan artikel contoh — soft 404 yang dihukum Google.
  *
  * `API_BASE_URL` tetap diimpor dari `lib/api.ts` — alamat API masih hanya
  * disusun di sana; yang tidak dipakai di sini cuma lapisan fallback-nya.
@@ -48,7 +46,9 @@ type Hasil =
 async function ambilBerita(slug: string): Promise<Hasil> {
   let res: Response;
   try {
-    res = await fetch(`${API_BASE_URL}/news/${encodeURIComponent(slug)}`, {
+    // `track=0`: pembaca dihitung oleh view di peramban, bukan oleh render
+    // server ini — kalau keduanya menghitung, satu kunjungan tercatat dua.
+    res = await fetch(`${API_BASE_URL}/news/${encodeURIComponent(slug)}?track=0`, {
       headers: { Accept: 'application/json' },
       cache: 'no-store',
     });
@@ -76,10 +76,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   /*
    * Slug yang tidak dikenal ditangani `notFound()` di komponen halaman, jadi
-   * yang tersisa di sini hanya keadaan "server bisu": view di baliknya tetap
-   * menampilkan sesuatu, tetapi yang ditampilkannya adalah artikel contoh.
-   * Halaman semacam itu tidak boleh masuk indeks — alamatnya akan tercatat di
-   * Google membawa isi yang tidak pernah diterbitkan bandara.
+   * yang tersisa di sini hanya keadaan "server bisu": view di baliknya tidak
+   * punya artikel untuk ditampilkan. Halaman semacam itu tidak boleh masuk
+   * indeks — alamatnya akan tercatat di Google tanpa isi berita apa pun.
    */
   if (hasil.keadaan !== 'ada') {
     return {
@@ -92,7 +91,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const berita = hasil.berita;
   const ringkasan = (berita.excerpt || '')
     .replace(/<[^>]*>/g, ' ')
-    .replace(/s+/g, ' ')
+    .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 200);
 
@@ -118,7 +117,7 @@ export default async function NewsDetailPage({ params }: { params: Promise<{ slu
    * 404 yang sesungguhnya, lengkap dengan status HTTP-nya.
    *
    * Hanya untuk `tidak-ada`. Saat backend bisu halaman tetap disajikan
-   * (view punya isi cadangannya sendiri) dan sudah ditandai `noindex` di
+   * (view mencoba lagi dari peramban) dan sudah ditandai `noindex` di
    * `generateMetadata` — gangguan server tidak boleh menghapus artikel yang
    * sehat dari indeks Google.
    */

@@ -635,6 +635,23 @@ export interface PpidProfileDocument {
   has_document: boolean;
 }
 
+/**
+ * Dokumen bergambar pada halaman Profil PPID — bagan struktur, maklumat,
+ * standar biaya, dan apa pun yang ditambahkan petugas.
+ */
+export interface PpidImageDocument {
+  id: number;
+  title: string;
+  description: string | null;
+  /** Lintasan disk, URL penuh, atau aset statis frontend berawalan "/". */
+  image_path: string | null;
+  sort_order: number;
+  is_active: boolean;
+  /** Turunan `$appends`; null bila berkas unggahannya hilang. */
+  image_url: string | null;
+  has_image: boolean;
+}
+
 /** Tautan ke portal resmi pemerintah di luar aptpairport.id. */
 export interface ExternalLink {
   id: number;

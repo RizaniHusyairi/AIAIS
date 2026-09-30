@@ -130,6 +130,26 @@ class NewsCoverTest extends TestCase
             ->assertJsonCount(0, 'data');
     }
 
+    public function test_draf_tidak_dapat_dibuka_lewat_slug_dan_tidak_menambah_pembaca(): void
+    {
+        $token = $this->admin();
+
+        $this->withToken($token)
+            ->post($this->prefix.'/admin/news', $this->beritaBaku(['status' => 'draft']))
+            ->assertCreated();
+
+        $draf = News::first();
+
+        $this->getJson($this->prefix.'/news/'.$draf->slug)->assertNotFound();
+        $this->assertSame(0, $draf->fresh()->views_count);
+
+        $draf->update(['status' => 'published']);
+
+        $this->getJson($this->prefix.'/news/'.$draf->slug)
+            ->assertOk()
+            ->assertJsonPath('data.slug', $draf->slug);
+    }
+
     public function test_mengganti_sampul_membuang_berkas_lama(): void
     {
         $token = $this->admin();

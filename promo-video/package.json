@@ -1,0 +1,31 @@
+{
+  "name": "aiais-promo-video",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Video promosi motion graphic portal Bandara APT Pranoto (Remotion)",
+  "scripts": {
+    "data": "node scripts/fetch-data.mjs",
+    "studio": "remotion studio",
+    "render": "remotion render Promo out/promo.mp4",
+    "still": "remotion still Promo out/still.png",
+    "render:web": "node scripts/render-web.mjs",
+    "music": "node scripts/make-music.mjs",
+    "render:web:page": "vite"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.529",
+    "@remotion/google-fonts": "^4.0.529",
+    "@remotion/media": "^4.0.529",
+    "@remotion/transitions": "^4.0.529",
+    "@remotion/web-renderer": "^4.0.529",
+    "lucide-react": "^1.48.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "remotion": "^4.0.529"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.1"
+  }
+}

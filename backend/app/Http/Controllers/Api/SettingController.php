@@ -5,7 +5,10 @@ namespace App\Http\Controllers\Api;
 use App\Helpers\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class SettingController extends Controller
 {
@@ -161,6 +164,19 @@ class SettingController extends Controller
         'wa_daily_cap' => '',
     ];
 
+    /**
+     * Kunci yang boleh diisi lewat unggahan berkas, bukan hanya URL.
+     *
+     * Sampul video dimuat SEBELUM pengunjung menekan putar, jadi ia harus
+     * gambar milik portal sendiri — menempelkan tautan Drive atau Google
+     * lainnya menyeret setiap pengunjung ke server Google, persis yang
+     * dihindari pola facade di VideoProfil.tsx.
+     */
+    public const IMAGE_KEYS = ['ppid_video_gambar'];
+
+    /** Folder unggahan gambar pengaturan pada disk `public`. */
+    private const IMAGE_DIR = 'pengaturan';
+
     /** Mode yang dikenali; dipakai pula sebagai aturan validasi. */
     public const INSTAGRAM_MODES = ['auto', 'manual'];
 
@@ -201,7 +217,17 @@ class SettingController extends Controller
      */
     public function update(Request $request)
     {
-        $incoming = array_intersect_key($request->all(), self::DEFAULTS);
+        $unggahan = $this->simpanGambarUnggahan($request);
+        if ($unggahan instanceof JsonResponse) {
+            return $unggahan;
+        }
+
+        // Berkas yang diunggah sudah menjadi URL pada `$unggahan`; objek
+        // UploadedFile-nya sendiri tidak boleh ikut ke pemeriksaan string.
+        $incoming = array_intersect_key(
+            array_merge(array_diff_key($request->all(), $request->allFiles()), $unggahan),
+            self::DEFAULTS,
+        );
 
         if (empty($incoming)) {
             return ApiResponse::error('Tidak ada pengaturan yang dikenali untuk disimpan', null, 422);
@@ -224,8 +250,11 @@ class SettingController extends Controller
         }
 
         foreach ($incoming as $key => $value) {
+            $lama = Setting::where('key', $key)->value('value');
+
             if ($value === null || $value === '') {
                 Setting::where('key', $key)->delete(); // kembali ke bawaan
+                $this->hapusGambarLama($key, $lama);
 
                 continue;
             }
@@ -235,8 +264,69 @@ class SettingController extends Controller
             }
 
             Setting::updateOrCreate(['key' => $key], ['value' => $value]);
+
+            if ($lama !== $value) {
+                $this->hapusGambarLama($key, $lama);
+            }
         }
 
         return $this->index();
+    }
+
+    /**
+     * Unggah gambar untuk kunci pada IMAGE_KEYS, dikirim sebagai multipart
+     * dengan nama medan sama dengan kuncinya.
+     *
+     * Hasilnya disimpan sebagai URL penuh, bukan lintasan: nilai pengaturan
+     * dipakai frontend langsung sebagai `src`, sama seperti URL yang diketik
+     * petugas. Dengan begitu satu kunci tetap punya satu bentuk nilai.
+     *
+     * @return array<string, string>|JsonResponse
+     */
+    private function simpanGambarUnggahan(Request $request): array|JsonResponse
+    {
+        $hasil = [];
+
+        foreach (self::IMAGE_KEYS as $key) {
+            if (! $request->hasFile($key)) {
+                continue;
+            }
+
+            $berkas = $request->file($key);
+            $sah = $berkas->isValid()
+                && in_array(strtolower($berkas->extension()), ['jpg', 'jpeg', 'png', 'webp'], true)
+                && $berkas->getSize() <= 5 * 1024 * 1024;
+
+            if (! $sah) {
+                $pesan = 'Gambar harus berformat JPG, PNG, atau WEBP dengan ukuran maksimal 5 MB.';
+
+                return ApiResponse::error($pesan, [$key => [$pesan]], 422);
+            }
+
+            // Nama berkas diacak: nama unggahan asli kerap memuat spasi.
+            $path = $berkas->storeAs(self::IMAGE_DIR, Str::uuid().'.'.strtolower($berkas->extension()), 'public');
+            $hasil[$key] = Storage::disk('public')->url($path);
+        }
+
+        return $hasil;
+    }
+
+    /**
+     * Hapus berkas unggahan yang digantikan.
+     *
+     * Hanya berkas di folder IMAGE_DIR milik disk `public` yang disentuh.
+     * Nilai lain — URL luar, aset statis frontend — bukan milik backend.
+     */
+    private function hapusGambarLama(string $key, ?string $lama): void
+    {
+        if (! in_array($key, self::IMAGE_KEYS, true) || empty($lama)) {
+            return;
+        }
+
+        $awalan = rtrim(Storage::disk('public')->url(self::IMAGE_DIR), '/').'/';
+
+        if (str_starts_with($lama, $awalan)) {
+            Storage::disk('public')->delete(self::IMAGE_DIR.'/'.substr($lama, strlen($awalan)));
+        }
     }
 }

@@ -1,0 +1,16 @@
+{
+  "_catatan": "Satu-satunya sumber durasi adegan (frame, 30 fps). Dibaca src/Promo.tsx dan scripts/make-music.mjs agar musik selalu pas dengan video.",
+  "fps": 30,
+  "transition": 12,
+  "scenes": [
+    { "id": "hook", "dur": 100 },
+    { "id": "desktop", "dur": 195 },
+    { "id": "jadwal", "dur": 160 },
+    { "id": "berita", "dur": 130 },
+    { "id": "pwa", "dur": 130 },
+    { "id": "fasilitas", "dur": 135 },
+    { "id": "bantuan", "dur": 130 },
+    { "id": "ppid", "dur": 215 },
+    { "id": "cta", "dur": 134 }
+  ]
+}
