@@ -19,7 +19,10 @@ import LewatiTautan from "@/components/layout/LewatiTautan";
 import PengaturGerak from "@/components/layout/PengaturGerak";
 import TombolAksesibilitas from "@/components/layout/TombolAksesibilitas";
 import DekorMalam from "@/components/effects/DekorMalam";
-import { SITE_URL, SITE_NAME, ldBandara, ldSitus } from "@/lib/seo";
+import {
+  SITE_URL, SITE_NAME, JUDUL_BERANDA, RINGKASAN_BERANDA, KARTU_BAWAAN,
+  ldBandara, ldSitus,
+} from "@/lib/seo";
 import JsonLd from "@/components/JsonLd";
 import "./globals.css";
 
@@ -71,9 +74,9 @@ const fontTerbaca = Atkinson_Hyperlegible_Next({
   preload: false,
 });
 
-const JUDUL_BAWAAN = "Bandara APT Pranoto Samarinda (AAP) | Sistem Informasi Terpadu AIAIS";
-const RINGKASAN_BAWAAN =
-  "Portal resmi informasi penerbangan FIDS, berita, pengumuman, fasilitas terminal, direktori tenant, dan pengaduan online Bandara Aji Pangeran Tumenggung Pranoto Samarinda.";
+// Teksnya dijaga di lib/seo.ts — alasan panjang-pendeknya ada di sana.
+const JUDUL_BAWAAN = JUDUL_BERANDA;
+const RINGKASAN_BAWAAN = RINGKASAN_BERANDA;
 
 export const metadata: Metadata = {
   /*
@@ -96,7 +99,11 @@ export const metadata: Metadata = {
    */
   title: JUDUL_BAWAAN,
   description: RINGKASAN_BAWAAN,
-  keywords: ["APT Pranoto", "AAP Samarinda", "Bandara Samarinda", "Jadwal Penerbangan Samarinda", "FIDS AAP", "IKN Airport"],
+  keywords: [
+    "APT Pranoto", "Bandara APT Pranoto", "Bandara Samarinda", "AAP Samarinda", "WALS",
+    "Jadwal Penerbangan Samarinda", "Jadwal Pesawat Samarinda", "FIDS AAP",
+    "Bandara Kalimantan Timur", "IKN Airport",
+  ],
   authors: [{ name: SITE_NAME, url: SITE_URL }],
   alternates: { canonical: "/" },
 
@@ -107,10 +114,8 @@ export const metadata: Metadata = {
    * dibagikan lewat WhatsApp (kanal utama pengumuman bandara) muncul telanjang
    * tanpa judul maupun gambar.
    *
-   * Gambarnya sengaja tidak disebut: `app/opengraph-image.tsx` sudah
-   * dilampirkan Next ke seluruh rute lewat konvensi berkas, dan menyebutnya
-   * ulang di sini menghasilkan dua tag og:image yang bersaing — persoalan
-   * yang sama dengan ikon tab pada catatan di bawah.
+   * Gambarnya kartu foto terminal — lihat `KARTU_BAWAAN` di lib/seo.ts
+   * untuk alasan kenapa berkas statis dan bukan `opengraph-image.tsx`.
    */
   openGraph: {
     type: "website",
@@ -119,11 +124,13 @@ export const metadata: Metadata = {
     siteName: SITE_NAME,
     title: JUDUL_BAWAAN,
     description: RINGKASAN_BAWAAN,
+    images: [{ url: KARTU_BAWAAN, width: 1200, height: 630, alt: SITE_NAME }],
   },
   twitter: {
     card: "summary_large_image",
     title: JUDUL_BAWAAN,
     description: RINGKASAN_BAWAAN,
+    images: [KARTU_BAWAAN],
   },
 
   /*
@@ -145,7 +152,7 @@ export const metadata: Metadata = {
   },
 
   /*
-   * Verifikasi kepemilikan di Google Search Console.
+   * Verifikasi kepemilikan di Google Search Console dan Bing Webmaster Tools.
    *
    * Lewat variabel lingkungan, bukan literal: token ini milik satu akun
    * Google tertentu, dan menuliskannya di dalam repo berarti siapa pun yang
@@ -157,9 +164,20 @@ export const metadata: Metadata = {
    * Cara memakainya: ambil token dari Search Console (metode "tag HTML"),
    * isi NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION di .env produksi, lalu build.
    */
-  ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
-    ? { verification: { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION } }
-    : {}),
+  verification: {
+    ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
+      ? { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION }
+      : {}),
+    /*
+     * Bing tidak membaca token Google. Tanpa properti terverifikasi di Bing
+     * Webmaster Tools, sitemap tidak pernah dikirim ke Bing dan perubahan
+     * judul/gambar baru terlihat di sana berminggu-minggu kemudian.
+     * Isi NEXT_PUBLIC_BING_SITE_VERIFICATION dari metode "meta tag" Bing.
+     */
+    ...(process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION
+      ? { other: { "msvalidate.01": process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION } }
+      : {}),
+  },
 
   manifest: "/manifest.webmanifest",
   applicationName: "APT Pranoto",
@@ -171,7 +189,7 @@ export const metadata: Metadata = {
   /*
    * Ikon TIDAK didaftarkan di sini.
    *
-   * `src/app/icon.png` dan `src/app/apple-icon.png` sudah ditemukan Next.js
+   * `src/app/favicon.ico`, `src/app/icon.png`, dan `src/app/apple-icon.png` sudah ditemukan Next.js
    * lewat konvensi berkas, dan tautannya disisipkan otomatis. Mendaftarkannya
    * ulang di sini justru menghasilkan DUA tautan ikon yang bersaing, dan
    * peramban tidak sepakat mana yang menang — itu sebabnya tab sempat

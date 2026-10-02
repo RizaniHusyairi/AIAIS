@@ -24,7 +24,7 @@ import { motion } from 'framer-motion';
 import SkyParticles from '@/components/effects/SkyParticles';
 import { FlightArc } from '@/components/ppid/PpidHero';
 import { VERSION_LABEL } from '@/lib/version';
-import { CONTACT, MAPS_URL } from '@/lib/airportProfile';
+import { CONTACT, MAPS_URL, MEDIA_SOSIAL } from '@/lib/airportProfile';
 import { RELATED_LINKS } from '@/lib/relatedLinks';
 import { useVisitorStats, useFlightSummary } from '@/lib/visitors';
 import { usesOwnChrome } from '@/lib/layoutChrome';
@@ -54,32 +54,32 @@ type Brand = { name: string; href: string; hover: string; path: string };
 const SOCIALS: Brand[] = [
   {
     name: 'Instagram',
-    href: 'https://www.instagram.com/aptpranotoairport',
+    href: MEDIA_SOSIAL.instagram,
     hover: 'hover:bg-pink-600',
     // Jalurnya satu sumber di components/icons/InstagramGlyph.
     path: INSTAGRAM_PATH,
   },
   {
     name: 'Facebook',
-    href: 'https://www.facebook.com/share/1EyVSyu6Un/',
+    href: MEDIA_SOSIAL.facebook,
     hover: 'hover:bg-blue-600',
     path: 'M22 12.06C22 6.5 17.52 2 12 2S2 6.5 2 12.06c0 5.02 3.66 9.18 8.44 9.94v-7.03H7.9v-2.91h2.54V9.85c0-2.52 1.49-3.91 3.77-3.91 1.09 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.78-1.63 1.57v1.89h2.78l-.44 2.91h-2.34V22c4.78-.76 8.44-4.92 8.44-9.94Z',
   },
   {
     name: 'YouTube',
-    href: 'https://www.youtube.com/@aptpranotoairport',
+    href: MEDIA_SOSIAL.youtube,
     hover: 'hover:bg-red-600',
     path: 'M23.5 6.2a3.02 3.02 0 0 0-2.12-2.14C19.5 3.55 12 3.55 12 3.55s-7.5 0-9.38.51A3.02 3.02 0 0 0 .5 6.2C0 8.08 0 12 0 12s0 3.92.5 5.8a3.02 3.02 0 0 0 2.12 2.14c1.88.51 9.38.51 9.38.51s7.5 0 9.38-.51a3.02 3.02 0 0 0 2.12-2.14C24 15.92 24 12 24 12s0-3.92-.5-5.8ZM9.55 15.57V8.43L15.82 12l-6.27 3.57Z',
   },
   {
     name: 'X',
-    href: 'https://x.com/aptp_airport',
+    href: MEDIA_SOSIAL.x,
     hover: 'hover:bg-slate-900',
     path: 'M18.9 2.25h3.37l-7.37 8.42 8.67 11.08h-6.79l-5.32-6.95-6.08 6.95H2l7.88-9-8.32-10.5h6.96l4.81 6.36 5.57-6.36Zm-1.18 17.5h1.87L7.1 4.14H5.09l12.63 15.61Z',
   },
   {
     name: 'TikTok',
-    href: 'https://www.tiktok.com/@aptpranotoairport',
+    href: MEDIA_SOSIAL.tiktok,
     hover: 'hover:bg-cyan-500',
     path: 'M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 0 1-2.59 2.5 2.59 2.59 0 1 1 .77-5.06v-3.1a5.66 5.66 0 0 0-.77-.05A5.66 5.66 0 1 0 15.54 15.4V9.01a7.35 7.35 0 0 0 4.3 1.38V7.3a4.29 4.29 0 0 1-3.24-1.48Z',
   },

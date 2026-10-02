@@ -26,6 +26,8 @@ import { useStatistikBandara } from '@/lib/statistikBandara';
 import { useTentang } from '@/lib/tentang';
 import VideoProfil from '@/components/home/VideoProfil';
 import MitraLogos from '@/components/home/MitraLogos';
+import JsonLd from '@/components/JsonLd';
+import { ldBeranda } from '@/lib/seo';
 import {
   Plane, ArrowRight, Building2, ChevronRight, ChevronLeft, MapPin, Car,
   ParkingSquare, Headphones,
@@ -303,6 +305,10 @@ export default function HomePage() {
 
   return (
     <div className="bg-slate-50">
+      {/* Menunjuk foto terminal sebagai gambar utama beranda; tanpa ini Bing
+          memilih foto pejabat sebagai thumbnail hasil pencarian. Lihat
+          `ldBeranda` di lib/seo.ts. */}
+      <JsonLd data={ldBeranda()} />
       {/* ================= 1. HERO ================= */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 z-0">

@@ -293,5 +293,18 @@ export const CONTACT = {
  * tetap disimpan sebagai arsip sumber transkripsinya.
  */
 
+/**
+ * Akun media sosial resmi. Satu sumber bagi ikon di footer dan `sameAs` pada
+ * data terstruktur — keduanya harus menunjuk akun yang sama, dan salinan kedua
+ * pasti tertinggal begitu salah satu akun berganti alamat.
+ */
+export const MEDIA_SOSIAL = {
+  instagram: 'https://www.instagram.com/aptpranotoairport',
+  facebook: 'https://www.facebook.com/share/1EyVSyu6Un/',
+  youtube: 'https://www.youtube.com/@aptpranotoairport',
+  x: 'https://x.com/aptp_airport',
+  tiktok: 'https://www.tiktok.com/@aptpranotoairport',
+} as const;
+
 /** Tautan peta eksternal; tanpa peta tersemat agar tetap berguna tanpa internet. */
 export const MAPS_URL = `https://www.google.com/maps/search/?api=1&query=${CONTACT.lat},${CONTACT.lon}`;
