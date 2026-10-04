@@ -750,6 +750,19 @@ export interface Complaint {
   reporter_name: string;
   reporter_email: string;
   reporter_phone: string;
+  /** Galeri foto; hanya ikut pada detail publik dan daftar admin. */
+  images?: NewsImage[];
+}
+
+/** Satu foto galeri berita (`news_images`). */
+export interface NewsImage {
+  id: number;
+  news_id: number;
+  path: string;
+  caption: string | null;
+  sort_order: number;
+  /** Turunan `$appends`; null bila berkasnya hilang dari cakram. */
+  url: string | null;
   category: string;
   subject: string;
   description: string;

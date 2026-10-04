@@ -30,6 +30,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link';
 import { motion, useReducedMotion } from 'framer-motion';
 import SafeHtml from '@/components/SafeHtml';
+import GaleriBerita from '@/components/berita/GaleriBerita';
 import SkyParticles from '@/components/effects/SkyParticles';
 import { urlAbsolut } from '@/lib/seo';
 import { useKemajuanBaca, useKemajuanHero } from '@/lib/gulirBaca';
@@ -186,6 +187,10 @@ export default function TampilanBerita({
               <div ref={badanRef} className="mt-8">
                 <SafeHtml className="article-content article-content--lega article-content--majalah" html={artikel.content} />
               </div>
+
+              {/* Di luar `badanRef`: judul galeri bukan sub judul artikel dan
+                  tidak boleh terbaca "Rute Baca" sebagai bagian tulisan. */}
+              <GaleriBerita foto={artikel.images ?? []} />
 
               <SobekanTiket
                 artikel={artikel}

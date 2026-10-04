@@ -5,16 +5,34 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Helpers\ApiResponse;
 use App\Models\News;
+use App\Models\NewsImage;
+use App\Support\PengecilFoto;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class NewsController extends Controller
 {
     /** Tempat foto sampul unggahan v2 disimpan pada cakram `public`. */
     private const DIR_SAMPUL = 'news/covers';
+
+    /** Tempat foto galeri berita disimpan pada cakram `public`. */
+    private const DIR_GALERI = 'news/gallery';
+
+    /**
+     * Sisi terpanjang foto tersimpan, dalam piksel. Sampul tampil sebagai hero
+     * selebar layar, jadi diberi ruang lebih; galeri paling lebar tampil di
+     * lightbox, yang di layar laptop umum tidak melewati 1600.
+     */
+    private const SISI_SAMPUL = 1920;
+    private const SISI_GALERI = 1600;
 
     public function index(Request $request)
     {
@@ -59,6 +77,10 @@ class NewsController extends Controller
             $this->catatPembaca($request, $news);
         }
 
+        // Publik hanya menerima foto yang berkasnya ada; kotak gambar kosong di
+        // tengah galeri lebih buruk daripada galeri yang satu foto lebih pendek.
+        $news->setRelation('images', $news->images()->get()->filter(fn (NewsImage $f) => $f->url !== null)->values());
+
         return ApiResponse::success($news, 'Detail berita');
     }
 
@@ -90,6 +112,7 @@ class NewsController extends Controller
     public function store(Request $request)
     {
         $validated = $this->validasi($request, true);
+        $galeri = $this->rencanaGaleri($request, null);
 
         if ($sampul = $this->simpanSampul($request)) {
             $validated['thumbnail'] = $sampul;
@@ -100,15 +123,34 @@ class NewsController extends Controller
         $validated['slug'] = Str::slug($request->title).'-'.time();
         $validated['published_at'] = now();
 
-        $news = News::create($validated);
+        $baru = array_filter([$sampul]);
 
-        return ApiResponse::success($news, 'Berita berhasil dibuat', null, 201);
+        try {
+            $news = DB::transaction(function () use ($validated, $galeri, &$baru) {
+                $news = News::create($validated);
+
+                if ($galeri !== null) {
+                    $this->terapkanGaleri($news, $galeri, $baru);
+                }
+
+                return $news;
+            });
+        } catch (Throwable $e) {
+            $this->buangBerkasBaru($baru);
+
+            throw $e;
+        }
+
+        return ApiResponse::success($news->load('images'), 'Berita berhasil dibuat', null, 201);
     }
 
     /** Semua berita (termasuk draft) untuk panel admin */
     public function adminIndex()
     {
-        $news = News::orderBy('published_at', 'desc')->get();
+        // Galeri ikut dimuat karena form ubah mengambil beritanya dari daftar
+        // ini; foto yang berkasnya hilang tetap dikirim (`url` null) supaya
+        // petugas melihatnya dan bisa menggantinya.
+        $news = News::with('images')->orderBy('published_at', 'desc')->get();
         return ApiResponse::success($news, 'Seluruh berita & artikel');
     }
 
@@ -117,6 +159,7 @@ class NewsController extends Controller
         $news = News::findOrFail($id);
 
         $validated = $this->validasi($request, false);
+        $galeri = $this->rencanaGaleri($request, $news);
 
         // Sampul lama baru dihapus sesudah yang baru benar-benar tersimpan,
         // supaya kegagalan unggahan tidak meninggalkan berita tanpa gambar.
@@ -133,23 +176,175 @@ class NewsController extends Controller
             $validated['slug'] = Str::slug($request->title).'-'.time();
         }
 
-        $news->update($validated);
+        $baru = array_filter([$sampul]);
+        $dibuang = [];
 
-        if (isset($sampul) && $sampul) {
-            $this->hapusBerkas($lama);
+        try {
+            DB::transaction(function () use ($news, $validated, $galeri, &$baru, &$dibuang) {
+                $news->update($validated);
+
+                if ($galeri !== null) {
+                    $dibuang = $this->terapkanGaleri($news, $galeri, $baru);
+                }
+            });
+        } catch (Throwable $e) {
+            $this->buangBerkasBaru($baru);
+
+            throw $e;
         }
 
-        return ApiResponse::success($news, 'Berita berhasil diperbarui');
+        // Berkas lama baru dibuang sesudah transaksi berhasil — kalau
+        // dibuang lebih dulu lalu transaksinya gagal, barisnya kembali
+        // menunjuk berkas yang sudah tidak ada.
+        if ($sampul) {
+            $this->hapusBerkas($lama);
+        }
+        foreach ($dibuang as $lintasan) {
+            $this->hapusBerkas($lintasan);
+        }
+
+        return ApiResponse::success($news->load('images'), 'Berita berhasil diperbarui');
     }
 
     public function destroy($id)
     {
         $news = News::findOrFail($id);
-        $lintasan = $news->thumbnail;
-        $news->delete();
-        $this->hapusBerkas($lintasan);
+        $lintasan = [$news->thumbnail, ...$news->images()->pluck('path')->all()];
+
+        DB::transaction(function () use ($news) {
+            // Dihapus eksplisit, tidak bergantung pada cascade: tabel `news`
+            // milik v1 dan sifat kunci asingnya di luar kendali modul ini.
+            NewsImage::where('news_id', $news->id)->delete();
+            $news->delete();
+        });
+
+        foreach ($lintasan as $l) {
+            $this->hapusBerkas($l);
+        }
 
         return ApiResponse::success(null, 'Berita berhasil dihapus');
+    }
+
+    /**
+     * Baca dan periksa susunan galeri yang dikirim panel, sebelum apa pun ditulis.
+     *
+     * `gallery` adalah JSON berurutan — urutan larik itulah urutan tampil:
+     *   `{ "id": 7, "caption": "..." }`      foto yang sudah ada
+     *   `{ "upload": 0, "caption": "..." }`  berkas `gallery_files[0]`
+     * Foto lama yang tidak disebut berarti dibuang.
+     *
+     * Bila `gallery` tidak dikirim sama sekali, galeri tidak disentuh (null) —
+     * supaya klien yang hanya mengubah status atau judul tidak mengosongkannya.
+     *
+     * @return array<int, array{id: ?int, file: ?UploadedFile, caption: ?string}>|null
+     */
+    private function rencanaGaleri(Request $request, ?News $news): ?array
+    {
+        if (! $request->has('gallery')) {
+            return null;
+        }
+
+        $susunan = json_decode((string) $request->input('gallery'), true);
+        if (! is_array($susunan) || ! array_is_list($susunan)) {
+            throw ValidationException::withMessages(['gallery' => 'Susunan galeri tidak terbaca. Muat ulang halaman lalu coba lagi.']);
+        }
+
+        $berkas = $request->file('gallery_files', []);
+
+        Validator::make(
+            ['gallery' => $susunan, 'gallery_files' => $berkas],
+            [
+                'gallery' => 'array|max:'.NewsImage::MAX_PER_NEWS,
+                'gallery.*' => 'array',
+                'gallery.*.id' => 'nullable|integer',
+                'gallery.*.upload' => 'nullable|integer|min:0',
+                'gallery.*.caption' => 'nullable|string|max:255',
+                'gallery_files' => 'array',
+                'gallery_files.*' => 'image|mimes:jpg,jpeg,png,webp|max:5120',   // 5 MB
+            ],
+            [
+                'gallery.max' => 'Galeri paling banyak '.NewsImage::MAX_PER_NEWS.' foto.',
+                'gallery.*.caption.max' => 'Keterangan foto maksimal 255 karakter.',
+                'gallery_files.*.image' => 'Foto galeri harus berupa berkas gambar.',
+                'gallery_files.*.mimes' => 'Foto galeri harus berformat JPG, PNG, atau WEBP.',
+                'gallery_files.*.max' => 'Ukuran setiap foto galeri maksimal 5 MB.',
+            ],
+        )->validate();
+
+        $milik = $news ? array_map('intval', $news->images()->pluck('id')->all()) : [];
+        $terpakai = [];
+        $rencana = [];
+
+        foreach ($susunan as $i => $butir) {
+            $id = isset($butir['id']) ? (int) $butir['id'] : null;
+            $upload = isset($butir['upload']) ? (int) $butir['upload'] : null;
+            $caption = trim((string) ($butir['caption'] ?? '')) ?: null;
+
+            // Setiap butir harus menunjuk tepat satu hal yang sah dan belum
+            // dipakai butir lain: foto milik berita INI, atau berkas yang
+            // benar-benar ikut terkirim. Id foto berita lain ditolak.
+            $sah = $id !== null
+                ? in_array($id, $milik, true) && ! in_array("id:$id", $terpakai, true)
+                : $upload !== null && isset($berkas[$upload]) && ! in_array("up:$upload", $terpakai, true);
+
+            if (! $sah) {
+                throw ValidationException::withMessages([
+                    'gallery' => 'Foto galeri ke-'.($i + 1).' tidak dikenali. Muat ulang halaman lalu coba lagi.',
+                ]);
+            }
+
+            $terpakai[] = $id !== null ? "id:$id" : "up:$upload";
+            $rencana[] = ['id' => $id, 'file' => $id === null ? $berkas[$upload] : null, 'caption' => $caption];
+        }
+
+        return $rencana;
+    }
+
+    /**
+     * Terapkan susunan galeri. Dijalankan di dalam transaksi.
+     *
+     * @param  string[]  $baru  diisi lintasan berkas yang baru disimpan,
+     *                          untuk dibuang bila transaksinya gagal
+     * @return string[] lintasan foto lama yang harus dibuang sesudah transaksi
+     */
+    private function terapkanGaleri(News $news, array $rencana, array &$baru): array
+    {
+        $dipakai = [];
+
+        foreach ($rencana as $urutan => $butir) {
+            if ($butir['file']) {
+                $lintasan = PengecilFoto::simpan($butir['file'], self::DIR_GALERI, self::SISI_GALERI);
+                $baru[] = $lintasan;
+
+                $dipakai[] = NewsImage::create([
+                    'news_id' => $news->id,
+                    'path' => $lintasan,
+                    'caption' => $butir['caption'],
+                    'sort_order' => $urutan,
+                ])->id;
+
+                continue;
+            }
+
+            NewsImage::whereKey($butir['id'])->update([
+                'caption' => $butir['caption'],
+                'sort_order' => $urutan,
+            ]);
+            $dipakai[] = $butir['id'];
+        }
+
+        $dibuang = NewsImage::where('news_id', $news->id)->whereNotIn('id', $dipakai)->pluck('path')->all();
+        NewsImage::where('news_id', $news->id)->whereNotIn('id', $dipakai)->delete();
+
+        return $dibuang;
+    }
+
+    /** Buang berkas yang terlanjur disimpan oleh permintaan yang gagal. */
+    private function buangBerkasBaru(array $lintasan): void
+    {
+        foreach ($lintasan as $l) {
+            Storage::disk('public')->delete($l);
+        }
     }
 
     /**
@@ -197,11 +392,7 @@ class NewsController extends Controller
             'cover.max' => 'Ukuran gambar sampul maksimal 5 MB.',
         ]);
 
-        return $request->file('cover')->storeAs(
-            self::DIR_SAMPUL,
-            Str::uuid().'.'.$request->file('cover')->extension(),
-            'public',
-        );
+        return PengecilFoto::simpan($request->file('cover'), self::DIR_SAMPUL, self::SISI_SAMPUL);
     }
 
     /**
@@ -217,7 +408,7 @@ class NewsController extends Controller
             return;
         }
 
-        if (! str_starts_with($lintasan, self::DIR_SAMPUL.'/')) {
+        if (! str_starts_with($lintasan, self::DIR_SAMPUL.'/') && ! str_starts_with($lintasan, self::DIR_GALERI.'/')) {
             return;
         }
 

@@ -31,6 +31,7 @@ import {
   Toast, ToastMsg,
 } from '@/components/admin/ui';
 import EditorTeks from '@/components/admin/EditorTeks';
+import PanelGaleri, { dariServer, lepasPratinjau, susunGaleri, tandaGaleri, type FotoGaleri } from './PanelGaleri';
 import TampilanBerita from '@/components/berita/TampilanBerita';
 import { teksPolos } from '@/lib/berita';
 
@@ -84,7 +85,7 @@ export const KUNCI_TOAST = 'aiais_toast_berita';
  * Isian kosong diganti teks penuntun supaya pratinjau tidak pernah terbuka
  * sebagai halaman kosong yang terbaca seperti rusak.
  */
-function beritaContoh(form: Form, sampul: string): NewsItem {
+function beritaContoh(form: Form, sampul: string, galeri: FotoGaleri[]): NewsItem {
   return {
     id: 0,
     slug: 'pratinjau',
@@ -99,6 +100,10 @@ function beritaContoh(form: Form, sampul: string): NewsItem {
     is_featured: form.is_featured,
     status: form.status,
     published_at: new Date().toISOString(),
+    // Foto yang berkasnya hilang disaring seperti di halaman publik.
+    images: galeri
+      .filter((f) => f.url)
+      .map((f, i) => ({ id: f.id ?? -(i + 1), news_id: 0, path: '', caption: f.caption.trim() || null, sort_order: i, url: f.url })),
   };
 }
 
@@ -115,8 +120,8 @@ function beritaContoh(form: Form, sampul: string): NewsItem {
  * "Rute Baca" akan tergulir keluar layar.
  */
 function HamparanPratinjau({
-  form, sampul, onTutup,
-}: { form: Form; sampul: string; onTutup: () => void }) {
+  form, sampul, galeri, onTutup,
+}: { form: Form; sampul: string; galeri: FotoGaleri[]; onTutup: () => void }) {
   // Gulir badan dikunci selama hamparan terbuka supaya halaman form di
   // baliknya tidak ikut bergerak saat pratinjau digulir.
   useEffect(() => {
@@ -159,7 +164,7 @@ function HamparanPratinjau({
         </button>
       </div>
 
-      <TampilanBerita artikel={beritaContoh(form, sampul)} daftar={[]} pratinjau />
+      <TampilanBerita artikel={beritaContoh(form, sampul, galeri)} daftar={[]} pratinjau />
     </div>
   );
 }
@@ -195,6 +200,9 @@ export default function FormBeritaView({ id }: { id?: number }) {
   const [pratinjauBerkas, setPratinjauBerkas] = useState<string>('');
   const [modeUrl, setModeUrl] = useState(false);
   const [seret, setSeret] = useState(false);
+
+  const [galeri, setGaleri] = useState<FotoGaleri[]>([]);
+  const [galeriAwal, setGaleriAwal] = useState(tandaGaleri([]));
 
   const [galat, setGalat] = useState<Record<string, string>>({});
   const [memuat, setMemuat] = useState(ubah);
@@ -240,6 +248,9 @@ export default function FormBeritaView({ id }: { id?: number }) {
 
       setForm(isi);
       setAwal(isi);
+      const foto = dariServer(item.images);
+      setGaleri(foto);
+      setGaleriAwal(tandaGaleri(foto));
       setDocKey((k) => k + 1);
       // Berita peninggalan v1 memakai URL penuh; medan URL dibuka agar
       // petugas melihat dari mana gambarnya berasal.
@@ -260,11 +271,17 @@ export default function FormBeritaView({ id }: { id?: number }) {
     return () => URL.revokeObjectURL(pratinjauBerkas);
   }, [pratinjauBerkas]);
 
+  // Foto galeri baru yang masih tersisa saat halaman ditinggalkan dilepas di
+  // sini; yang dibuang petugas sudah dilepas `PanelGaleri` saat itu juga.
+  const galeriRef = useRef(galeri);
+  useEffect(() => { galeriRef.current = galeri; }, [galeri]);
+  useEffect(() => () => galeriRef.current.forEach(lepasPratinjau), []);
+
   /* ---------- cegah tulisan hilang ---------- */
 
   const kotor = useMemo(
-    () => !!berkas || JSON.stringify(form) !== JSON.stringify(awal),
-    [form, awal, berkas],
+    () => !!berkas || JSON.stringify(form) !== JSON.stringify(awal) || tandaGaleri(galeri) !== galeriAwal,
+    [form, awal, berkas, galeri, galeriAwal],
   );
 
   useEffect(() => {
@@ -352,6 +369,10 @@ export default function FormBeritaView({ id }: { id?: number }) {
     if (berkas) fd.append('cover', berkas);
     else fd.append('thumbnail', form.thumbnail.trim());
 
+    // Selalu dikirim, juga saat kosong: galeri kosong berarti petugas
+    // membuang semua fotonya, dan server harus ikut membuangnya.
+    susunGaleri(fd, galeri);
+
     const res = ubah ? await adminUpload(`/news/${id}`, fd) : await adminUpload('/news', fd);
     setMenyimpan(false);
 
@@ -361,6 +382,7 @@ export default function FormBeritaView({ id }: { id?: number }) {
     }
 
     setAwal(form);
+    setGaleriAwal(tandaGaleri(galeri));
     setBerkas(null);
     sessionStorage.setItem(
       KUNCI_TOAST,
@@ -511,11 +533,17 @@ export default function FormBeritaView({ id }: { id?: number }) {
 
               <InfoNote>
                 Gunakan <b>Judul Bagian</b> untuk memecah tulisan panjang, dan <b>Daftar Berpoin</b> untuk
-                rincian — keduanya membuat berita jauh lebih mudah dibaca di layar ponsel. Gambar tambahan
-                belum dapat disisipkan di dalam tulisan; satu gambar sampul di sebelah kanan sudah cukup.
+                rincian — keduanya membuat berita jauh lebih mudah dibaca di layar ponsel. Gambar tidak
+                disisipkan di dalam tulisan; foto pendukung masuk lewat <b>Galeri Foto</b> di bawah.
               </InfoNote>
             </div>
           </Panel>
+
+          <PanelGaleri
+            galeri={galeri}
+            ubah={setGaleri}
+            onGalat={(pesan) => setToast({ text: pesan, kind: 'error' })}
+          />
         </div>
 
         {/* ================= KANAN: sampul, publikasi, pratinjau ================= */}
@@ -523,7 +551,8 @@ export default function FormBeritaView({ id }: { id?: number }) {
           <Panel title="Gambar Sampul">
             <div className="p-5 space-y-3">
               <p className="text-[11.5px] text-[var(--adm-muted)] leading-relaxed">
-                Foto utama berita. Bentuk mendatar (16:9) paling pas. Maksimal 5 MB, format JPG, PNG, atau WEBP.
+                Foto utama berita. Bentuk mendatar (16:9) paling pas. Maksimal 5 MB, format JPG, PNG, atau WEBP —
+                foto otomatis dikecilkan saat disimpan, jadi tidak perlu diperkecil lebih dulu.
               </p>
 
               {sampul ? (
@@ -721,7 +750,7 @@ export default function FormBeritaView({ id }: { id?: number }) {
       />
 
       {bukaPratinjau && (
-        <HamparanPratinjau form={form} sampul={sampul} onTutup={() => setBukaPratinjau(false)} />
+        <HamparanPratinjau form={form} sampul={sampul} galeri={galeri} onTutup={() => setBukaPratinjau(false)} />
       )}
 
       <Toast msg={toast} onDone={() => setToast(null)} />

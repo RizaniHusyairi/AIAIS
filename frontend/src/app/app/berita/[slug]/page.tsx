@@ -23,6 +23,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import SafeHtml from '@/components/SafeHtml';
+import GaleriBerita from '@/components/berita/GaleriBerita';
 import { fetchApi } from '@/lib/api';
 import { urlAbsolut } from '@/lib/seo';
 import { NewsItem } from '@/types';
@@ -283,6 +284,14 @@ export default function BeritaDetailScreen() {
               html={artikel.content}
             />
           </motion.div>
+
+          {/* Dibungkus bersyarat: pembungkus kosong pun mendapat jarak dari
+              `space-y-6` dan meninggalkan celah di atas sobekan tiket. */}
+          {artikel.images?.some((f) => f.url) && (
+            <motion.div variants={listItem}>
+              <GaleriBerita foto={artikel.images} tata="karusel" />
+            </motion.div>
+          )}
 
           {/* Sobekan tiket — penanda tulisannya sudah habis */}
           <motion.div variants={listItem} className="relative rounded-2xl bg-[#f6f8fc] border border-slate-200 px-4 py-4 space-y-2">

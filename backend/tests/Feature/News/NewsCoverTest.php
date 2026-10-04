@@ -3,11 +3,10 @@
 namespace Tests\Feature\News;
 
 use App\Models\News;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Tests\Support\CreatesLegacyUserSchema;
+use Tests\Support\CreatesNewsSchema;
 use Tests\TestCase;
 
 /**
@@ -32,7 +31,7 @@ use Tests\TestCase;
  */
 class NewsCoverTest extends TestCase
 {
-    use CreatesLegacyUserSchema;
+    use CreatesLegacyUserSchema, CreatesNewsSchema;
 
     private string $prefix;
 
@@ -43,30 +42,6 @@ class NewsCoverTest extends TestCase
         $this->createNewsSchema();
         Storage::fake('public');
         $this->prefix = '/api/'.config('api.version');
-    }
-
-    /** Bentuk `news` seperti di `db_apt`: kolom v1 ditambah kolom v2. */
-    private function createNewsSchema(): void
-    {
-        Schema::dropIfExists('news');
-
-        Schema::create('news', function (Blueprint $table) {
-            $table->id();
-            $table->string('title', 255);
-            $table->string('slug')->unique();
-            $table->string('category')->default('Berita');
-            $table->text('content');
-            $table->text('excerpt')->nullable();
-            $table->string('author')->default('Humas Bandara');
-            $table->unsignedInteger('views_count')->default(0);
-            $table->boolean('is_featured')->default(false);
-            $table->string('status', 20)->default('published');
-            $table->timestamp('published_at')->nullable();
-            $table->string('image', 500)->nullable();
-            $table->boolean('is_published')->default(true);
-            $table->boolean('is_headline')->default(false);
-            $table->timestamps();
-        });
     }
 
     /** Petugas panel beserta tokennya. */

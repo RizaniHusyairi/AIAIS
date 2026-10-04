@@ -3,8 +3,7 @@
 namespace Tests\Feature\News;
 
 use App\Models\News;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+use Tests\Support\CreatesNewsSchema;
 use Tests\TestCase;
 
 /**
@@ -16,6 +15,8 @@ use Tests\TestCase;
  */
 class NewsViewCountTest extends TestCase
 {
+    use CreatesNewsSchema;
+
     private string $prefix;
 
     private const PERAMBAN = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/140.0';
@@ -24,24 +25,7 @@ class NewsViewCountTest extends TestCase
     {
         parent::setUp();
 
-        Schema::dropIfExists('news');
-        Schema::create('news', function (Blueprint $table) {
-            $table->id();
-            $table->string('title', 255);
-            $table->string('slug')->unique();
-            $table->string('category')->default('Berita');
-            $table->text('content');
-            $table->text('excerpt')->nullable();
-            $table->string('author')->default('Humas Bandara');
-            $table->unsignedInteger('views_count')->default(0);
-            $table->boolean('is_featured')->default(false);
-            $table->string('status', 20)->default('published');
-            $table->timestamp('published_at')->nullable();
-            $table->string('image', 500)->nullable();
-            $table->boolean('is_published')->default(true);
-            $table->boolean('is_headline')->default(false);
-            $table->timestamps();
-        });
+        $this->createNewsSchema();
 
         $this->prefix = '/api/'.config('api.version');
     }

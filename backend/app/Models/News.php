@@ -6,6 +6,7 @@ use App\Models\Concerns\ResolvesFileUrl;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Berita dan siaran pers bandara.
@@ -58,6 +59,12 @@ class News extends Model
      * `thumbnail_url` — URL siap pakai; menangani berkas v1 maupun unggahan v2.
      */
     protected $appends = ['thumbnail', 'thumbnail_url'];
+
+    /** Galeri foto berita, menurut urutan tampil. */
+    public function images(): HasMany
+    {
+        return $this->hasMany(NewsImage::class)->orderBy('sort_order')->orderBy('id');
+    }
 
     /** Nama v2 untuk kolom `image` warisan v1. */
     protected function thumbnail(): Attribute
