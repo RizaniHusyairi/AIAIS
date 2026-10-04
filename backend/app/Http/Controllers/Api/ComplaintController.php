@@ -5,11 +5,14 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Helpers\ApiResponse;
 use App\Models\Complaint;
+use App\Models\ComplaintAiInsight;
+use App\Support\AsistenPengaduan;
 use App\Support\Notifikasi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use RuntimeException;
 
 /**
  * Pengaduan publik berlampiran bukti.
@@ -144,11 +147,56 @@ class ComplaintController extends Controller
         return ApiResponse::success($complaint->fresh(), 'Pengaduan berhasil diperbarui');
     }
 
+    /** Hasil analisis AI terakhir, atau null bila belum pernah dianalisis. */
+    public function insight($id)
+    {
+        $complaint = Complaint::findOrFail($id);
+
+        $insight = ComplaintAiInsight::where('complaint_id', $complaint->id)->latest('id')->first();
+
+        // Dibungkus: ApiResponse mengubah null menjadi {}, yang tak dapat
+        // dibedakan dari objek kosong di sisi klien.
+        return ApiResponse::success(['insight' => $insight], 'Analisis AI pengaduan');
+    }
+
+    /**
+     * Minta analisis AI baru. Lihat App\Support\AsistenPengaduan.
+     *
+     * Hanya menyimpan saran; status dan tanggapan pengaduan tidak disentuh.
+     */
+    public function analyze(Request $request, AsistenPengaduan $asisten, $id)
+    {
+        $complaint = Complaint::findOrFail($id);
+
+        if (! $asisten->aktif()) {
+            return ApiResponse::error('Fitur analisis AI belum diaktifkan.', null, 503);
+        }
+
+        try {
+            $hasil = $asisten->analisis($complaint);
+        } catch (RuntimeException $e) {
+            return ApiResponse::error($e->getMessage(), null, 502);
+        }
+
+        $insight = ComplaintAiInsight::create([
+            'complaint_id' => $complaint->id,
+            'model' => $hasil['model'],
+            'result' => $hasil['result'],
+            'input_tokens' => $hasil['input_tokens'],
+            'output_tokens' => $hasil['output_tokens'],
+            'requested_by' => $request->user()?->id,
+        ]);
+
+        return ApiResponse::success($insight, 'Analisis AI selesai. Periksa sebelum dipakai.', null, 201);
+    }
+
     public function destroy($id)
     {
         $complaint = Complaint::findOrFail($id);
         $lampiran = $complaint->attachment;
 
+        // Hasil analisis memuat ringkasan isi pengaduan; ikut dihapus.
+        ComplaintAiInsight::where('complaint_id', $complaint->id)->delete();
         $complaint->delete();
 
         if (! empty($lampiran)) {

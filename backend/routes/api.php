@@ -774,6 +774,11 @@ Route::prefix(config('api.version'))->group(function () {
             Route::put('/lost-reports/{id}/status', [LostReportController::class, 'updateStatus'])->whereNumber('id');
             Route::put('/lost-reports/{id}/match', [LostReportController::class, 'match'])->whereNumber('id');
             Route::delete('/lost-reports/{id}', [LostReportController::class, 'destroy'])->whereNumber('id');
+            Route::get('/complaints/{id}/ai-insight', [ComplaintController::class, 'insight'])->whereNumber('id');
+            // Tiap panggilan berbiaya dan mengirim data ke penyedia luar; dibatasi laju.
+            Route::post('/complaints/{id}/ai-insight', [ComplaintController::class, 'analyze'])
+                ->whereNumber('id')
+                ->middleware('throttle:10,1');
 
             // Barang temuan — seluruhnya internal, tidak ada padanan publiknya.
             //

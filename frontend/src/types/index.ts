@@ -963,6 +963,30 @@ export interface Letter {
   file_url: string | null;
   has_file: boolean;
 }
+/** Keluaran terstruktur analisis AI — lihat `AsistenPengaduan::skema()` di backend. */
+export interface ComplaintAiResult {
+  ringkasan: string;
+  /** null bila model menyarankan kategori di luar `Complaint::CATEGORIES`. */
+  kategori_saran: string | null;
+  urgensi: 'rendah' | 'sedang' | 'tinggi';
+  perlu_eskalasi: boolean;
+  alasan_eskalasi: string;
+  tindak_lanjut: string[];
+  draf_balasan: string;
+}
+
+/** Satu analisis AI atas pengaduan; tiap "analisis ulang" menambah baris baru. */
+export interface ComplaintAiInsight {
+  id: number;
+  complaint_id: number;
+  model: string;
+  result: ComplaintAiResult;
+  input_tokens: number;
+  output_tokens: number;
+  requested_by?: number | null;
+  created_at: string;
+}
+
 
 export interface ChatMessage {
   id: number;

@@ -28,6 +28,14 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    // Analisis AI pengaduan (App\Support\AsistenPengaduan). Mati bila
+    // sakelarnya false atau kuncinya kosong — panel tetap berjalan tanpanya.
+    'anthropic' => [
+        'enabled' => env('AI_INSIGHT_ENABLED', false),
+        'key' => env('ANTHROPIC_API_KEY'),
+        'model' => env('AI_INSIGHT_MODEL', 'claude-sonnet-5-5'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

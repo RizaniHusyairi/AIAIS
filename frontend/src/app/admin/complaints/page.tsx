@@ -27,6 +27,7 @@ import {
   Mail, Phone, ExternalLink, Reply,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import PanelAnalisisAi from './PanelAnalisisAi';
 
 const STATUS_META: Record<string, { label: string; color: string }> = {
   open: { label: 'Menunggu Balasan', color: '#fbbf24' },
@@ -661,6 +662,15 @@ export default function AdminHelpdeskPage() {
                 </a>
               )}
             </div>
+
+            <PanelAnalisisAi
+              key={aduanTerbuka.id}
+              complaint={aduanTerbuka}
+              onPakaiDraf={(draf) => {
+                setTanggapan(draf);
+                setToast({ text: 'Draf disalin ke kolom tanggapan. Sunting sebelum disimpan.', kind: 'success' });
+              }}
+            />
 
             <div>
               <label className="block text-[11px] font-semibold text-[var(--adm-muted)] uppercase tracking-wider mb-1.5">
