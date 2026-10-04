@@ -14,6 +14,28 @@ npm run render      # → out/promo.mp4 (CLI Remotion, ±2 menit) — cara utama
 
 `npm run render` memakai ffmpeg bawaan Remotion. Berkas itu tidak bertanda tangan, sehingga **diblokir Smart App Control** Windows 11 (kode keluar `0xC0E90002`). Di mesin yang Smart App Control-nya masih aktif, pakai jalur cadangan `npm run render:web`. Skrip ini menyajikan `web/` lewat Vite, lalu membukanya di Chrome/Edge terpasang (`--headless=new`, memakai GPU) dan merender dengan WebCodecs. Musik ditempel setelahnya lewat mediabunny, karena memasang `<Audio>` saat render membuatnya ±100× lebih lambat. Waktu render sekitar 3,5 menit.
 
+## Motion reel 16:9 (`reel/`)
+
+Versi kedua: reel motion graphic 1920×1080, 60 fps, 20 detik, untuk YouTube, layar terminal, dan situs. Tidak memakai Remotion. Setiap frame adalah fungsi murni dari waktu yang digambar ke kanvas 2D, lalu dienkode WebCodecs (mediabunny) di Chrome headless terpasang. Musik disintesis di `reel/audio.js` memakai jam 120 BPM yang sama.
+
+```bash
+npm run reel                                  # → out/promo-reel.mp4 (±15 dtk)
+npm run reel:sheet -- "sheet=2.3,4.5,8.7"     # → out/reel-sheet.png, lembar kontak untuk pemeriksaan
+```
+
+Datanya juga `src/data/snapshot.json` dan foto di `public/img`, jadi `npm run data` ikut memperbarui reel. Aturan isi di bawah tetap berlaku.
+
+| Dtk | Adegan |
+|---|---|
+| 0–2 | Titik → landasan pacu, "Samarinda", pesawat lepas landas |
+| 2–4 | "SATU PORTAL. SEMUA INFO." lalu kamera menembus huruf O |
+| 4–7 | Papan split-flap keberangkatan → kedatangan |
+| 7–10 | Mosaik fasilitas berbalik, Runway layar penuh, kartu wisata |
+| 10–13 | Korsel berita, tiga golongan informasi PPID |
+| 13–16 | Aplikasi di ponsel: Pusat Bantuan → Lapor Kehilangan → terkirim |
+| 16–18 | Montase delapan potongan |
+| 18–20 | Partikel menyusun "aptpairport.id", logo bandara |
+
 ## Sumber data
 
 | Data | Sumber |

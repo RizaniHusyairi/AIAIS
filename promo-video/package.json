@@ -10,7 +10,9 @@
     "still": "remotion still Promo out/still.png",
     "render:web": "node scripts/render-web.mjs",
     "music": "node scripts/make-music.mjs",
-    "render:web:page": "vite"
+    "render:web:page": "vite",
+    "reel": "node reel/run.mjs render",
+    "reel:sheet": "node reel/run.mjs"
   },
   "dependencies": {
     "@remotion/cli": "^4.0.529",
