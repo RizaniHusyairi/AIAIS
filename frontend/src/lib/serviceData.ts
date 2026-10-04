@@ -280,6 +280,26 @@ export const SERVICES: Service[] = [
 export const getService = (slug: string): Service | undefined =>
   SERVICES.find((s) => s.slug === slug);
 
+/**
+ * Layanan yang di PWA punya layar pengajuan sendiri, bukan layar detail umum.
+ *
+ * "Pengajuan Informasi Publik" (slug v1 `informasi-publik`) ikut tercantum di
+ * tabel layanan, tetapi layar detailnya hanya berisi syarat dan keterangan
+ * "formulir belum tersedia" — padahal formulirnya ada di /app/ppid/permohonan.
+ * Pengunjung yang memilihnya dari menu Layanan diantar langsung ke sana.
+ */
+const LAYAR_PWA_KHUSUS: Record<string, string> = {
+  'informasi-publik': '/app/ppid/permohonan',
+};
+
+/** Tujuan PWA untuk satu layanan. */
+export const hrefLayananPwa = (slug: string): string =>
+  LAYAR_PWA_KHUSUS[slug] ?? `/app/layanan/${slug}`;
+
+/** Layar khusus bila ada; null berarti pakai layar detail umum. */
+export const layarKhususLayanan = (slug: string): string | null =>
+  LAYAR_PWA_KHUSUS[slug] ?? null;
+
 /* ------------------------------------------------------------------ */
 /*  Penggabungan dengan data dari API                                  */
 /* ------------------------------------------------------------------ */

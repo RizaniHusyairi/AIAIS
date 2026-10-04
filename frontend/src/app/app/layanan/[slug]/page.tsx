@@ -13,18 +13,29 @@
  */
 
 import React, { use, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { fetchApi } from '@/lib/api';
 import type { ServiceItem } from '@/types';
-import { gabungLayanan, type Service } from '@/lib/serviceData';
+import { gabungLayanan, layarKhususLayanan, type Service } from '@/lib/serviceData';
 import { StatusBar, AppHeader, Memuat, LayarKosong, listContainer, listItem } from '@/components/pwa/ui';
 import { CircleCheck, ClipboardList, Ruler, Info, ArrowRight, PackageSearch } from 'lucide-react';
 
 export default function LayananDetailScreen({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
+  const router = useRouter();
   const [layanan, setLayanan] = useState<Service | null | 'tidak-ada'>(null);
 
   useEffect(() => {
+    // Layanan berlayar khusus (mis. Pengajuan Informasi Publik) tetap bisa
+    // tiba di sini lewat tautan lama atau proxy dari /layanan/<slug> desktop.
+    // `replace`, bukan `push`: tombol kembali tidak boleh memantul ke sini.
+    const khusus = layarKhususLayanan(slug);
+    if (khusus) {
+      router.replace(khusus);
+      return;
+    }
+
     let batal = false;
 
     fetchApi<ServiceItem>(`/services/${slug}`).then((res) => {
@@ -33,7 +44,7 @@ export default function LayananDetailScreen({ params }: { params: Promise<{ slug
     });
 
     return () => { batal = true; };
-  }, [slug]);
+  }, [slug, router]);
 
   if (layanan === null) {
     return (

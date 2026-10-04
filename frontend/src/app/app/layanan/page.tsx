@@ -18,7 +18,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { fetchApi } from '@/lib/api';
 import type { ServiceItem } from '@/types';
-import { gabungLayanan, EXTERNAL_SERVICES, type Service } from '@/lib/serviceData';
+import { gabungLayanan, hrefLayananPwa, EXTERNAL_SERVICES, type Service } from '@/lib/serviceData';
 import { hostOf } from '@/lib/url';
 import {
   StatusBar, AppHeader, KotakCari, Memuat, listContainer, listItem,
@@ -131,7 +131,7 @@ export default function LayananScreen() {
                 return (
                   <motion.div key={s.slug} variants={listItem}>
                     <Link
-                      href={`/app/layanan/${s.slug}`}
+                      href={hrefLayananPwa(s.slug)}
                       className="flex items-center gap-3.5 bg-white rounded-2xl p-3.5 shadow-sm shadow-slate-200/60 active:scale-[0.99] transition-transform"
                     >
                       <span
