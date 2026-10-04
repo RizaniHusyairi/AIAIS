@@ -10,7 +10,6 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Illuminate\Validation\Rule;
 
 /**
  * Statistik lalu lintas udara.
@@ -24,6 +23,9 @@ use Illuminate\Validation\Rule;
  * paralel sepanjang 12 yang diisi nol untuk bulan tanpa data, sehingga
  * "belum ada data" dan "benar-benar nol" tidak dapat dibedakan. Di sini tiap
  * periode adalah satu objek bernama, dan periode tanpa data tidak muncul.
+ *
+ * Catatan hariannya tidak lagi diketik tangan: `LlauController` menulis ulang
+ * satu bulan penuh setiap kali rekapitulasi LLAU diterapkan.
  */
 class AirTrafficController extends Controller
 {
@@ -74,40 +76,6 @@ class AirTrafficController extends Controller
             'summary' => $this->ringkas($logs),
             'series' => $seri,
         ], 'Statistik lalu lintas udara');
-    }
-
-    /** Daftar admin — catatan harian, terbaru lebih dulu. */
-    public function adminIndex(Request $request)
-    {
-        $logs = AirTrafficLog::query()
-            ->when($request->query('year'), fn ($q, $y) => $q->whereYear('date', $y))
-            ->when($request->query('month'), fn ($q, $m) => $q->whereMonth('date', $m))
-            ->orderByDesc('date')
-            ->get();
-
-        return ApiResponse::success($logs, 'Catatan lalu lintas udara harian');
-    }
-
-    public function store(Request $request)
-    {
-        $log = AirTrafficLog::create($this->validated($request));
-
-        return ApiResponse::success($log, 'Catatan harian berhasil ditambahkan', null, 201);
-    }
-
-    public function update(Request $request, $id)
-    {
-        $log = AirTrafficLog::findOrFail($id);
-        $log->update($this->validated($request, $log->id));
-
-        return ApiResponse::success($log->fresh(), 'Catatan harian berhasil diperbarui');
-    }
-
-    public function destroy($id)
-    {
-        AirTrafficLog::findOrFail($id)->delete();
-
-        return ApiResponse::success(null, 'Catatan harian berhasil dihapus');
     }
 
     /**
@@ -221,30 +189,5 @@ class AirTrafficController extends Controller
             ] + $this->ringkas($baris))
             ->values()
             ->all();
-    }
-
-    private function validated(Request $request, ?int $ignoreId = null): array
-    {
-        $partial = $ignoreId !== null ? 'sometimes|' : '';
-
-        $aturan = [
-            'date' => [
-                ...($ignoreId !== null ? ['sometimes'] : []),
-                'required', 'date',
-                Rule::unique('air_traffic_logs', 'date')->ignore($ignoreId),
-            ],
-        ];
-
-        foreach (AirTrafficLog::CATEGORIES as $kategori) {
-            $aturan["{$kategori}_arrival"] = $partial.'required|integer|min:0';
-            $aturan["{$kategori}_departure"] = $partial.'required|integer|min:0';
-        }
-
-        return $request->validate($aturan, [
-            'date.required' => 'Tanggal wajib diisi.',
-            'date.unique' => 'Catatan untuk tanggal ini sudah ada. Sunting catatan yang lama.',
-            '*.integer' => 'Seluruh angka harus berupa bilangan bulat.',
-            '*.min' => 'Angka tidak boleh negatif.',
-        ]);
     }
 }

@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\InstagramController;
 use App\Http\Controllers\Api\InventoryController;
 use App\Http\Controllers\Api\KaraokeController;
 use App\Http\Controllers\Api\LetterController;
+use App\Http\Controllers\Api\LlauController;
 use App\Http\Controllers\Api\LostReportController;
 use App\Http\Controllers\Api\OfficialController;
 use App\Http\Controllers\Api\MeetingController;
@@ -242,6 +243,10 @@ Route::prefix(config('api.version'))->group(function () {
     // Statistik lalu lintas udara. Mengembalikan agregat, bukan baris harian
     // mentah — `?year=` memecah serinya per bulan.
     Route::get('/air-traffic', [AirTrafficController::class, 'index']);
+
+    // Dasbor rekapitulasi LLAU bulanan. `?period=YYYY-MM`; tanpa itu bulan
+    // terakhir. Hanya agregat — baris per penerbangan tidak pernah dikirim.
+    Route::get('/llau', [LlauController::class, 'index']);
 
     // Posko Nataru.
     //
@@ -565,13 +570,22 @@ Route::prefix(config('api.version'))->group(function () {
             Route::delete('/tourisms/{id}/gallery', [TourismController::class, 'destroyGalleryItem']);
             Route::delete('/tourisms/{id}', [TourismController::class, 'destroy']);
 
-            // Catatan lalu lintas udara harian.
-            Route::get('/air-traffic', [AirTrafficController::class, 'adminIndex']);
-            Route::post('/air-traffic', [AirTrafficController::class, 'store']);
-            Route::put('/air-traffic/{id}', [AirTrafficController::class, 'update']);
-            // Cetak rekapitulasi bulanan. Periode wajib disebut lewat ?month=YYYY-MM.
+            // Catatan lalu lintas udara harian tidak lagi diketik tangan: isinya
+            // ditulis ulang dari unggahan LLAU. Yang tersisa hanya cetak
+            // rekapitulasi bulanan (?month=YYYY-MM).
             Route::get('/air-traffic/export-pdf', [AirTrafficController::class, 'exportPdf']);
-            Route::delete('/air-traffic/{id}', [AirTrafficController::class, 'destroy']);
+
+            // Rekapitulasi LLAU. `preview` membaca tanpa menyimpan; `POST /llau`
+            // menerapkan dan mengganti seluruh data bulan yang sama.
+            Route::get('/llau', [LlauController::class, 'adminIndex']);
+            Route::post('/llau/preview', [LlauController::class, 'preview']);
+            Route::post('/llau', [LlauController::class, 'store']);
+            Route::get('/llau/{id}', [LlauController::class, 'show'])->whereNumber('id');
+            // Berkas asli memuat NIP penanda tangan — hanya lewat sini, bertoken.
+            Route::get('/llau/{id}/file', [LlauController::class, 'file'])->whereNumber('id');
+            // Laporan bulanan bentuk surat BLU. POST karena membawa NIP penanda tangan.
+            Route::post('/llau/{id}/laporan', [LlauController::class, 'laporan'])->whereNumber('id');
+            Route::delete('/llau/{id}', [LlauController::class, 'destroy'])->whereNumber('id');
 
             // Pengajuan field trip. Berkas syaratnya berupa surat pengantar
             // berkop instansi, tersimpan di cakram privat dan hanya dilayani
@@ -760,6 +774,11 @@ Route::prefix(config('api.version'))->group(function () {
             // Pengaduan Management
             Route::get('/complaints', [ComplaintController::class, 'index']);
             Route::put('/complaints/{id}/resolve', [ComplaintController::class, 'resolve']);
+            Route::get('/complaints/{id}/ai-insight', [ComplaintController::class, 'insight'])->whereNumber('id');
+            // Tiap panggilan berbiaya dan mengirim data ke penyedia luar; dibatasi laju.
+            Route::post('/complaints/{id}/ai-insight', [ComplaintController::class, 'analyze'])
+                ->whereNumber('id')
+                ->middleware('throttle:10,1');
             Route::delete('/complaints/{id}', [ComplaintController::class, 'destroy']);
 
             // Lapor Kehilangan Barang.
@@ -774,11 +793,6 @@ Route::prefix(config('api.version'))->group(function () {
             Route::put('/lost-reports/{id}/status', [LostReportController::class, 'updateStatus'])->whereNumber('id');
             Route::put('/lost-reports/{id}/match', [LostReportController::class, 'match'])->whereNumber('id');
             Route::delete('/lost-reports/{id}', [LostReportController::class, 'destroy'])->whereNumber('id');
-            Route::get('/complaints/{id}/ai-insight', [ComplaintController::class, 'insight'])->whereNumber('id');
-            // Tiap panggilan berbiaya dan mengirim data ke penyedia luar; dibatasi laju.
-            Route::post('/complaints/{id}/ai-insight', [ComplaintController::class, 'analyze'])
-                ->whereNumber('id')
-                ->middleware('throttle:10,1');
 
             // Barang temuan — seluruhnya internal, tidak ada padanan publiknya.
             //

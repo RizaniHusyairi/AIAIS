@@ -39,7 +39,7 @@ const NAV: { section: string; items: NavItem[] }[] = [
   {
     section: 'Operasional',
     items: [
-      { name: 'Lalu Lintas Udara', href: '/admin/air-traffic', icon: BarChart3 },
+      { name: 'Rekapitulasi LLAU', href: '/admin/llau', icon: BarChart3 },
       { name: 'Posko Nataru', href: '/admin/nataru', icon: CalendarRange },
       { name: 'Kinerja Keuangan', href: '/admin/keuangan', icon: Wallet },
     ],

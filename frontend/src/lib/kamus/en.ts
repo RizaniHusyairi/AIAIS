@@ -104,7 +104,7 @@ const en = {
     strukturOrganisasi: { nama: 'Organisational Structure', desc: 'Organisation chart of the Class I UPBU Office' },
     pejabatBandara: { nama: 'Airport Officials', desc: 'Leadership of the Class I UPBU Office of APT Pranoto' },
     fasilitasBandara: { nama: 'Airport Facilities', desc: 'Waiting lounges, prayer rooms, medical care, and public amenities' },
-    statistikLaluLintas: { nama: 'Traffic Statistics', desc: 'Aircraft, passenger, baggage, and cargo movements per period' },
+    statistikLaluLintas: { nama: 'Traffic Statistics', desc: 'Monthly LLAU recap: passengers, cargo, routes, airlines, on-time performance' },
 
     profilPpid: { nama: 'PPID Profile', desc: 'Profile of the Information and Documentation Management Officer' },
     sopPpid: { nama: 'PPID Procedures', desc: 'Standard operating procedures for information services' },

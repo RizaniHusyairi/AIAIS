@@ -112,7 +112,7 @@ const id = {
     strukturOrganisasi: { nama: 'Struktur Organisasi', desc: 'Bagan organisasi Kantor UPBU Kelas I' },
     pejabatBandara: { nama: 'Pejabat Bandara', desc: 'Struktur pimpinan Kantor UPBU Kelas I APT Pranoto' },
     fasilitasBandara: { nama: 'Fasilitas Bandara', desc: 'Ruang tunggu, musala, kesehatan, dan fasilitas umum' },
-    statistikLaluLintas: { nama: 'Statistik Lalu Lintas', desc: 'Pergerakan pesawat, penumpang, bagasi, dan kargo per periode' },
+    statistikLaluLintas: { nama: 'Statistik Lalu Lintas', desc: 'Rekap bulanan LLAU: penumpang, kargo, rute, maskapai, ketepatan waktu' },
 
     profilPpid: { nama: 'Profil PPID BLU', desc: 'Profil Pejabat Pengelola Informasi dan Dokumentasi' },
     sopPpid: { nama: 'SOP PPID', desc: 'Prosedur operasional standar layanan informasi' },

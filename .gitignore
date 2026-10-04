@@ -101,3 +101,12 @@ docs/*.csv
 # Konfigurasi konektor MCP per-mesin (lihat CLAUDE.md: berkas .claude/ dan
 # konfigurasi mesin tidak ikut repositori)
 .mcp.json
+
+# Berkas LLAU resmi (rekap sumber dan laporan bulanan) memuat nama dan NIP
+# pejabat — data pribadi menurut UU 27/2022. Simpan di luar repositori; kode
+# hanya membutuhkan kerangka templat di backend/resources/llau.
+docs/LLAU REKAP/
+docs/LLAU EXPORT/
+
+# Berkas kunci sementara Microsoft Office.
+~$*

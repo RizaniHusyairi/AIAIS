@@ -117,18 +117,205 @@ export interface AirTrafficStats {
   series: TrafficPeriod[];
 }
 
-/** Satu catatan lalu lintas udara harian (panel admin). */
-export interface AirTrafficLog {
+/* ---------------- Rekapitulasi LLAU ---------------- */
+
+/** Label satu periode laporan LLAU. */
+export interface LlauPeriodLabel {
+  /** Kunci mesin: "2026-09". */
+  period: string;
+  /** "September 2026". */
+  label: string;
+  /** "Sep 26" — untuk sumbu grafik. */
+  short: string;
+  year: number;
+  month: number;
+}
+
+/**
+ * Angka utama satu bulan LLAU.
+ *
+ * Penumpang = dewasa + anak + bayi + transit (seperti baris TOTAL di Excel).
+ * `otp` dan `load_factor` hanya dihitung pada kegiatan BERJADWAL; `null` bila
+ * tidak ada penerbangan yang dapat diukur.
+ */
+export interface LlauSummary {
+  flights: TrafficTotals;
+  passengers: TrafficTotals;
+  baggage: TrafficTotals;
+  cargo: TrafficTotals;
+  mail: TrafficTotals;
+  transit: number;
+  days: number;
+  routes: number;
+  operators: number;
+  otp: {
+    measured: number;
+    on_time: number;
+    late: number;
+    rate: number | null;
+    average_late_minutes: number | null;
+  };
+  load_factor: number | null;
+}
+
+export interface LlauNamedCount {
+  name: string;
+  flights: number;
+}
+
+/** Rincian satu bulan untuk dasbor publik. */
+export interface LlauPeriodDetail extends LlauPeriodLabel {
+  updated_at: string | null;
+  summary: LlauSummary;
+  daily: {
+    date: string;
+    flights_arrival: number;
+    flights_departure: number;
+    passengers_arrival: number;
+    passengers_departure: number;
+  }[];
+  /** Diurutkan dari penumpang terbanyak. `code` "LOKAL" = penerbangan lokal. */
+  routes: {
+    code: string;
+    flights: number;
+    passengers_arrival: number;
+    passengers_departure: number;
+    passengers: number;
+    cargo: number;
+  }[];
+  operators: {
+    icao: string | null;
+    name: string;
+    flights: number;
+    passengers: number;
+    cargo: number;
+    /** Persen dari seluruh penerbangan bulan itu. */
+    share: number;
+  }[];
+  categories: LlauNamedCount[];
+  aircraft_types: LlauNamedCount[];
+  /** 24 slot jam terjadwal (waktu setempat). */
+  hourly: { hour: number; arrival: number; departure: number }[];
+  /** Penyebab yang dicatat pada penerbangan berjadwal yang terlambat > 15 menit. */
+  delay_causes: LlauNamedCount[];
+}
+
+export interface LlauTrendPoint {
+  report_id: number;
+  period: string;
+  label: string;
+  flights: number;
+  flights_arrival: number;
+  flights_departure: number;
+  passengers: number;
+  passengers_arrival: number;
+  passengers_departure: number;
+  baggage: number;
+  cargo: number;
+  otp_rate: number | null;
+}
+
+/** Respons `GET /llau`. */
+export interface LlauStats {
+  /** Seluruh bulan yang tersedia, terbaru lebih dulu. */
+  periods: LlauPeriodLabel[];
+  period: LlauPeriodDetail | null;
+  /** Bulan tepat sebelumnya, bila diunggah — pembanding kartu angka. */
+  previous: (LlauPeriodLabel & { summary: LlauSummary }) | null;
+  /** Urut dari terlama; paling banyak 24 bulan. */
+  trend: LlauTrendPoint[];
+}
+
+/** Satu laporan pada daftar admin. */
+export interface LlauReport extends LlauPeriodLabel {
   id: number;
-  date: string;
-  aircraft_arrival: number;
-  aircraft_departure: number;
-  passenger_arrival: number;
-  passenger_departure: number;
-  baggage_arrival: number;
-  baggage_departure: number;
-  cargo_arrival: number;
-  cargo_departure: number;
+  original_name: string;
+  flight_count: number;
+  passengers: number;
+  cargo: number;
+  otp_rate: number | null;
+  warnings: string[];
+  /** Diterapkan walau total tidak cocok dengan baris JUMLAH Excel. */
+  mismatch_ignored: boolean;
+  uploaded_by: string | null;
+  updated_at: string | null;
+}
+
+/** Satu baris penerbangan LLAU (hanya dikirim ke panel admin). */
+export interface LlauFlight {
+  id: number;
+  /** Nomor baris pada lembar Excel aslinya — rujukan saat memperbaiki berkas. */
+  row_number: number;
+  flight_date: string;
+  scheduled_at: string | null;
+  actual_at: string | null;
+  /** Aktual − terjadwal, menit; negatif = lebih awal. */
+  delay_minutes: number | null;
+  delay_category: string | null;
+  origin: string;
+  destination: string;
+  operator_name: string;
+  operator_icao: string | null;
+  operator_brand: string | null;
+  flight_category: string | null;
+  route_type: string | null;
+  remarks: string | null;
+  flight_number: string | null;
+  registration: string | null;
+  aircraft_type: string | null;
+  seat_capacity: number | null;
+  direction: 'A' | 'D';
+  pax_adult: number;
+  pax_child: number;
+  pax_infant: number;
+  transit_adult: number;
+  transit_child: number;
+  transit_infant: number;
+  baggage_kg: number;
+  cargo_kg: number;
+  mail_kg: number;
+}
+
+/** Respons `GET /admin/llau/{id}`. */
+export interface LlauReportDetail {
+  report: LlauPeriodLabel & {
+    id: number;
+    original_name: string;
+    flight_count: number;
+    warnings: string[];
+    mismatch_ignored: boolean;
+    uploaded_by: string | null;
+    created_at: string | null;
+    updated_at: string | null;
+    has_file: boolean;
+  };
+  /** Per kolom angka: nilai baris JUMLAH Excel (null bila tak terbaca) vs hasil hitung. */
+  totals: { column: string; label: string; excel: number | null; computed: number }[];
+  detail: Omit<LlauPeriodDetail, keyof LlauPeriodLabel | 'updated_at'>;
+  previous: (LlauPeriodLabel & { id: number; summary: LlauSummary }) | null;
+  neighbors: {
+    older: (LlauPeriodLabel & { id: number }) | null;
+    newer: (LlauPeriodLabel & { id: number }) | null;
+  };
+  flights: LlauFlight[];
+  /** Penanda tangan bawaan laporan bulanan (config/pejabat.php); hanya di endpoint admin. */
+  signer: { nama: string; nip: string };
+}
+
+/** Hasil `POST /admin/llau/preview` — dibaca, belum disimpan. */
+export interface LlauPreview {
+  period: LlauPeriodLabel | null;
+  flight_count: number;
+  /** Membatalkan penerapan. */
+  errors: string[];
+  /** Hanya diberitahukan. */
+  warnings: string[];
+  mismatches: { column: string; label: string; excel: number; computed: number }[];
+  excel_totals: Record<string, number> | null;
+  computed_totals: Record<string, number>;
+  summary: LlauSummary | null;
+  /** Laporan bulan yang sama yang akan diganti. */
+  replaces: { id: number; updated_at: string | null } | null;
 }
 
 /** Status pengajuan; nilainya ditiru apa adanya dari v1. */
@@ -563,6 +750,19 @@ export interface NewsItem {
   is_featured: boolean;
   status?: 'draft' | 'published';
   published_at: string;
+  /** Galeri foto; hanya ikut pada detail publik dan daftar admin. */
+  images?: NewsImage[];
+}
+
+/** Satu foto galeri berita (`news_images`). */
+export interface NewsImage {
+  id: number;
+  news_id: number;
+  path: string;
+  caption: string | null;
+  sort_order: number;
+  /** Turunan `$appends`; null bila berkasnya hilang dari cakram. */
+  url: string | null;
 }
 
 /**
@@ -750,19 +950,6 @@ export interface Complaint {
   reporter_name: string;
   reporter_email: string;
   reporter_phone: string;
-  /** Galeri foto; hanya ikut pada detail publik dan daftar admin. */
-  images?: NewsImage[];
-}
-
-/** Satu foto galeri berita (`news_images`). */
-export interface NewsImage {
-  id: number;
-  news_id: number;
-  path: string;
-  caption: string | null;
-  sort_order: number;
-  /** Turunan `$appends`; null bila berkasnya hilang dari cakram. */
-  url: string | null;
   category: string;
   subject: string;
   description: string;
@@ -773,6 +960,30 @@ export interface NewsImage {
   status: ComplaintStatus;
   admin_response?: string | null;
   responded_at?: string | null;
+  created_at: string;
+}
+
+/** Keluaran terstruktur analisis AI — lihat `AsistenPengaduan::skema()` di backend. */
+export interface ComplaintAiResult {
+  ringkasan: string;
+  /** null bila model menyarankan kategori di luar `Complaint::CATEGORIES`. */
+  kategori_saran: string | null;
+  urgensi: 'rendah' | 'sedang' | 'tinggi';
+  perlu_eskalasi: boolean;
+  alasan_eskalasi: string;
+  tindak_lanjut: string[];
+  draf_balasan: string;
+}
+
+/** Satu analisis AI atas pengaduan; tiap "analisis ulang" menambah baris baru. */
+export interface ComplaintAiInsight {
+  id: number;
+  complaint_id: number;
+  model: string;
+  result: ComplaintAiResult;
+  input_tokens: number;
+  output_tokens: number;
+  requested_by?: number | null;
   created_at: string;
 }
 
@@ -963,30 +1174,6 @@ export interface Letter {
   file_url: string | null;
   has_file: boolean;
 }
-/** Keluaran terstruktur analisis AI — lihat `AsistenPengaduan::skema()` di backend. */
-export interface ComplaintAiResult {
-  ringkasan: string;
-  /** null bila model menyarankan kategori di luar `Complaint::CATEGORIES`. */
-  kategori_saran: string | null;
-  urgensi: 'rendah' | 'sedang' | 'tinggi';
-  perlu_eskalasi: boolean;
-  alasan_eskalasi: string;
-  tindak_lanjut: string[];
-  draf_balasan: string;
-}
-
-/** Satu analisis AI atas pengaduan; tiap "analisis ulang" menambah baris baru. */
-export interface ComplaintAiInsight {
-  id: number;
-  complaint_id: number;
-  model: string;
-  result: ComplaintAiResult;
-  input_tokens: number;
-  output_tokens: number;
-  requested_by?: number | null;
-  created_at: string;
-}
-
 
 export interface ChatMessage {
   id: number;
