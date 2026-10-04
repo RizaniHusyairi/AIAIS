@@ -292,41 +292,103 @@ export async function adminUpload<T>(path: string, form: FormData): Promise<ApiR
  * biner. Tautan `<a href>` biasa juga tidak bisa: endpointnya butuh sesi yang
  * hanya dikenali proksi. Karena itu berkasnya diambil sebagai blob lalu
  * diunduh dari memori — tanpa pernah membuat URL publik untuk scan KTP.
+ *
+ * Mode `buka` menampilkan berkas di tab baru (pratinjau foto/PDF peramban),
+ * bukan mengunduhnya. Tabnya dibuka SEBELUM `fetch`, selagi masih dalam
+ * gestur klik — sesudah `await`, peramban menganggapnya popup dan
+ * memblokirnya.
  */
 export async function adminDownload(
   path: string,
   namaBerkas: string,
+  mode: 'unduh' | 'buka' = 'unduh',
+  /**
+   * Berkas yang disusun dari isian (mis. laporan bertanda tangan) diminta
+   * lewat POST: isiannya bisa memuat data pribadi seperti NIP, dan data
+   * pribadi tidak boleh menumpang di URL yang tercatat di log server.
+   */
+  kiriman?: { body: unknown },
 ): Promise<{ ok: boolean; message: string }> {
+  const tab = mode === 'buka' ? window.open('', '_blank') : null;
+  const gagalkan = (message: string) => {
+    tab?.close();
+
+    return { ok: false, message };
+  };
+
   try {
-    const res = await fetch(`${BASE}${path}`, { cache: 'no-store' });
+    const res = await fetch(`${BASE}${path}`, kiriman
+      ? {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify(kiriman.body),
+          cache: 'no-store',
+        }
+      : { cache: 'no-store' });
 
     if (res.status === 401) {
+      tab?.close();
       keHalamanMasuk();
 
       return { ok: false, message: 'Sesi berakhir, silakan masuk kembali' };
     }
 
-    if (res.status === 403) {
-      return { ok: false, message: 'Anda tidak berwenang membuka berkas ini.' };
-    }
+    if (res.status === 403) return gagalkan('Anda tidak berwenang membuka berkas ini.');
 
-    if (!res.ok) return { ok: false, message: 'Berkas tidak dapat diambil' };
+    // Pesan backend (mis. "nilai belum diisi", "berkas tidak ditemukan")
+    // diteruskan apa adanya — pesan umum membuat petugas tidak tahu apa
+    // yang harus dibereskan.
+    if (!res.ok) {
+      const json = await res.json().catch(() => null);
+
+      return gagalkan(json?.message || `Berkas tidak dapat diambil (HTTP ${res.status})`);
+    }
 
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = namaBerkas;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    // Dibebaskan setelah unduhan dimulai supaya blob tidak menetap di memori.
-    setTimeout(() => URL.revokeObjectURL(url), 10_000);
 
-    return { ok: true, message: 'Berkas diunduh' };
+    if (tab) {
+      tab.location.href = url;
+    } else {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = lengkapiNama(namaBerkas, res.headers.get('content-disposition'), blob.type);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
+    // Tab pratinjau butuh blobnya lebih lama daripada unduhan biasa.
+    setTimeout(() => URL.revokeObjectURL(url), tab ? 60_000 : 10_000);
+
+    return { ok: true, message: tab ? 'Berkas dibuka di tab baru' : 'Berkas diunduh' };
   } catch {
-    return { ok: false, message: 'Tidak dapat terhubung ke server' };
+    return gagalkan('Tidak dapat terhubung ke server');
   }
+}
+
+const EKSTENSI: Record<string, string> = {
+  'application/pdf': 'pdf',
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+};
+
+/**
+ * Pastikan nama unduhan berekstensi.
+ *
+ * Pemanggil sering hanya tahu label ("KTP-Budi"), sementara ekstensinya baru
+ * diketahui server (KTP bisa JPG atau PDF). Tanpa ekstensi, Windows tidak tahu
+ * aplikasi mana yang membuka berkasnya.
+ */
+function lengkapiNama(nama: string, disposisi: string | null, tipe: string): string {
+  if (/\.[a-z0-9]{2,5}$/i.test(nama)) return nama;
+
+  const dariServer = disposisi?.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i)?.[1];
+  const ext = dariServer?.match(/\.([a-z0-9]{2,5})$/i)?.[1] ?? EKSTENSI[tipe.split(';')[0].trim()];
+
+  return ext ? `${nama}.${ext}` : nama;
 }
 
 export async function logout() {

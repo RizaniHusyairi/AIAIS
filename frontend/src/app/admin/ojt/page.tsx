@@ -22,7 +22,7 @@ import {
   Loading, EmptyState, Table, Row, Cell, SearchBox, StatCard, stagger,
 } from '@/components/admin/ui';
 import {
-  GraduationCap, Trash2, RefreshCw, Download, ListChecks, Users, CircleCheck, Play, Plus, X, Award, Lock, Unlock,
+  GraduationCap, Trash2, RefreshCw, Eye, ListChecks, Users, CircleCheck, Play, Plus, X, Award, Lock, Unlock,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -180,7 +180,8 @@ export default function AdminOjtPage() {
   };
 
   const unduh = async (it: OjtStudent, jenis: string, label: string) => {
-    const res = await adminDownload(`/ojt/${it.id}/files/${jenis}`, `${label}-${it.name}`);
+    // Dibuka di tab baru: petugas memeriksa KTP/foto, bukan mengarsipkannya.
+    const res = await adminDownload(`/ojt/${it.id}/files/${jenis}`, `${label}-${it.name}`, 'buka');
     if (!res.ok) setToast({ text: res.message, kind: 'error' });
   };
 
@@ -248,7 +249,7 @@ export default function AdminOjtPage() {
                           onClick={() => unduh(it, b.jenis, b.label)}
                           className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-[var(--adm-hover)] hover:bg-cyan-500/20 text-[var(--adm-body)] hover:text-[var(--adm-accent)] text-[11px] font-bold transition-colors cursor-pointer"
                         >
-                          <Download className="w-3 h-3" /> {b.label}
+                          <Eye className="w-3 h-3" /> {b.label}
                         </button>
                       ))}
                     </span>
