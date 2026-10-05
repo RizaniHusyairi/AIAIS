@@ -8,9 +8,9 @@
  * informasi, maupun pengajuan layanan. Sebelumnya antrean itu hanya terlihat
  * di dasbor, dan petugas yang langsung menuju modul lain tidak pernah tahu.
  *
- * "Sekali" dijaga penanda `sessionStorage` dari `login()`: memuat ulang
- * halaman atau berpindah modul tidak memunculkannya lagi. Kegagalan memuat
- * data didiamkan — ini pelengkap, bukan gerbang masuk panel.
+ * "Sekali" dijaga penanda `sessionStorage` dari `login()`, dihabiskan setelah
+ * jawabannya diterima: memuat ulang halaman atau berpindah modul tidak
+ * memunculkannya lagi. Kegagalan memuat data didiamkan — ini pelengkap, bukan gerbang masuk panel.
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
@@ -21,7 +21,7 @@ import {
   BadgeCheck, Megaphone, Gavel, HardHat, PlaneTakeoff, Clock3, ClipboardList, Clock,
   AlertTriangle, ArrowRight, Inbox, LayoutDashboard, BellRing,
 } from 'lucide-react';
-import { adminFetch, ambilPenandaMasuk, getUser } from '@/lib/adminApi';
+import { adminFetch, adaPenandaMasuk, habiskanPenandaMasuk, getUser } from '@/lib/adminApi';
 import { relatif } from '@/lib/waktuRelatif';
 import { Modal, Btn, RadarDecor, stagger, riseIn } from '@/components/admin/ui';
 import type { PendingWork, PendingWorkItem } from '@/types';
@@ -100,11 +100,14 @@ export default function ModalAntreanMasuk() {
   const [kini] = useState(() => Date.now());
 
   useEffect(() => {
-    if (!ambilPenandaMasuk()) return;
+    if (!adaPenandaMasuk()) return;
 
     let batal = false;
     adminFetch<PendingWork>('/pending-work').then((res) => {
-      if (batal || !res.ok || !res.data || res.data.total <= 0) return;
+      if (batal) return;
+      // Dihabiskan di sini, bukan sebelum fetch — lihat `adaPenandaMasuk`.
+      habiskanPenandaMasuk();
+      if (!res.ok || !res.data || res.data.total <= 0) return;
       setData(res.data);
       setOpen(true);
     });

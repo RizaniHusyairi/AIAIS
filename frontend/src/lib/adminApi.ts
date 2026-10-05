@@ -55,16 +55,26 @@ export function clearSession() {
  */
 const SAMBUT_KEY = 'aiais_sambut_antrean';
 
-/** Ambil sekaligus hapus penanda; `true` hanya sekali per login. */
-export function ambilPenandaMasuk(): boolean {
+/**
+ * Membaca dan menghapus penanda dipisah sengaja.
+ *
+ * Bila dihapus saat dibaca, efek yang dijalankan dua kali oleh StrictMode
+ * (atau komponen yang terlepas sebelum fetch-nya selesai) menghabiskan
+ * penanda tanpa pernah menampilkan apa pun. Penanda baru dihabiskan setelah
+ * jawabannya benar-benar diterima.
+ */
+export function adaPenandaMasuk(): boolean {
   try {
-    const ada = sessionStorage.getItem(SAMBUT_KEY) === '1';
-    sessionStorage.removeItem(SAMBUT_KEY);
-
-    return ada;
+    return sessionStorage.getItem(SAMBUT_KEY) === '1';
   } catch {
     return false;
   }
+}
+
+export function habiskanPenandaMasuk() {
+  try {
+    sessionStorage.removeItem(SAMBUT_KEY);
+  } catch {}
 }
 
 /** Alihkan ke halaman masuk setelah sesi dinyatakan tidak berlaku. */
