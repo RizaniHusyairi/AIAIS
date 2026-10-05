@@ -397,6 +397,8 @@ Route::prefix(config('api.version'))->group(function () {
 
             // Analytics & Settings
             Route::get('/analytics', [AnalyticsController::class, 'dashboard']);
+            // Pengingat sesudah login: hanya antrean yang menunggu petugas.
+            Route::get('/pending-work', [AnalyticsController::class, 'pendingWork']);
             Route::post('/settings', [SettingController::class, 'update']);
 
             // Flights Management

@@ -12,6 +12,7 @@ import { API_BASE_URL } from '@/lib/api';
 import { APP_VERSION, VERSION_LABEL, IS_PRERELEASE, RELEASE_CHANNEL } from '@/lib/version';
 import InstagramGlyph from '@/components/icons/InstagramGlyph';
 import LonengNotifikasi from '@/components/admin/LonengNotifikasi';
+import ModalAntreanMasuk from '@/components/admin/ModalAntreanMasuk';
 import {
   LayoutDashboard, Newspaper, Megaphone, Building2, Store, FileText, MessageSquareWarning,
   LogOut, ExternalLink, ShieldCheck, Menu, Radar, ChevronRight, ImageIcon, ScrollText, Scale, Landmark,
@@ -569,6 +570,10 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           </AnimatePresence>
         </main>
       </div>
+
+      {/* Di kerangka, bukan di dasbor: petugas bisa saja langsung menuju
+          modul lain sesudah masuk, dan pengingatnya tetap harus sampai. */}
+      <ModalAntreanMasuk />
     </div>
   );
 }

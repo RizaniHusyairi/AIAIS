@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { adminFetch, getUser } from '@/lib/adminApi';
 import { API_BASE_URL } from '@/lib/api';
+import { relatif } from '@/lib/waktuRelatif';
 import { Panel, Loading, Badge, stagger, riseIn, RadarDecor, JumpCard, EmptyState } from '@/components/admin/ui';
 import {
   GrafikTren, GrafikJam, DonutPerangkat, GrafikLlau, Sparkline, useWarna, angka,
@@ -88,18 +89,6 @@ const AKTIVITAS: Record<Aktivitas['type'], { label: string; icon: React.ElementT
 };
 
 /* ---------------- pembantu ---------------- */
-
-/** "3 menit lalu", "2 hari lalu" — umur antrean lebih bermakna daripada jam. */
-function relatif(iso: string, kini: number): string {
-  const detik = Math.max(0, Math.round((kini - new Date(iso).getTime()) / 1000));
-  if (detik < 60) return 'baru saja';
-  const menit = Math.round(detik / 60);
-  if (menit < 60) return `${menit} menit lalu`;
-  const jam = Math.round(menit / 60);
-  if (jam < 24) return `${jam} jam lalu`;
-  const hari = Math.round(jam / 24);
-  return hari < 30 ? `${hari} hari lalu` : new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-}
 
 function sapaan(jam: number): string {
   if (jam < 11) return 'Selamat pagi';

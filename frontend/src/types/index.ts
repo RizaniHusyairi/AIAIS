@@ -1569,3 +1569,28 @@ export interface KaraokePapanJuri extends KaraokeRekap {
 export interface KaraokeDetailAdmin extends KaraokeRekap {
   scores: KaraokeScore[];
 }
+
+/** Satu jenis pekerjaan yang menunggu petugas (`GET /admin/pending-work`). */
+export interface PendingWorkItem {
+  /** `complaints`, `chat`, `lost_reports`, `information_requests`, `fieldtrips`, `pengajuan:<slug>`, `slots`, `extend_advance`. */
+  key: string;
+  label: string;
+  href: string;
+  count: number;
+  oldest_at: string | null;
+  /** Lewat tenggat UU 14/2008; hanya bermakna untuk permohonan informasi. */
+  overdue: number;
+}
+
+export interface PendingWorkGroup {
+  key: 'interaksi' | 'pengajuan';
+  label: string;
+  items: PendingWorkItem[];
+}
+
+/** Pengingat antrean sesudah login. Butir bernilai nol tidak dikirim. */
+export interface PendingWork {
+  total: number;
+  generated_at: string;
+  groups: PendingWorkGroup[];
+}

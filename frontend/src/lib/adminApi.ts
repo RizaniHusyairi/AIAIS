@@ -40,6 +40,31 @@ function simpanPengguna(user: AdminUser) {
 
 export function clearSession() {
   localStorage.removeItem(USER_KEY);
+  try {
+    sessionStorage.removeItem(SAMBUT_KEY);
+  } catch {}
+}
+
+/**
+ * Penanda "baru saja masuk".
+ *
+ * Dipasang `login()` dan dihabiskan sekali oleh `ModalAntreanMasuk`, supaya
+ * pengingat antrean muncul tepat sesudah login — bukan setiap kali panel
+ * dimuat ulang. Disimpan di `sessionStorage` karena memang hanya berlaku
+ * untuk tab tempat petugas baru saja masuk.
+ */
+const SAMBUT_KEY = 'aiais_sambut_antrean';
+
+/** Ambil sekaligus hapus penanda; `true` hanya sekali per login. */
+export function ambilPenandaMasuk(): boolean {
+  try {
+    const ada = sessionStorage.getItem(SAMBUT_KEY) === '1';
+    sessionStorage.removeItem(SAMBUT_KEY);
+
+    return ada;
+  } catch {
+    return false;
+  }
 }
 
 /** Alihkan ke halaman masuk setelah sesi dinyatakan tidak berlaku. */
@@ -63,6 +88,9 @@ export async function login(email: string, password: string): Promise<ApiResult<
 
     if (res.ok && json?.success) {
       simpanPengguna(json.data.user);
+      try {
+        sessionStorage.setItem(SAMBUT_KEY, '1');
+      } catch {}
 
       return { ok: true, data: json.data, message: json.message ?? 'Login berhasil', status: res.status };
     }

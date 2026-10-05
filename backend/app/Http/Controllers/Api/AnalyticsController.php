@@ -8,15 +8,19 @@ use App\Models\Announcement;
 use App\Models\ChatThread;
 use App\Models\Complaint;
 use App\Models\Document;
+use App\Models\ExtendAdvance;
 use App\Models\Facility;
+use App\Models\FieldTrip;
 use App\Models\Flight;
 use App\Models\InformationRequest;
 use App\Models\LostReport;
 use App\Models\News;
+use App\Models\Slot;
 use App\Models\Tenant;
 use App\Models\VisitorLog;
 use App\Support\CetakanPdf;
 use App\Support\RingkasanLlau;
+use App\Support\SubmissionRegistry;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -240,6 +244,73 @@ class AnalyticsController extends Controller
             'oldest_at' => $tertua ? Carbon::parse($tertua, 'UTC')->toIso8601String() : null,
             'overdue' => 0,
         ];
+    }
+
+    /**
+     * Ringkasan pekerjaan yang menunggu, untuk pengingat sesaat setelah masuk.
+     *
+     * Dipisah dari `dashboard()` karena dipanggil dari halaman panel mana pun
+     * tujuan petugas sesudah login — menghitung tren kunjungan dan rekap LLAU
+     * hanya untuk sebuah pengingat adalah pemborosan. Butir bernilai nol
+     * dibuang: yang ditanyakan di sini "apa yang harus dikerjakan", bukan
+     * "apa saja yang ada".
+     */
+    public function pendingWork(Request $request)
+    {
+        $isAdmin = $request->user()?->role === 'admin';
+        $hariIni = Carbon::now(CetakanPdf::ZONA)->startOfDay();
+
+        $ada = fn (array $butir) => array_values(array_filter($butir, fn ($b) => $b['count'] > 0));
+
+        $groups = array_values(array_filter([
+            ['key' => 'interaksi', 'label' => 'Pengaduan & Interaksi', 'items' => $ada($this->antreanTindakan($isAdmin, $hariIni))],
+            ['key' => 'pengajuan', 'label' => 'Pengajuan Layanan', 'items' => $ada($this->antreanPengajuan())],
+        ], fn ($g) => $g['items'] !== []));
+
+        return ApiResponse::success([
+            'total' => array_sum(array_map(fn ($g) => array_sum(array_column($g['items'], 'count')), $groups)),
+            'generated_at' => now()->toIso8601String(),
+            'groups' => $groups,
+        ], 'Antrean tindakan berhasil dimuat');
+    }
+
+    /**
+     * Pengajuan layanan yang menunggu keputusan petugas.
+     *
+     * Hanya `Diajukan` yang dihitung. "Revisi Diperlukan" dan "Menunggu
+     * Dokumen Ditandatangani" sedang menunggu pemohon, bukan petugas.
+     *
+     * Tabel-tabel ini warisan v1 tanpa migrasi di repositori ini; yang belum
+     * ada di sebuah lingkungan dilewati, bukan menggagalkan seluruh respons.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function antreanPengajuan(): array
+    {
+        $sumber = [['fieldtrips', 'Kunjungan Lapangan', '/admin/fieldtrips', FieldTrip::class]];
+
+        foreach (SubmissionRegistry::all() as $slug => $def) {
+            $sumber[] = ["pengajuan:{$slug}", $def['label'], "/admin/pengajuan/{$slug}", $def['model']];
+        }
+
+        $sumber[] = ['slots', 'Slot Charter', '/admin/slots', Slot::class];
+        $sumber[] = ['extend_advance', 'Extend Advance', '/admin/extend-advance', ExtendAdvance::class];
+
+        $butir = [];
+
+        foreach ($sumber as [$key, $label, $href, $model]) {
+            if (! Schema::hasTable((new $model)->getTable())) {
+                continue;
+            }
+
+            try {
+                $butir[] = $this->antrean($key, $label, $href, $model::where('submission_status', 'Diajukan'));
+            } catch (Throwable $e) {
+                report($e);
+            }
+        }
+
+        return $butir;
     }
 
     /**
