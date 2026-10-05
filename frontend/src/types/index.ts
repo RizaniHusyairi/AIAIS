@@ -446,6 +446,8 @@ export type StatusOjt = 'Mendaftar' | 'Berjalan' | 'Selesai' | 'Batal';
 
 /** Satu komponen penilaian OJT. */
 export interface OjtGrade {
+  /** Kategori (Hard Skill, Soft Skill, ...). Baris lama v1 bisa tanpa ini. */
+  type?: string | null;
   component: string;
   score: number;
 }

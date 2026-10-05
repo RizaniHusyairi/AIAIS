@@ -25,6 +25,16 @@ class OjtStudent extends Model
 
     public const DISK = 'local';
 
+    /**
+     * Disk berkas warisan v1.
+     *
+     * v2 mengambil alih basis data v1 di tempat, dan v1 menyimpan berkas OJT
+     * ke disk `public`-nya sendiri (`public/uploads/ojt_docs/...`) — di v2
+     * itulah disk `legacy`. Tanpa disk ini, KTP, foto, dan sertifikat peserta
+     * lama terbaca "tidak ditemukan" di server produksi, padahal berkasnya ada.
+     */
+    public const DISK_V1 = 'legacy';
+
     /** Kolom berkas; dipakai bersama oleh unduhan dan penghapusan. */
     public const FILE_FIELDS = ['identity_card_path', 'photo_path', 'final_certificate_path'];
 
@@ -103,33 +113,62 @@ class OjtStudent extends Model
 
         $rata = round(array_sum($angka) / count($angka), 2);
 
+        // Skala mengikuti v1 (`Staff_User\OjtStudentController::updateGrades`)
+        // apa adanya: empat jenjang, tanpa E. Predikat ini tercetak di
+        // sertifikat, dan peserta lama sudah menerima sertifikat dengan skala
+        // tersebut — skala yang berbeda membuat dua angkatan tidak sebanding.
         return [
             'average_score' => $rata,
             'predicate' => match (true) {
-                $rata >= 90 => 'Sangat Baik',
+                $rata >= 90 => 'Sangat Memuaskan',
                 $rata >= 80 => 'Baik',
                 $rata >= 70 => 'Cukup',
-                $rata >= 60 => 'Kurang',
-                default => 'Sangat Kurang',
+                default => 'Kurang',
             },
             'letter_grade' => match (true) {
                 $rata >= 90 => 'A',
                 $rata >= 80 => 'B',
                 $rata >= 70 => 'C',
-                $rata >= 60 => 'D',
-                default => 'E',
+                default => 'D',
             },
         ];
+    }
+
+    /**
+     * Disk yang benar-benar memegang berkas ini, atau null bila tidak ada.
+     *
+     * Dibedakan lewat keberadaan berkasnya, bukan awalan lintasan — alasan
+     * yang sama dengan `ResolvesFileUrl`.
+     */
+    public static function diskUntuk(?string $lintasan): ?string
+    {
+        if (blank($lintasan)) {
+            return null;
+        }
+
+        foreach ([self::DISK, self::DISK_V1] as $disk) {
+            if (Storage::disk($disk)->exists($lintasan)) {
+                return $disk;
+            }
+        }
+
+        return null;
+    }
+
+    /** Hapus satu berkas, di disk mana pun ia tersimpan. */
+    public static function hapusSatu(?string $lintasan): void
+    {
+        $disk = self::diskUntuk($lintasan);
+
+        if ($disk !== null) {
+            Storage::disk($disk)->delete($lintasan);
+        }
     }
 
     public function hapusBerkas(): void
     {
         foreach (self::FILE_FIELDS as $kolom) {
-            $lintasan = $this->attributes[$kolom] ?? null;
-
-            if ($lintasan && Storage::disk(self::DISK)->exists($lintasan)) {
-                Storage::disk(self::DISK)->delete($lintasan);
-            }
+            self::hapusSatu($this->attributes[$kolom] ?? null);
         }
     }
 }

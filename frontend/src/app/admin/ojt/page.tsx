@@ -41,6 +41,29 @@ const BERKAS: { kolom: string; jenis: string; label: string }[] = [
   { kolom: 'final_certificate_path', jenis: 'final_certificate', label: 'Sertifikat' },
 ];
 
+/**
+ * Kategori dan komponen penilaian bawaan.
+ *
+ * Disalin dari formulir penilaian portal v1
+ * (`user_staff2/ojt/show.blade.php`, diambil 6 Oktober 2026) supaya peserta
+ * baru dinilai dengan komponen yang sama dengan angkatan sebelumnya.
+ */
+const KATEGORI_NILAI = ['Hard Skill', 'Soft Skill', 'Bidang Kompetensi FSD', 'Bidang Kompetensi FSU'];
+
+const KOMPONEN_BAWAAN: OjtGrade[] = [
+  { type: 'Hard Skill', component: 'Kemampuan Mendesign Program', score: 0 },
+  { type: 'Hard Skill', component: 'Kemampuan Melaksanakan Magang', score: 0 },
+  { type: 'Hard Skill', component: 'Laporan & Presentasi', score: 0 },
+  { type: 'Soft Skill', component: 'Integritas', score: 0 },
+  { type: 'Soft Skill', component: 'Tanggung Jawab', score: 0 },
+  { type: 'Soft Skill', component: 'Kerja Keras', score: 0 },
+  { type: 'Soft Skill', component: 'Kreativitas', score: 0 },
+];
+
+/** Pilihan kategori; nilai lama di luar daftar tetap ditampilkan, tidak dibuang. */
+const opsiKategori = (sekarang?: string | null) =>
+  [...new Set(['', ...KATEGORI_NILAI, sekarang ?? ''])].map((k) => ({ value: k, label: k || '— Umum —' }));
+
 const tgl = (iso: string) =>
   new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
 
@@ -136,7 +159,7 @@ export default function AdminOjtPage() {
 
     const res = await adminFetch(`/ojt/${nilaiItem.id}/grades`, {
       method: 'PUT',
-      body: { grades: bersih.map((n) => ({ component: n.component.trim(), score: Number(n.score) })) },
+      body: { grades: bersih.map((n) => ({ type: n.type?.trim() || null, component: n.component.trim(), score: Number(n.score) })) },
     });
     setSaving(false);
 
@@ -150,7 +173,8 @@ export default function AdminOjtPage() {
   /* ---------------- sertifikat & finalisasi ---------------- */
 
   const cetakSertifikat = async (it: OjtStudent) => {
-    const res = await adminDownload(`/ojt/${it.id}/certificate`, `sertifikat-${it.name}.pdf`);
+    // Dibuka sebagai pratinjau seperti v1, supaya diperiksa dulu sebelum dicetak.
+    const res = await adminDownload(`/ojt/${it.id}/certificate`, `sertifikat-${it.name}.pdf`, 'buka');
     if (!res.ok) setToast({ text: res.message, kind: 'error' });
   };
 
@@ -281,7 +305,7 @@ export default function AdminOjtPage() {
                     {/* Nilai terkunci sesudah sertifikat terbit — tombolnya
                         dimatikan disertai alasan, bukan disembunyikan. */}
                     <button
-                      onClick={() => { setNilaiItem(it); setNilai(it.grades?.length ? [...it.grades] : [{ component: '', score: 0 }]); }}
+                      onClick={() => { setNilaiItem(it); setNilai(it.grades?.length ? [...it.grades] : KOMPONEN_BAWAAN.map((g) => ({ ...g }))); }}
                       disabled={it.is_finalized}
                       className="w-7 h-7 rounded-lg bg-[var(--adm-hover)] enabled:hover:bg-violet-500/20 text-[var(--adm-body)] enabled:hover:text-violet-300 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center transition-colors cursor-pointer"
                       title={it.is_finalized ? 'Nilai terkunci — sertifikat sudah diterbitkan' : 'Isi nilai'}
@@ -393,6 +417,14 @@ export default function AdminOjtPage() {
             <div className="space-y-2">
               {nilai.map((n, i) => (
                 <div key={i} className="flex gap-2 items-end">
+                  <div className="w-40">
+                    <Field
+                      label={i === 0 ? 'Kategori' : ''} type="select"
+                      value={n.type ?? ''}
+                      options={opsiKategori(n.type)}
+                      onChange={(v) => setNilai(nilai.map((x, j) => j === i ? { ...x, type: String(v) } : x))}
+                    />
+                  </div>
                   <div className="flex-1">
                     <Field
                       label={i === 0 ? 'Komponen' : ''}
@@ -420,7 +452,7 @@ export default function AdminOjtPage() {
               ))}
             </div>
 
-            <Btn variant="ghost" onClick={() => setNilai([...nilai, { component: '', score: 0 }])}>
+            <Btn variant="ghost" onClick={() => setNilai([...nilai, { type: '', component: '', score: 0 }])}>
               <Plus className="w-4 h-4" /> Tambah Komponen
             </Btn>
 

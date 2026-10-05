@@ -202,6 +202,72 @@ class OjtCertificateTest extends TestCase
             ->assertJsonPath('data.average_score', 70);
     }
 
+    /**
+     * Sertifikat benar-benar terbit sebagai PDF, termasuk pas foto peserta
+     * v1 yang tersimpan di direktori unggahan v1 (disk `legacy`).
+     */
+    public function test_sertifikat_tercetak_dengan_foto_peserta_v1(): void
+    {
+        Storage::fake('legacy');
+        Storage::disk('legacy')->put(
+            'ojt_docs/photos/lama.png',
+            base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==')
+        );
+
+        $peserta = $this->buatPeserta();
+        $peserta->photo_path = 'ojt_docs/photos/lama.png';
+        $peserta->save();
+        $token = $this->tokenAdmin();
+
+        $this->withToken($token)
+            ->putJson($this->prefix.'/admin/ojt/'.$peserta->id.'/grades', ['grades' => $this->nilai()]);
+
+        $res = $this->withToken($token)
+            ->get($this->prefix.'/admin/ojt/'.$peserta->id.'/certificate')
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+
+        $this->assertStringStartsWith('%PDF', $res->getContent());
+    }
+
+    /** KTP dan foto peserta v1 terbaca dari disk `legacy`, bukan "tidak ditemukan". */
+    public function test_berkas_peserta_v1_dapat_dibuka(): void
+    {
+        Storage::fake('legacy');
+        Storage::disk('legacy')->put('ojt_docs/identity/ktp.jpg', 'isi-ktp');
+
+        $peserta = $this->buatPeserta();
+        $peserta->identity_card_path = 'ojt_docs/identity/ktp.jpg';
+        $peserta->save();
+
+        $res = $this->withToken($this->tokenAdmin())
+            ->get($this->prefix.'/admin/ojt/'.$peserta->id.'/files/identity_card')
+            ->assertOk();
+
+        $this->assertSame('isi-ktp', $res->streamedContent());
+    }
+
+    /** Kategori nilai v1 (Hard/Soft Skill) tidak hilang saat disimpan ulang. */
+    public function test_kategori_nilai_ikut_tersimpan(): void
+    {
+        $peserta = $this->buatPeserta();
+
+        $this->withToken($this->tokenAdmin())
+            ->putJson($this->prefix.'/admin/ojt/'.$peserta->id.'/grades', ['grades' => [
+                ['type' => 'Soft Skill', 'component' => 'Integritas', 'score' => 95],
+            ]])
+            ->assertOk()
+            ->assertJsonPath('data.grades.0.type', 'Soft Skill');
+    }
+
+    /** Skala predikat sama dengan v1: empat jenjang, di bawah 70 "Kurang"/D. */
+    public function test_skala_predikat_mengikuti_v1(): void
+    {
+        $this->assertSame('Sangat Memuaskan', OjtStudent::hitungNilai([['score' => 90]])['predicate']);
+        $this->assertSame('D', OjtStudent::hitungNilai([['score' => 40]])['letter_grade']);
+        $this->assertSame('Kurang', OjtStudent::hitungNilai([['score' => 40]])['predicate']);
+    }
+
     /** Lintasan berkas sertifikat tidak pernah ikut respons. */
     public function test_lintasan_sertifikat_tidak_bocor(): void
     {

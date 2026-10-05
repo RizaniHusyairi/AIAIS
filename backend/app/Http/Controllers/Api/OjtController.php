@@ -8,6 +8,7 @@ use App\Models\OjtStudent;
 use App\Support\CetakanPdf;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -155,6 +156,10 @@ class OjtController extends Controller
 
         $data = $request->validate([
             'grades' => 'required|array|min:1',
+            // Kategori penilaian (Hard Skill, Soft Skill, ...) — v1 menyimpannya
+            // di setiap baris. Tanpa aturan ini `validate()` membuangnya, dan
+            // menyimpan ulang nilai peserta lama diam-diam menghapus kategorinya.
+            'grades.*.type' => 'nullable|string|max:60',
             'grades.*.component' => 'required|string|max:125',
             'grades.*.score' => 'required|numeric|min:0|max:100',
         ], [
@@ -196,13 +201,47 @@ class OjtController extends Controller
         }
 
         $pdf = Pdf::loadView('pdf.ojt-certificate', [
-            'judul' => 'Sertifikat Praktik Kerja Lapangan',
-            'dicetakPada' => CetakanPdf::dicetakPada(),
-            'dicetakOleh' => $request->user()?->name,
+            'judul' => 'Sertifikat OJT',
+            // Tanggal di blok tanda tangan adalah tanggal cetak, seperti v1:
+            // sertifikat dicetak tepat sebelum dimintakan tanda tangan.
+            // Zonanya WITA — di UTC, cetakan pagi hari bertanggal kemarin.
+            'dicetak' => Carbon::now(CetakanPdf::ZONA),
             'peserta' => $item,
+            'latar' => $this->dataUri(resource_path('pdf/sertifikat-ojt-bg.png')),
+            'foto' => $this->fotoPeserta($item),
         ])->setPaper('a4', 'landscape');
 
-        return $pdf->download('sertifikat-ojt-'.Str::slug($item->name).'.pdf');
+        // `stream` (inline), bukan `download`: v1 membukanya sebagai pratinjau
+        // agar petugas memeriksanya dulu sebelum dicetak.
+        return $pdf->stream('sertifikat-ojt-'.Str::slug($item->name).'.pdf');
+    }
+
+    /** Pas foto peserta sebagai data URI, dari disk mana pun ia tersimpan. */
+    private function fotoPeserta(OjtStudent $item): ?string
+    {
+        $lintasan = $item->getAttributes()['photo_path'] ?? null;
+        $disk = OjtStudent::diskUntuk($lintasan);
+
+        if ($disk === null) {
+            return null;
+        }
+
+        $mime = Storage::disk($disk)->mimeType($lintasan) ?: 'image/jpeg';
+
+        // DomPDF hanya dapat menggambar JPEG/PNG/GIF; berkas lain dilewati
+        // daripada membuat seluruh sertifikat gagal dicetak.
+        if (! in_array($mime, ['image/jpeg', 'image/png', 'image/gif'], true)) {
+            return null;
+        }
+
+        return 'data:'.$mime.';base64,'.base64_encode(Storage::disk($disk)->get($lintasan));
+    }
+
+    private function dataUri(string $berkas): ?string
+    {
+        return is_file($berkas)
+            ? 'data:'.mime_content_type($berkas).';base64,'.base64_encode(file_get_contents($berkas))
+            : null;
     }
 
     /**
@@ -233,9 +272,7 @@ class OjtController extends Controller
 
         $lama = $item->getAttributes()['final_certificate_path'] ?? null;
 
-        if ($lama && Storage::disk(OjtStudent::DISK)->exists($lama)) {
-            Storage::disk(OjtStudent::DISK)->delete($lama);
-        }
+        OjtStudent::hapusSatu($lama);
 
         $item->final_certificate_path = $request->file('signed_certificate')->storeAs(
             'ojt/certificates',
@@ -267,11 +304,7 @@ class OjtController extends Controller
             return ApiResponse::error('Peserta ini belum difinalisasi.', null, 422);
         }
 
-        $lintasan = $item->getAttributes()['final_certificate_path'];
-
-        if (Storage::disk(OjtStudent::DISK)->exists($lintasan)) {
-            Storage::disk(OjtStudent::DISK)->delete($lintasan);
-        }
+        OjtStudent::hapusSatu($item->getAttributes()['final_certificate_path']);
 
         $item->final_certificate_path = null;
         $item->save();
@@ -387,9 +420,7 @@ class OjtController extends Controller
 
             $lama = $item->getAttributes()[$def['kolom']] ?? null;
 
-            if ($lama && Storage::disk(OjtStudent::DISK)->exists($lama)) {
-                Storage::disk(OjtStudent::DISK)->delete($lama);
-            }
+            OjtStudent::hapusSatu($lama);
 
             $berkas = $request->file($medan);
 
@@ -420,10 +451,12 @@ class OjtController extends Controller
 
         $lintasan = $item->getAttributes()[$def['kolom']] ?? null;
 
-        if (! $lintasan || ! Storage::disk(OjtStudent::DISK)->exists($lintasan)) {
+        $disk = OjtStudent::diskUntuk($lintasan);
+
+        if ($disk === null) {
             return ApiResponse::error('Berkas tidak ditemukan', null, 404);
         }
 
-        return Storage::disk(OjtStudent::DISK)->download($lintasan);
+        return Storage::disk($disk)->download($lintasan);
     }
 }

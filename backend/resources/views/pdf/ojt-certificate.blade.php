@@ -1,162 +1,162 @@
 {{--
     Sertifikat OJT.
 
-    TIDAK memakai `pdf._layout`. Kerangka itu memikul kop laporan, penomoran
-    halaman, dan blok provenans — semuanya benar untuk laporan, dan semuanya
-    salah untuk sertifikat. Sertifikat adalah satu lembar utuh yang dipajang,
-    dan kaki "Dicetak 15 Agustus 2026 oleh admin" di bawahnya justru merusak
-    kesan dokumen resmi yang hendak dibawanya.
+    Tata letak, kop, kalimat, dan latarnya mengikuti sertifikat portal v1
+    (`resources/views/user_staff2/ojt/certificate_pdf.blade.php` pada
+    aptp-airport-main). Peserta lama sudah menerima sertifikat dengan wujud
+    itu; sertifikat v2 yang tampil lain membuat dua angkatan peserta memegang
+    dua dokumen resmi yang tidak serupa.
 
-    Tata letaknya memakai tabel dan blok, bukan flexbox — DomPDF tidak
-    mengenalnya (lihat catatan pada `_layout`).
+    PROVENANS
+      Sumber   : templat sertifikat OJT portal v1 dan latarnya
+                 (`public/assetsv2/image/sertifikat/bg.png`, disalin ke
+                 `resources/pdf/sertifikat-ojt-bg.png`).
+      Diambil  : 6 Oktober 2026.
+      Catatan  : salah ketik v1 "KEMENTRIAN" dan "JENDRAL" TIDAK ditiru.
+                 Penanda tangan dibaca dari `config('pejabat.penanda_tangan')`,
+                 bukan ditulis mati seperti di v1, supaya pergantian pejabat
+                 cukup lewat `.env`.
+
+    Perbedaan teknis dari v1:
+      - Latar dipasang sebagai <img> penuh halaman, bukan `background-size`
+        yang tidak dikenal DomPDF.
+      - Pas foto dikirim sebagai data URI: berkasnya di disk privat atau di
+        direktori unggahan v1, keduanya bisa di luar chroot DomPDF.
+
+    TIDAK memakai `pdf._layout` — sertifikat adalah satu lembar utuh tanpa kop
+    laporan, penomoran halaman, atau kaki "dicetak oleh".
 --}}
+@php($ttd = config('pejabat.penanda_tangan'))
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="utf-8">
-    <title>{{ $judul }}</title>
+    <title>{{ $judul }} - {{ $peserta->name }}</title>
     <style>
         @page { margin: 0; }
 
         body {
-            font-family: DejaVu Sans, sans-serif;
+            font-family: 'Times New Roman', Times, serif;
             margin: 0;
-            color: #1e293b;
+            padding: 0;
+            color: #000;
         }
 
-        .lembar {
-            /* A4 lanskap dikurangi bingkai. */
+        .latar {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
-            height: 545px;
-            padding: 26px 34px;
-            box-sizing: border-box;
+            height: 100%;
+            z-index: -1;
         }
 
-        .bingkai {
-            border: 3px solid #0b1e5b;
-            padding: 4px;
-            height: 100%;
-            box-sizing: border-box;
-        }
-
-        .dalam {
-            border: 1px solid #c8a34a;
-            height: 100%;
-            box-sizing: border-box;
-            padding: 22px 34px;
+        .isi {
+            padding: 60px 100px 0 100px;
             text-align: center;
         }
 
-        .instansi { font-size: 13px; font-weight: bold; color: #0b1e5b; letter-spacing: .06em; }
-        .kementerian { font-size: 9px; color: #64748b; margin-top: 2px; letter-spacing: .1em; }
+        .kop .baris1 { font-size: 20px; font-weight: bold; }
+        .kop .baris2 { font-size: 16px; font-weight: bold; }
+        .kop .baris3 { font-size: 14px; font-weight: bold; }
+        .kop .baris4 { font-size: 14px; }
 
-        h1 {
-            font-size: 24px;
-            color: #0b1e5b;
-            letter-spacing: .14em;
-            margin: 16px 0 2px 0;
+        .judul {
+            font-size: 22px;
+            font-weight: bold;
+            letter-spacing: 5px;
+            margin-bottom: 5px;
         }
 
-        .nomor { font-size: 9px; color: #64748b; letter-spacing: .05em; }
-        .diberikan { font-size: 10px; color: #475569; margin-top: 16px; }
+        .nomor { font-size: 16px; margin-bottom: 20px; }
+        .teks { font-size: 18px; line-height: 1.2; margin-bottom: 20px; }
+        .teks-panjang { margin: 0 80px 20px 80px; }
 
         .nama {
-            font-size: 26px;
+            font-size: 28px;
             font-weight: bold;
-            color: #0b1e5b;
-            margin: 6px 0 2px 0;
+            text-decoration: underline;
+            margin: 20px 0 30px 0;
         }
 
-        .garis-nama { width: 55%; margin: 0 auto; border-bottom: 1px solid #c8a34a; }
-        .identitas { font-size: 10px; color: #475569; margin-top: 6px; }
-
-        .keterangan {
-            font-size: 10.5px;
-            color: #334155;
-            margin: 14px auto 0 auto;
-            width: 80%;
-            line-height: 1.6;
+        .foto {
+            position: absolute;
+            bottom: 120px;
+            left: 120px;
+            width: 110px;
+            height: 130px;
+            border: 2px solid #fff;
         }
 
-        table.nilai {
-            margin: 14px auto 0 auto;
-            border-collapse: collapse;
-            font-size: 10px;
-        }
-        table.nilai td { padding: 3px 14px; }
-        table.nilai .label { color: #64748b; text-align: right; }
-        table.nilai .isi { font-weight: bold; color: #0b1e5b; text-align: left; }
-
-        .predikat {
-            display: inline-block;
-            margin-top: 10px;
-            border: 2px solid #c8a34a;
-            border-radius: 999px;
-            padding: 5px 22px;
+        .kaki {
+            position: absolute;
+            bottom: 230px;
+            width: 100%;
             font-size: 13px;
-            font-weight: bold;
-            color: #0b1e5b;
-            letter-spacing: .08em;
         }
 
-        .ttd { margin-top: 20px; font-size: 10px; color: #334155; }
-        .ttd .kota { margin-bottom: 46px; }
-        .ttd .garis { display: inline-block; border-top: 1px solid #334155; padding-top: 3px; min-width: 190px; }
+        .ttd {
+            float: right;
+            width: 300px;
+            margin-right: 100px;
+            text-align: left;
+        }
+
+        .ttd .jabatan { margin-right: 30px; }
+        .ttd .ruang { height: 64px; }
+        .ttd .nama-pejabat { font-weight: bold; text-decoration: underline; font-size: 12px; }
+        .ttd .nip { font-weight: bold; font-size: 12px; }
     </style>
 </head>
 <body>
-<div class="lembar">
-    <div class="bingkai">
-        <div class="dalam">
-            <div class="instansi">BANDAR UDARA APT PRANOTO SAMARINDA</div>
-            <div class="kementerian">DIREKTORAT JENDERAL PERHUBUNGAN UDARA</div>
+    @if ($latar)
+        <img src="{{ $latar }}" class="latar" alt="">
+    @endif
 
-            <h1>SERTIFIKAT</h1>
-            <div class="nomor">PRAKTIK KERJA LAPANGAN (ON THE JOB TRAINING)</div>
+    <div class="isi">
+        <div class="kop">
+            <div class="baris1">KEMENTERIAN PERHUBUNGAN</div>
+            <div class="baris2">DIREKTORAT JENDERAL PERHUBUNGAN UDARA</div>
+            <div class="baris2">BADAN LAYANAN UMUM</div>
+            <div class="baris2">KANTOR UNIT PENYELENGGARA BANDAR UDARA KELAS I</div>
+            <div class="baris3">AJI PANGERAN TUMENGGUNG PRANOTO - SAMARINDA</div>
+            <div class="baris4">Jalan Poros Bontang Samarinda Kel. Sungai Siring Samarinda - Kalimantan Timur</div>
+            <div class="baris4">Telp. (0541) 2831593 Email : mail.aptpranotoairport@gmail.com</div>
+            <hr>
+        </div>
 
-            <div class="diberikan">Diberikan kepada</div>
+        <div class="judul">SERTIFIKAT</div>
+        {{-- Nomor urutnya diisi tangan saat penandatanganan, seperti di v1.
+             Sistem tidak punya buku agenda nomor surat, dan mengarangnya
+             berarti menerbitkan nomor resmi yang tidak tercatat. --}}
+        <div class="nomor">No: SM.304/...../APTP/{{ $dicetak->format('Y') }}</div>
 
-            <div class="nama">{{ $peserta->name }}</div>
-            <div class="garis-nama"></div>
+        <div class="teks">Diberikan kepada:</div>
 
-            <div class="identitas">
-                {{ $peserta->id_number }} &nbsp;·&nbsp; {{ $peserta->institution }} &nbsp;·&nbsp; {{ $peserta->major }}
-            </div>
+        <div class="nama">{{ $peserta->name }}</div>
 
-            <p class="keterangan">
-                Atas keikutsertaannya dalam kegiatan Praktik Kerja Lapangan di Bandar Udara APT Pranoto
-                Samarinda, yang dilaksanakan pada
-                <strong>{{ \App\Support\CetakanPdf::tanggal($peserta->start_date, 'd F Y') }}</strong>
-                sampai dengan
-                <strong>{{ \App\Support\CetakanPdf::tanggal($peserta->end_date, 'd F Y') }}</strong>
-                @if ($peserta->work_units && count($peserta->work_units) > 0)
-                    pada unit {{ implode(', ', $peserta->work_units) }}
-                @endif
-                dengan hasil sebagai berikut.
-            </p>
-
-            <table class="nilai">
-                <tr>
-                    <td class="label">Nilai Akhir</td>
-                    <td class="isi">{{ number_format((float) $peserta->average_score, 2, ',', '.') }}</td>
-                    <td class="label">Huruf Mutu</td>
-                    <td class="isi">{{ $peserta->letter_grade ?? '—' }}</td>
-                </tr>
-            </table>
-
-            <div class="predikat">{{ strtoupper($peserta->predicate ?? '—') }}</div>
-
-            <div class="ttd">
-                {{-- Tanggal ditulis sebagai tanggal TERBIT sertifikat, bukan
-                     tanggal cetak ulang: sertifikat yang dicetak dua kali tidak
-                     boleh membawa dua tanggal berbeda. --}}
-                <div class="kota">
-                    Samarinda, {{ \App\Support\CetakanPdf::tanggal($peserta->end_date, 'd F Y') }}
-                </div>
-                <div class="garis">Kepala Bandar Udara APT Pranoto</div>
-            </div>
+        <div class="teks teks-panjang">
+            dari {{ $peserta->institution }} Jurusan {{ $peserta->major }} telah menyelesaikan Program
+            <strong>On the Job Training (OJT)</strong> pada Kantor UPBU Kelas I A.P.T. Pranoto Samarinda
+            selama <strong>{{ $peserta->duration }}</strong>
+            mulai dari <strong>{{ \App\Support\CetakanPdf::tanggal($peserta->start_date, 'd F Y') }}</strong>
+            s/d <strong>{{ \App\Support\CetakanPdf::tanggal($peserta->end_date, 'd F Y') }}</strong>
+            dengan predikat <strong>{{ $peserta->predicate }}</strong>.
         </div>
     </div>
-</div>
+
+    @if ($foto)
+        <img src="{{ $foto }}" class="foto" alt="">
+    @endif
+
+    <div class="kaki">
+        <div class="ttd">
+            <div>Samarinda, {{ \App\Support\CetakanPdf::tanggal($dicetak, 'd F Y') }}</div>
+            <div class="jabatan">{{ mb_strtoupper($ttd['jabatan']) }}</div>
+            <div class="ruang"></div>
+            <div class="nama-pejabat">{{ mb_strtoupper($ttd['nama']) }}</div>
+            <div class="nip">NIP. {{ $ttd['nip'] }}</div>
+        </div>
+    </div>
 </body>
 </html>
