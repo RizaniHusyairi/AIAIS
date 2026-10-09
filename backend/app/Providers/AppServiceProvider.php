@@ -2,10 +2,14 @@
 
 namespace App\Providers;
 
+use App\Helpers\ApiResponse;
 use App\Services\Notifikasi\KonfigurasiSurel;
 use Carbon\Carbon;
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -27,6 +31,50 @@ class AppServiceProvider extends ServiceProvider
         $this->arahkanTautanResetKePortal();
         $this->setelBahasaTanggal();
         $this->pakaiSurelDariPanel();
+        $this->aturBatasLajuAbsensi();
+    }
+
+    /**
+     * Batas laju daftar hadir rapat.
+     *
+     * `throttle:N,1` biasa — kunci per IP — salah sasaran di sini, dua kali:
+     *
+     *  1. Halaman `/absensi/{token}` mengambil keterangan rapat dari SISI
+     *     SERVER Next. Bagi Laravel seluruh permintaan itu datang dari satu
+     *     IP, milik server Next sendiri, sehingga jatah per IP menjadi jatah
+     *     BERSAMA semua peserta. Peserta ke-31 yang memindai QR menjelang
+     *     rapat dimulai mendapat "tautan tidak dikenali".
+     *  2. Kirimannya memang dari peramban peserta, tetapi peserta rapat di
+     *     kantor bandara keluar lewat satu IP Wi-Fi yang sama. 20 per menit
+     *     per IP berarti rapat yang lebih besar dari itu tertahan di pintu.
+     *
+     * Karena itu jatahnya dihitung per TAUTAN (per rapat), dengan batas per
+     * IP yang jauh lebih longgar sebagai pagar terhadap banjir permintaan.
+     * Token 48 aksara tetap tidak dapat ditebak — batas ini menjaga beban,
+     * bukan kerahasiaan.
+     *
+     * Jawaban 429-nya ditulis sendiri: bawaan Laravel berbunyi "Too Many
+     * Attempts.", dan layar peserta menampilkan `message` apa adanya.
+     */
+    private function aturBatasLajuAbsensi(): void
+    {
+        $tolak = fn (Request $request, array $headers) => ApiResponse::error(
+            'Daftar hadir sedang ramai diisi. Tunggu sebentar, lalu coba lagi.',
+            null,
+            429,
+        )->withHeaders($headers);
+
+        RateLimiter::for('absensi-baca', fn (Request $request) => [
+            Limit::perMinute(300)->by('absensi-baca:token:'.$request->route('token'))->response($tolak),
+            Limit::perMinute(600)->by('absensi-baca:ip:'.$request->ip())->response($tolak),
+        ]);
+
+        RateLimiter::for('absensi-tulis', fn (Request $request) => [
+            // Per rapat per IP: satu Wi-Fi kantor yang dipakai puluhan peserta
+            // sekaligus masih lega, satu perangkat yang membanjiri tidak.
+            Limit::perMinute(60)->by('absensi-tulis:'.$request->route('token').':'.$request->ip())->response($tolak),
+            Limit::perMinute(300)->by('absensi-tulis:token:'.$request->route('token'))->response($tolak),
+        ]);
     }
 
     /**

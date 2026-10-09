@@ -1,14 +1,18 @@
 /**
  * Musik reel, disintesis luring dengan OfflineAudioContext — bebas lisensi.
- * Jam sama dengan reel.js: 120 BPM, 1 ketuk = 0,5 dtk. F mayor, I–V–vi–IV
- * (F–C–Dm–Bb), satu akor per birama. Hentakan jatuh di setiap pergantian
- * adegan, ada jeda hening sesaat sebelum "drop" di detik 18.
+ * Jam dan urutan adegan dibaca dari timeline.js (sama dengan gambar): 80 BPM
+ * berasa half-time, F mayor I–V–vi–IV (F–C–Dm–Bb), satu akor per birama.
+ * Hentakan jatuh di setiap pergantian adegan dan ada jeda hening sesaat
+ * sebelum "drop" penutup. Efek tiap adegan dijadwalkan relatif ke awalnya.
  */
-const B = 0.5;
+import { BEAT as B, BAR, SCENES, scene } from './timeline.js';
+
 const CHORDS = [[65, 69, 72, 77], [64, 67, 72, 76], [62, 65, 69, 74], [62, 65, 70, 74]];
 const ROOTS = [41, 36, 38, 34];
 const hz = (m) => 440 * 2 ** ((m - 69) / 12);
-const bar = (t) => Math.floor(t / 2) % 4;
+const bar = (t) => Math.floor(t / BAR + 1e-6) % 4;
+/** Detik mulai adegan `id` ditambah n ketuk. */
+const at = (id, n = 0) => scene(id).start + n * B;
 
 export async function makeMusic(dur) {
   const SR = 48000;
@@ -26,7 +30,7 @@ export async function makeMusic(dur) {
   for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < d.length; i++) d[i] = (rnd() * 2 - 1) * Math.pow(1 - i / d.length, 3.5); }
   const rev = ac.createConvolver(); rev.buffer = ir;
   const revOut = ac.createGain(); revOut.gain.value = 0.32; rev.connect(revOut).connect(master);
-  const dl = ac.createDelay(1); dl.delayTime.value = 0.375;
+  const dl = ac.createDelay(1); dl.delayTime.value = B * 0.75; // seperdelapan bertitik
   const fb = ac.createGain(); fb.gain.value = 0.36;
   const dlf = ac.createBiquadFilter(); dlf.type = 'lowpass'; dlf.frequency.value = 2800;
   const dlOut = ac.createGain(); dlOut.gain.value = 0.28;
@@ -145,95 +149,121 @@ export async function makeMusic(dur) {
   }
 
   // ---- aransemen ----
-  // 0–2 pembuka: titik, landasan, ketikan, pesawat lepas landas, iris.
-  pad(0, 2.0, CHORDS[0].map((m) => m - 12), 0.03, 250, 1600);
-  blip(0.05, 1500, 0.12, 0.14, 'sine');
-  sweep(0.42, 0.45, 500, 4000, 0.22);
-  for (let i = 0; i < 41; i += 2) tick(0.8 + (i / 41) * 0.45, 0.06);
-  hat(1.0, 0.14, true); kick(1.0, 0.35);
-  sweep(0.9, 0.7, 200, 3000, 0.2, 0.8); // deru pesawat
-  riser(1.0, 2.0, 0.22);
-  sweep(1.55, 0.42, 300, 6000, 0.25);
+  const S8 = B / 2, S16 = B / 4;
+  const FINAL = at('penutup');
+  const GAP = FINAL - 0.16; // hening sejenak sebelum drop
 
-  for (const t of [2, 4, 7, 10, 13]) impact(t, t === 2 ? 1 : 0.7);
+  // Pembuka (8 ketuk): titik, landasan, ketikan, lepas landas, iris.
+  pad(0, at('portal'), CHORDS[0].map((m) => m - 12), 0.03, 250, 1800);
+  blip(0.04, 1500, 0.12, 0.16, 'sine');
+  sweep(at('intro', 0.9), 0.6, 500, 4000, 0.22);
+  for (let i = 0; i < 41; i += 2) tick(at('intro', 1.8 + (i / 41) * 1.2), 0.06);
+  hat(at('intro', 2), 0.14, true); kick(at('intro', 2), 0.4);
+  sweep(at('intro', 2.6), B * 3.6, 150, 2400, 0.22, 0.7); // deru mesin pesawat
+  for (let k = 0; k < 4; k++) bell(at('intro', 1.5 + k * 0.5), CHORDS[0][k] + 12, 0.025, 1.4);
+  for (let k = 4; k < 8; k++) kick(at('intro', k), 0.35 + k * 0.05);
+  riser(at('intro', 5), at('portal'), 0.24);
+  sweep(at('intro', 6.4), B * 1.6, 300, 6000, 0.25);
 
-  // 2–4 satu hentakan per kata.
+  for (const s of SCENES.slice(1)) if (s.id !== 'penutup') impact(s.start, s.id === 'portal' ? 1 : 0.65);
+
+  // Portal (4 ketuk): satu hentakan per kata.
   for (let k = 0; k < 4; k++) {
-    const t = 2 + k * B;
+    const t = at('portal', k);
     if (k) kick(t, 1);
-    clap(t, 0.35); stab(t, CHORDS[k].map((m) => m + 12), 0.08, 0.32); bass(t, ROOTS[k], 0.4, 0.3);
-    for (let j = 1; j < 4; j++) hat(t + j * 0.125, 0.05);
+    clap(t, 0.35); stab(t, CHORDS[k].map((m) => m + 12), 0.08, 0.4); bass(t, ROOTS[k], 0.55, 0.3);
+    for (let j = 1; j < 4; j++) hat(t + j * S16, 0.05);
   }
-  riser(3.4, 4.0, 0.25);
-  for (let k = 0; k < 8; k++) clap(3.5 + k * 0.0625, 0.08 + k * 0.03);
+  riser(at('portal', 2.5), at('profil'), 0.25);
+  for (let k = 0; k < 8; k++) clap(at('portal', 3) + k * (B / 8), 0.08 + k * 0.03);
 
-  // 4–16 groove.
-  for (let t = 4; t < 16 - 1e-6; t += B) {
-    const bi = Math.round((t - 4) / B);
-    if (![4, 7, 10, 13].includes(t)) kick(t, 0.95);
-    if (bi % 2 === 1) clap(t, 0.32);
-    hat(t + 0.25, 0.09, true);
-    for (let j = 0; j < 4; j++) if (j !== 2) hat(t + j * 0.125, j % 2 ? 0.05 : 0.035);
+  // Groove half-time dari profil sampai sebelum montase.
+  const g0 = at('profil'), g1 = at('montase');
+  for (let t = g0; t < g1 - 1e-6; t += B) {
+    const bi = Math.round((t - g0) / B);
+    const onImpact = SCENES.some((s) => Math.abs(s.start - t) < 1e-6);
+    if (bi % 2 === 0 && !onImpact) kick(t, 0.95);
+    if (bi % 4 === 3) kick(t + S8, 0.6); // ketukan sinkop
+    if (bi % 2 === 1) clap(t, 0.3);
+    hat(t + S8, 0.08, true);
+    for (let j = 0; j < 4; j++) if (j !== 2) hat(t + j * S16, j % 2 ? 0.045 : 0.03);
     const r = ROOTS[bar(t)];
-    bass(t, r, 0.2); bass(t + 0.25, r + 12, 0.18, 0.22);
+    bass(t, r, B * 0.45); bass(t + S8, r + 12, B * 0.35, 0.2);
   }
-  for (let b = 2; b < 8; b++) pad(b * 2, b * 2 + 2, CHORDS[b % 4], 0.028, 500 + b * 120, 900 + b * 260);
-  // Papan split-flap: derak daun yang berputar, dua kali (berangkat, datang).
-  for (const p0 of [4.0, 5.5]) for (let i = 0; i < 60; i++) tick(p0 + 0.08 + i * 0.016 + rnd() * 0.01, 0.035 + 0.02 * rnd());
-  blip(5.45, 1100, 0.06, 0.06, 'triangle');
-  // 7–13 arpeggio seperenambelas.
+  for (let b = Math.round(g0 / BAR); b < Math.round(g1 / BAR); b++) pad(b * BAR, (b + 1) * BAR, CHORDS[b % 4], 0.026, 500 + (b % 8) * 140, 900 + (b % 8) * 300);
+  // Arpeggio seperenambelas, masuk di statistik dan makin terang.
   const ARP = [0, 1, 2, 3, 2, 1, 3, 2, 0, 2, 1, 3, 2, 3, 1, 2];
-  for (let i = 0; i < 6 * 8; i++) {
-    const t = 7 + i * 0.125, ch = CHORDS[bar(t)];
-    pluck(t, ch[ARP[i % 16]] + 12, 0.045 + 0.02 * Math.min(1, i / 24));
+  for (let t = at('statistik'), i = 0; t < g1 - 1e-6; t += S16, i++) {
+    if (t >= at('regulasi') && t < at('layanan')) continue; // beri ruang bunyi kertas
+    pluck(t, CHORDS[bar(t)][ARP[i % 16]] + 12, 0.035 + 0.02 * Math.min(1, i / 64));
   }
+
+  // Profil: denting di tiap simpul linimasa, desir saat visi naik.
+  [0.8, 1.85, 2.9].forEach((n, k) => { blip(at('profil', n), 900 + k * 200, 0.07, 0.1, 'sine'); bell(at('profil', n), [77, 81, 84][k], 0.035, 1.2); });
+  sweep(at('profil', 3.9), B, 400, 5000, 0.16);
+  // Jadwal: derak daun split-flap, dua kali.
+  for (const n of [0.3, 4]) for (let i = 0; i < 90; i++) tick(at('jadwal', n) + 0.15 + i * 0.016 + rnd() * 0.01, 0.03 + 0.02 * rnd());
+  blip(at('jadwal', 3.9), 1100, 0.06, 0.06, 'triangle');
+  // Statistik: angka berputar, bilah tumbuh, rute meluncur.
+  for (let i = 0; i < 40; i++) tick(at('statistik', 0.6) + i * 0.035, 0.035);
+  for (let j = 0; j < 6; j++) blip(at('statistik', 2.4 + j * 0.15), 500 + j * 90, 0.04, 0.08, 'sine');
+  for (let j = 0; j < 5; j++) sweep(at('statistik', 3.8 + j * 0.2), 0.3, 800, 3000, 0.06);
   // Fasilitas: kartu berbalik, runway membesar, kartu wisata.
-  for (const bt of [7.5, 8.0]) for (let d = 0; d < 6; d++) tick(bt + d * 0.04, 0.06 * (1 - d / 8));
-  sweep(8.35, 0.4, 400, 5000, 0.18);
-  [77, 81, 84].forEach((m, k) => bell(8.75 + k * 0.08, m, 0.03, 0.8));
-  [0, 1, 2].forEach((k) => blip(9.3 + k * 0.07, 800 + k * 200, 0.05, 0.08, 'sine'));
-  sweep(9.7, 0.3, 800, 7000, 0.2);
+  for (const n of [1.4, 2.3, 3.2]) for (let d = 0; d < 6; d++) tick(at('fasilitas', n) + d * 0.05, 0.07 * (1 - d / 8));
+  sweep(at('fasilitas', 3.6), B * 0.6, 400, 5000, 0.18);
+  [77, 81, 84].forEach((m, k) => bell(at('fasilitas', 4.4) + k * 0.1, m, 0.03, 0.9));
+  [0, 1, 2].forEach((k) => blip(at('fasilitas', 5.9 + k * 0.15), 800 + k * 200, 0.05, 0.08, 'sine'));
   // Berita & PPID.
-  for (const t of [10.5, 11.0]) sweep(t - 0.12, 0.2, 3000, 800, 0.12);
-  sweep(11.3, 0.25, 400, 6000, 0.2);
-  for (let k = 0; k < 18; k++) tick(11.6 + k * 0.035, 0.04);
-  blip(12.2, 1400, 0.06, 0.06, 'sine');
+  for (const n of [1, 2, 3]) sweep(at('info', n) - 0.12, 0.25, 3000, 800, 0.12);
+  sweep(at('info', 3.5), B * 0.6, 400, 6000, 0.2);
+  for (let k = 0; k < 24; k++) tick(at('info', 4.2) + k * 0.04, 0.04);
+  blip(at('info', 5.6), 1400, 0.06, 0.06, 'sine');
+  // Regulasi: surat jatuh, kertas dikocok, stempel.
+  sweep(at('regulasi', 0.2), 0.5, 3000, 600, 0.14);
+  for (let k = 0; k < 6; k++) {
+    const t = at('regulasi', 1 + k * 0.08), n = noise(t, 0.08), bp = filt('bandpass', 2500, 1), v = ac.createGain();
+    env(v, t, 0.002, 0.08, 0.07); n.connect(bp).connect(v).connect(master);
+  }
+  kick(at('regulasi', 2.3), 0.6); clap(at('regulasi', 2.3), 0.25);
   // Layanan: keping muncul, ketukan Bantuan, kirim, nada sukses.
-  for (let i = 0; i < 13; i++) blip(13.5 + i * 0.0625, 700 + i * 60, 0.03, 0.05, 'sine');
-  tick(14.5, 0.22); blip(14.5, 1800, 0.06, 0.04, 'sine');
-  sweep(14.55, 0.3, 2000, 500, 0.1);
-  tick(15.15, 0.22); blip(15.15, 1800, 0.06, 0.04, 'sine');
-  [72, 76, 79, 84].forEach((m, k) => bell(15.25 + k * 0.06, m, 0.04, 0.8));
-  sweep(15.6, 0.4, 800, 8000, 0.2);
-  // 16–18 montase: kick per seperdelapan, blip glitch, gulungan, lalu hening.
+  for (let i = 0; i < 13; i++) blip(at('layanan', 1 + i * 0.15), 700 + i * 60, 0.03, 0.06, 'sine');
+  tick(at('layanan', 3.5), 0.22); blip(at('layanan', 3.5), 1800, 0.06, 0.04, 'sine');
+  sweep(at('layanan', 3.7), 0.4, 2000, 500, 0.1);
+  tick(at('layanan', 5), 0.22); blip(at('layanan', 5), 1800, 0.06, 0.04, 'sine');
+  [72, 76, 79, 84].forEach((m, k) => bell(at('layanan', 5.2) + k * 0.07, m, 0.045, 1.0));
+  // FAQ: akordeon membuka per ketuk.
+  for (let k = 0; k < 4; k++) { blip(at('faq', 0.2 + k), 600 + k * 120, 0.05, 0.1, 'triangle'); sweep(at('faq', 0.2 + k), 0.25, 1200, 4000, 0.06); }
+
+  // Montase (4 ketuk): kick per setengah ketuk, blip glitch, gulungan, lalu hening.
   for (let c = 0; c < 8; c++) {
-    const t = 16 + c * 0.25;
+    const t = at('montase') + c * S8;
     kick(t, c % 2 ? 0.75 : 1);
     blip(t, 200 + rnd() * 1800, 0.05, 0.05, 'square');
-    if (c % 2 === 0) stab(t, CHORDS[(c / 2) % 4].map((m) => m + 12), 0.07, 0.18);
-    bass(t, ROOTS[(c >> 1) % 4], 0.2, 0.3);
-    const n = noise(t + 0.12, 0.05), bp = filt('bandpass', 3000, 3), v = ac.createGain(); env(v, t + 0.12, 0.001, 0.12, 0.05);
+    if (c % 2 === 0) stab(t, CHORDS[(c / 2) % 4].map((m) => m + 12), 0.07, 0.25);
+    bass(t, ROOTS[(c >> 1) % 4], 0.3, 0.3);
+    const n = noise(t + S16, 0.05), bp = filt('bandpass', 3000, 3), v = ac.createGain(); env(v, t + S16, 0.001, 0.12, 0.05);
     n.connect(bp).connect(v).connect(master);
   }
-  impact(16, 0.6);
-  for (let k = 0; k < 14; k++) clap(17.0 + k * (0.85 / 14) * (1 - k / 30), 0.06 + k * 0.022);
-  riser(16.5, 17.85, 0.28);
-  // 18–20 penutup: drop, partikel berkumpul, akor resolusi.
-  impact(18, 1.15);
-  pad(18, 19.5, [53, 60, 65, 69, 72, 79], 0.04, 3000, 900);
-  sweep(18.35, 0.6, 6000, 600, 0.12);
+  for (let k = 0; k < 16; k++) clap(at('montase', 2) + k * ((B * 1.84) / 16) * (1 - k / 34), 0.06 + k * 0.02);
+  riser(at('montase', 0.5), GAP, 0.28);
+
+  // Penutup (8 ketuk): drop, partikel berkumpul, akor resolusi panjang.
+  impact(FINAL, 1.15);
+  pad(FINAL, at('penutup', 7), [53, 60, 65, 69, 72, 79], 0.04, 3200, 900);
+  sweep(at('penutup', 0.6), B * 1.4, 6000, 600, 0.12);
   const PENTA = [65, 67, 69, 72, 74, 77, 79, 81, 84, 86, 89, 91];
-  PENTA.forEach((m, k) => bell(18.4 + k * 0.04, m, 0.028, 1.2));
-  [77, 84, 89].forEach((m, k) => bell(19.0 + k * 0.09, m, 0.03, 1.2));
+  PENTA.forEach((m, k) => bell(at('penutup', 0.8) + k * 0.07, m, 0.026, 1.4));
+  [77, 84, 89].forEach((m, k) => bell(at('penutup', 2.6) + k * 0.12, m, 0.032, 1.8));
+  for (const n of [4, 6]) { kick(at('penutup', n), 0.5); bass(at('penutup', n), ROOTS[0], B * 1.6, 0.25); }
 
   // Bus musik ditekan tiap kick (efek "pompa" sidechain).
   kicks.sort((a, b) => a - b);
   bus.gain.setValueAtTime(1, 0);
-  for (const k of kicks) { bus.gain.setValueAtTime(1, Math.max(0, k - 0.002)); bus.gain.linearRampToValueAtTime(0.35, k + 0.01); bus.gain.linearRampToValueAtTime(1, k + 0.22); }
+  for (const k of kicks) { bus.gain.setValueAtTime(1, Math.max(0, k - 0.002)); bus.gain.linearRampToValueAtTime(0.35, k + 0.01); bus.gain.linearRampToValueAtTime(1, k + 0.28); }
   // Jeda hening sebelum drop, lalu ekor musik memudar bersama gambar.
-  master.gain.setValueAtTime(0.7, 17.84); master.gain.linearRampToValueAtTime(0.0, 17.87);
-  master.gain.setValueAtTime(0.0, 17.995); master.gain.linearRampToValueAtTime(0.7, 18.0);
-  master.gain.setValueAtTime(0.7, 19.3); master.gain.linearRampToValueAtTime(0.0, 20.0);
+  master.gain.setValueAtTime(0.7, GAP - 0.03); master.gain.linearRampToValueAtTime(0.0, GAP);
+  master.gain.setValueAtTime(0.0, FINAL - 0.005); master.gain.linearRampToValueAtTime(0.7, FINAL);
+  master.gain.setValueAtTime(0.7, dur - 1.8); master.gain.linearRampToValueAtTime(0.0, dur);
 
   const buf = await ac.startRendering();
   let pk = 0;

@@ -9,9 +9,11 @@ use App\Models\Meeting;
 use App\Support\CetakanPdf;
 use App\Support\DaftarHadirWord;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use PhpOffice\PhpWord\IOFactory;
 
 /**
@@ -225,8 +227,22 @@ class MeetingController extends Controller
 
         $word = DaftarHadirWord::rakit($rapat, $peserta->all());
 
-        $sementara = tempnam(sys_get_temp_dir(), 'absensi_').'.docx';
-        IOFactory::createWriter($word, 'Word2007')->save($sementara);
+        /*
+         * Nama acak disusun sendiri, BUKAN `tempnam()`. `tempnam()` langsung
+         * membuat berkas kosong di cakram; menempelkan `.docx` pada namanya
+         * menghasilkan berkas kedua, dan hanya yang kedua itu yang dihapus
+         * sesudah terkirim — setiap unduhan meninggalkan satu berkas yatim.
+         */
+        $sementara = sys_get_temp_dir().DIRECTORY_SEPARATOR.'absensi_'.Str::uuid().'.docx';
+
+        try {
+            IOFactory::createWriter($word, 'Word2007')->save($sementara);
+        } catch (\Throwable $e) {
+            // Arsip yang gagal ditulis setengah jalan pun berisi data peserta.
+            @unlink($sementara);
+
+            throw $e;
+        }
 
         $nama = 'daftar-hadir-'.$rapat->slug.'.docx';
 
@@ -253,7 +269,10 @@ class MeetingController extends Controller
         return $rapat->attendances->map(function (Attendance $a) use ($mentah) {
             return [
                 'name' => $a->name,
+                // Kode `L`/`P` apa adanya; baris lama tanpa nilai tercetak "—".
+                'gender' => $a->gender,
                 'department' => $a->department,
+                'represents' => $a->represents,
                 'phone' => $a->phone,
                 /*
                  * Waktu tanda tangan dibubuhkan — kolom yang ada pada cetakan
@@ -318,15 +337,32 @@ class MeetingController extends Controller
 
         $data = $request->validate([
             'name' => 'required|string|max:125',
+            'gender' => ['required', Rule::in(array_keys(Attendance::GENDERS))],
             'department' => 'required|string|max:125',
+            // Opsional: kebanyakan peserta hadir atas namanya sendiri. Bila
+            // diisi, ia tercetak di bawah nama pada daftar hadir.
+            'represents' => 'nullable|string|max:125',
             // WAJIB, bukan opsional. Nomor inilah satu-satunya penanda yang
             // membedakan peserta di daftar hadir tanpa akun — tanpa ia, tidak
             // ada cara mengetahui satu orang mengisi dua kali. v1 juga
             // mewajibkannya.
-            'phone' => 'required|string|max:125',
+            //
+            // Jumlah angkanya diperiksa, bukan hanya "terisi": "-" atau "tidak
+            // ada" lolos `required`, lalu menjadi pembanding kosong yang
+            // bertabrakan dengan setiap isian tanpa angka berikutnya.
+            'phone' => ['required', 'string', 'max:125', function (string $attr, mixed $nilai, \Closure $gagal) {
+                $panjang = strlen((string) Attendance::normalkanNomor((string) $nilai));
+
+                if ($panjang < Attendance::NOMOR_MIN || $panjang > Attendance::NOMOR_MAKS) {
+                    $gagal('Nomor HP tidak valid. Tulis nomor lengkap, misalnya 0812 3456 7890.');
+                }
+            }],
             'signature' => 'required|string',
         ], [
             'name.required' => 'Nama wajib diisi.',
+            'gender.required' => 'Jenis kelamin wajib dipilih.',
+            'gender.in' => 'Pilih jenis kelamin: laki-laki atau perempuan.',
+            'represents.max' => 'Nama yang diwakili paling panjang 125 karakter.',
             'department.required' => 'Unit kerja atau instansi wajib diisi.',
             'phone.required' => 'Nomor HP wajib diisi.',
             'signature.required' => 'Tanda tangan wajib diisi. Goreskan tanda tangan Anda pada kotak yang tersedia.',
@@ -340,22 +376,19 @@ class MeetingController extends Controller
          * yang lumrah terjadi pada jaringan lambat — tercatat dua kali, dan
          * daftar hadir yang dicetak menjadi bukti kehadiran yang salah hitung.
          *
-         * Nomornya dinormalkan lebih dulu: "0812-3456-7890" dan "081234567890"
-         * ditulis orang yang sama tetapi tidak pernah cocok bila dibandingkan
-         * apa adanya.
+         * Nomornya dinormalkan lebih dulu (`Attendance::normalkanNomor`):
+         * "0812-3456-7890", "081234567890", dan "+62 812 3456 7890" ditulis
+         * orang yang sama tetapi tidak pernah cocok bila dibandingkan apa
+         * adanya.
+         *
+         * Pemeriksaan ini hanya jalan cepat dengan pesan yang ramah. Penjaga
+         * sesungguhnya indeks unik `(meeting_id, phone_normalized)` — lihat
+         * tangkapan saat menyimpan di bawah.
          */
-        $nomor = preg_replace('/[^0-9]/', '', $data['phone']);
+        $nomor = Attendance::normalkanNomor($data['phone']);
 
-        $sudahAda = $rapat->attendances()
-            ->get(['id', 'phone'])
-            ->contains(fn ($p) => preg_replace('/[^0-9]/', '', (string) $p->phone) === $nomor);
-
-        if ($sudahAda) {
-            return ApiResponse::error(
-                'Nomor HP ini sudah terdaftar pada daftar hadir rapat ini.',
-                null,
-                422
-            );
+        if ($this->nomorSudahHadir($rapat, $nomor)) {
+            return $this->tolakNomorGanda();
         }
 
         $lintasan = $this->simpanTandaTangan($data['signature']);
@@ -371,11 +404,28 @@ class MeetingController extends Controller
         $peserta = new Attendance([
             'meeting_id' => $rapat->id,
             'name' => $data['name'],
+            'gender' => $data['gender'],
             'department' => $data['department'],
-            'phone' => $data['phone'] ?? null,
+            // Isian kosong disimpan NULL, bukan "" — supaya cetakan cukup
+            // memeriksa `filled()` tanpa tertipu spasi.
+            'represents' => filled($data['represents'] ?? null) ? trim($data['represents']) : null,
+            'phone' => $data['phone'],
         ]);
         $peserta->signature = $lintasan;
-        $peserta->save();
+
+        try {
+            $peserta->save();
+        } catch (UniqueConstraintViolationException) {
+            /*
+             * Kiriman kembar yang tiba bersamaan: keduanya lolos pemeriksaan
+             * di atas, dan indeks unik menolak yang kalah cepat. Berkas tanda
+             * tangannya sudah terlanjur tertulis — dibuang, supaya cakram
+             * privat tidak menimbun goresan tanpa pemilik.
+             */
+            Storage::disk(Attendance::DISK)->delete($lintasan);
+
+            return $this->tolakNomorGanda();
+        }
 
         return ApiResponse::success(
             ['name' => $peserta->name],
@@ -386,6 +436,31 @@ class MeetingController extends Controller
     }
 
     /* -------------------------------------------------------------- */
+
+    /**
+     * Apakah nomor ini sudah tercatat pada rapat tersebut.
+     *
+     * Dua jalur, karena tidak semua baris punya `phone_normalized`: baris
+     * yang ditulis v1 (masih berjalan sampai cutover) tidak mengisinya, dan
+     * migrasinya sengaja membiarkan NULL pada nomor ganda peninggalan. Jalur
+     * kedua hanya memuat baris NULL itu — biasanya tidak ada sama sekali.
+     */
+    private function nomorSudahHadir(Meeting $rapat, ?string $nomor): bool
+    {
+        if ($rapat->attendances()->where('phone_normalized', $nomor)->exists()) {
+            return true;
+        }
+
+        return $rapat->attendances()
+            ->whereNull('phone_normalized')
+            ->get(['id', 'phone'])
+            ->contains(fn (Attendance $p) => Attendance::normalkanNomor($p->phone) === $nomor);
+    }
+
+    private function tolakNomorGanda()
+    {
+        return ApiResponse::error('Nomor HP ini sudah terdaftar pada daftar hadir rapat ini.', null, 422);
+    }
 
     /**
      * Simpan gambar tanda tangan dari kanvas (data URI PNG).

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
-import AbsensiForm from './AbsensiForm';
-import { fetchApi } from '@/lib/api';
+import AbsensiForm, { type MasalahTautan } from './AbsensiForm';
+import { API_BASE_URL } from '@/lib/api';
 import type { AbsensiInfo } from '@/types';
 
 /**
@@ -21,9 +21,37 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+/**
+ * Keterangan rapat beserta SEBAB kegagalannya.
+ *
+ * Sengaja tidak lewat `fetchApi`: ia meratakan setiap kegagalan menjadi
+ * `success: false` tanpa kode status, dan dulu akibatnya 429 maupun server
+ * yang mati sama-sama tampil sebagai "tautan tidak dikenali" — peserta
+ * memegang tautan yang benar lalu disuruh meminta tautan baru.
+ */
+async function muatRapat(token: string): Promise<{ info: AbsensiInfo | null; masalah: MasalahTautan | null }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/absensi/${encodeURIComponent(token)}`, {
+      headers: { Accept: 'application/json' },
+      cache: 'no-store',
+    });
+
+    if (res.status === 404) return { info: null, masalah: 'tidak-dikenal' };
+    if (res.status === 429) return { info: null, masalah: 'ramai' };
+
+    const json = await res.json().catch(() => null);
+
+    if (res.ok && json?.success && json.data) return { info: json.data, masalah: null };
+  } catch {
+    /* jatuh ke gangguan di bawah */
+  }
+
+  return { info: null, masalah: 'gangguan' };
+}
+
 export default async function AbsensiPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  const res = await fetchApi<AbsensiInfo>(`/absensi/${token}`);
+  const { info, masalah } = await muatRapat(token);
 
-  return <AbsensiForm token={token} info={res.success && res.data ? res.data : null} />;
+  return <AbsensiForm token={token} info={info} masalah={masalah} />;
 }

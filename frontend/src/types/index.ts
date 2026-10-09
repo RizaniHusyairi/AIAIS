@@ -1388,7 +1388,11 @@ export interface Attendance {
   id: number;
   meeting_id: number;
   name: string;
+  /** `L`/`P`; NULL pada baris sebelum isian ini ada (dan baris tulisan v1). */
+  gender: 'L' | 'P' | null;
   department: string;
+  /** Pihak yang diwakili peserta, bila ada. */
+  represents: string | null;
   phone: string | null;
   has_signature: boolean;
   created_at: string;

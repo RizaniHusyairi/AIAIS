@@ -5,9 +5,12 @@
  * data — nomor penerbangan, judul berita, nama fasilitas — dibaca dari sini.
  * Gambar ikut diunduh ke public/img supaya render tidak bergantung jaringan.
  *
- * Sumber: berita, fasilitas, dan wisata dari portal yang tayang (aptpairport.id)
- * karena isi dan fotonya sudah dikurasi petugas — basis data lokal masih memuat
- * foto yang tertukar. Penerbangan (FIDS) dan PPID dari API lokal.
+ * Sumber: berita, fasilitas, wisata, FAQ, dan surat regulasi dari portal yang
+ * tayang (aptpairport.id) karena isinya sudah dikurasi petugas — basis data
+ * lokal masih memuat foto tertukar dan surat uji coba. Penerbangan (FIDS), PPID,
+ * dan statistik LLAU dari API lokal (portal tayang belum punya endpoint LLAU).
+ * Profil & linimasa dibaca dari frontend/src/lib/airportProfile.ts yang
+ * berprovenans, bukan disalin tangan.
  *
  * Pakai: jalankan backend (php artisan serve --port=8000), lalu `npm run data`.
  */
@@ -143,6 +146,57 @@ async function ppid() {
 }
 
 /**
+ * Statistik lalu lintas udara: rekapitulasi LLAU periode terakhir yang diunggah
+ * petugas, beserta tren bulanannya. Kosong berarti belum ada laporan — gagal
+ * saja, adegan statistik tidak boleh diisi angka karangan.
+ */
+async function llau() {
+  const d = await get('/llau');
+  if (!d.period) throw new Error('Belum ada rekapitulasi LLAU di API lokal — unggah laporan dulu lewat panel admin.');
+  const s = d.period.summary;
+  return {
+    label: d.period.label,
+    passengers: s.passengers.total,
+    flights: s.flights.total,
+    cargo: s.cargo.total,
+    routes: (d.period.routes || []).slice(0, 5).map((r) => ({ code: r.code, passengers: r.passengers, flights: r.flights })),
+    trend: d.trend.map((t) => ({ label: t.label, passengers: t.passengers, flights: t.flights })),
+  };
+}
+
+/** FAQ aktif di portal; jawaban HTML diratakan jadi teks polos. */
+async function faqs() {
+  const list = await get('/faqs', PORTAL);
+  if (!list.length) throw new Error('FAQ portal kosong.');
+  const polos = (h) => (h || '').replace(/<\/(p|li)>/g, ' ').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
+  return list.slice(0, 6).map((f) => ({ category: f.category, question: f.question.trim(), answer: polos(f.answer) }));
+}
+
+/** Surat regulasi yang berkasnya tersedia di portal (publik menyaring). */
+async function letters() {
+  const list = (await get('/letters', PORTAL)).filter((l) => l.has_file);
+  return {
+    count: { keputusan: list.filter((l) => l.type === 'keputusan').length, edaran: list.filter((l) => l.type === 'edaran').length },
+    items: list.slice(0, 6).map((l) => ({ type: l.type, number: l.number, title: l.title, date: l.issue_date })),
+  };
+}
+
+/**
+ * Linimasa & visi dari airportProfile.ts. Berkas TS itu memakai alias `@/`,
+ * jadi dibundel esbuild ke memori lalu diimpor sebagai data URL.
+ */
+async function profile() {
+  const { build } = await import('esbuild');
+  const FE = join(ROOT, '..', 'frontend', 'src');
+  const out = await build({
+    entryPoints: [join(FE, 'lib', 'airportProfile.ts')], bundle: true, write: false, format: 'esm', platform: 'neutral', logLevel: 'error',
+    alias: { '@': FE },
+  });
+  const mod = await import('data:text/javascript;base64,' + Buffer.from(out.outputFiles[0].text).toString('base64'));
+  return { timeline: mod.TIMELINE, visi: mod.VISI.pernyataan, org: mod.ORG_NAME };
+}
+
+/**
  * Bahan beranda desktop (adegan "Satu portal, semua layar"): latar hero dari
  * setelan `bg_home` portal dan pratinjau unggahan Instagram yang tayang di
  * ponsel hero. Unggahan video (±55 MB) tidak diunduh utuh — cukup satu frame
@@ -206,13 +260,20 @@ for (const f of await readdir(IMG_DIR)) await unlink(join(IMG_DIR, f));
 
 const data = {
   fetchedAt: new Date().toISOString(),
-  source: { flights: API, ppid: API, news: PORTAL, facilities: PORTAL, tourisms: PORTAL },
+  source: {
+    flights: API, ppid: API, llau: API, news: PORTAL, facilities: PORTAL, tourisms: PORTAL, faqs: PORTAL, letters: PORTAL,
+    profile: 'frontend/src/lib/airportProfile.ts',
+  },
   flights: await flights(),
   news: await news(),
   facilities: await facilities(),
   tourisms: await tourisms(),
   ppid: await ppid(),
   home: await home(),
+  llau: await llau(),
+  faqs: await faqs(),
+  letters: await letters(),
+  profile: await profile(),
 };
 await writeFile(join(DATA_DIR, 'snapshot.json'), JSON.stringify(data, null, 2) + '\n');
 
@@ -226,7 +287,8 @@ for (const f of ['logo-white-apt.svg', 'logo-apt.svg', 'logo-kemenhub.png', 'ico
 console.log(
   `Snapshot: ${data.flights.length} penerbangan, ${data.news.length} berita, ` +
     `${data.facilities.length} fasilitas, ${data.tourisms.length} wisata, ` +
-    `PPID ${data.ppid.berkala.count}/${data.ppid.sertaMerta.count}/${data.ppid.setiapSaat.count}`,
+    `PPID ${data.ppid.berkala.count}/${data.ppid.sertaMerta.count}/${data.ppid.setiapSaat.count}, ` +
+    `LLAU ${data.llau.label}, ${data.faqs.length} FAQ, ${data.letters.items.length} surat`,
 );
 
 if (process.platform === 'win32') {

@@ -38,11 +38,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import TandaTanganKanvas from '@/components/akun/TandaTanganKanvas';
 import { StatusBar } from '@/components/pwa/ui';
 import { API_BASE_URL } from '@/lib/api';
-import { bacaPeserta, simpanPeserta, lupakanPeserta } from '@/lib/absensiPerangkat';
+import { bacaPeserta, simpanPeserta, lupakanPeserta, type JenisKelamin } from '@/lib/absensiPerangkat';
 import type { AbsensiInfo } from '@/types';
+import {
+  KartuSeksi, MedanTeks, PilihJenisKelamin, SakelarMewakili,
+  rapikanNomor, jumlahAngkaNomor, NOMOR_MIN, NOMOR_MAKS,
+} from './MedanAbsensi';
 import {
   CalendarDays, MapPin, User, CircleCheck, CircleAlert, Clock, ShieldCheck,
   Building2, Phone, ArrowRight, DoorClosed, LinkIcon, Home, UserCheck, X,
+  CloudOff, RotateCw, UserRoundPen,
 } from 'lucide-react';
 
 /* ------------------------------------------------------------------ */
@@ -81,20 +86,6 @@ function Keterangan({
   );
 }
 
-/** Label medan isian, seragam untuk keempatnya. */
-function LabelMedan({ icon: Icon, children }: { icon: React.ElementType; children: React.ReactNode }) {
-  return (
-    <span className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.12em] text-slate-500">
-      <Icon className="w-3.5 h-3.5 text-blue-600" />
-      {children}
-    </span>
-  );
-}
-
-const gaya =
-  'mt-2 w-full rounded-2xl px-4 py-4 text-[16px] text-slate-900 bg-white ring-1 ring-slate-200 '
-  + 'focus:ring-2 focus:ring-blue-500 outline-none transition-shadow placeholder:text-slate-300';
-
 const tanggalPanjang = (iso: string | null) =>
   iso
     ? new Date(iso).toLocaleDateString('id-ID', {
@@ -106,10 +97,50 @@ const tanggalPanjang = (iso: string | null) =>
 /*  Layar                                                              */
 /* ------------------------------------------------------------------ */
 
-export default function AbsensiForm({ token, info }: { token: string; info: AbsensiInfo | null }) {
+/**
+ * Sebab keterangan rapat tidak dapat dimuat.
+ *
+ * Dibedakan karena tindakan yang benar bagi peserta berbeda: tautan yang
+ * tidak dikenali perlu diganti, sedangkan server yang ramai atau terganggu
+ * cukup dicoba lagi — menyuruh peserta meminta tautan baru untuk keadaan itu
+ * membuat antrean di pintu bertambah panjang tanpa guna.
+ */
+export type MasalahTautan = 'tidak-dikenal' | 'ramai' | 'gangguan';
+
+const LAYAR_MASALAH: Record<MasalahTautan, { judul: string; isi: string; cobaLagi: boolean }> = {
+  'tidak-dikenal': {
+    judul: 'Tautan absensi tidak dikenali',
+    isi: 'Tautannya mungkin salah ketik, atau sudah diperbarui petugas. Mintalah tautan — atau pindai ulang kode QR — terbaru kepada penyelenggara rapat.',
+    cobaLagi: false,
+  },
+  ramai: {
+    judul: 'Daftar hadir sedang ramai',
+    isi: 'Banyak peserta membuka daftar hadir bersamaan. Tautan Anda benar — tunggu beberapa detik, lalu muat ulang.',
+    cobaLagi: true,
+  },
+  gangguan: {
+    judul: 'Daftar hadir belum dapat dimuat',
+    isi: 'Server sedang tidak dapat dihubungi. Tautan Anda tidak perlu diganti — periksa sambungan internet, lalu muat ulang.',
+    cobaLagi: true,
+  },
+};
+
+export default function AbsensiForm({
+  token,
+  info,
+  masalah,
+}: {
+  token: string;
+  info: AbsensiInfo | null;
+  masalah: MasalahTautan | null;
+}) {
   const [nama, setNama] = useState('');
   const [unit, setUnit] = useState('');
   const [telepon, setTelepon] = useState('');
+  const [jk, setJk] = useState<JenisKelamin | null>(null);
+  /** Sakelar "hadir mewakili"; isiannya hanya dikirim selama sakelar menyala. */
+  const [mewakili, setMewakili] = useState(false);
+  const [diwakili, setDiwakili] = useState('');
   const [ttd, setTtd] = useState<string | null>(null);
   const [galat, setGalat] = useState('');
   const [mengirim, setMengirim] = useState(false);
@@ -151,9 +182,31 @@ export default function AbsensiForm({ token, info }: { token: string; info: Abse
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setNama(tersimpan.name);
     setUnit(tersimpan.department);
-    setTelepon(tersimpan.phone);
+    setTelepon(rapikanNomor(tersimpan.phone));
+    setJk(tersimpan.gender ?? null);
     setDariPerangkat(true);
   }, []);
+
+  /*
+   * Kelengkapan tiap isian, dihitung dengan aturan yang SAMA dengan backend
+   * (nomor 8–15 angka, jenis kelamin L/P). Dipakai tiga tempat sekaligus:
+   * centang pada isian, centang pada kartu seksi, dan bilah kemajuan di
+   * dasar layar — jadi ketiganya mustahil saling berselisih.
+   */
+  const angkaNomor = jumlahAngkaNomor(telepon);
+  const cek = {
+    nama: nama.trim().length >= 2,
+    jk: jk !== null,
+    unit: unit.trim().length >= 2,
+    diwakili: !mewakili || diwakili.trim().length >= 2,
+    telepon: angkaNomor >= NOMOR_MIN && angkaNomor <= NOMOR_MAKS,
+    ttd: ttd !== null,
+  };
+  // Isian "mewakili" hanya dihitung selama sakelarnya menyala — kalau tidak,
+  // layar yang belum disentuh sama sekali sudah mengaku "1/6 terisi".
+  const langkah = [cek.nama, cek.jk, cek.unit, cek.telepon, cek.ttd, ...(mewakili ? [cek.diwakili] : [])];
+  const terisi = langkah.filter(Boolean).length;
+  const lengkap = terisi === langkah.length;
 
   /** "Bukan saya" — kosongkan formulir sekaligus lupakan simpanannya. */
   const bukanSaya = () => {
@@ -161,23 +214,45 @@ export default function AbsensiForm({ token, info }: { token: string; info: Abse
     setNama('');
     setUnit('');
     setTelepon('');
+    setJk(null);
     setDariPerangkat(false);
   };
 
-  /* ---- Tautan tidak dikenali: salah ketik, atau sudah diputar petugas ---- */
+  /** Mematikan sakelar ikut membuang isiannya — tidak ada nilai tersembunyi yang terkirim. */
+  const ubahMewakili = (aktif: boolean) => {
+    setMewakili(aktif);
+    if (!aktif) setDiwakili('');
+  };
+
+  /* ---- Keterangan rapat tidak termuat: tautan salah, server ramai, atau terganggu ---- */
   if (!info) {
+    const layar = LAYAR_MASALAH[masalah ?? 'tidak-dikenal'];
+    const Ikon = layar.cobaLagi ? CloudOff : LinkIcon;
+
     return (
       <Layar>
         <StatusBar />
         <div className="min-h-[80dvh] flex flex-col items-center justify-center px-8 text-center">
-          <span className="w-16 h-16 rounded-3xl bg-rose-50 ring-1 ring-rose-100 flex items-center justify-center">
-            <LinkIcon className="w-7 h-7 text-rose-500" />
+          <span
+            className={`w-16 h-16 rounded-3xl ring-1 flex items-center justify-center ${
+              layar.cobaLagi ? 'bg-amber-50 ring-amber-100' : 'bg-rose-50 ring-rose-100'
+            }`}
+          >
+            <Ikon className={`w-7 h-7 ${layar.cobaLagi ? 'text-amber-600' : 'text-rose-500'}`} />
           </span>
-          <h1 className="mt-5 text-[18px] font-black text-slate-900">Tautan absensi tidak dikenali</h1>
-          <p className="mt-2 text-[13px] text-slate-500 leading-relaxed max-w-xs">
-            Tautannya mungkin salah ketik, atau sudah diperbarui petugas. Mintalah tautan — atau
-            pindai ulang kode QR — terbaru kepada penyelenggara rapat.
-          </p>
+          <h1 className="mt-5 text-[18px] font-black text-slate-900">{layar.judul}</h1>
+          <p className="mt-2 text-[13px] text-slate-500 leading-relaxed max-w-xs">{layar.isi}</p>
+
+          {layar.cobaLagi && (
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="mt-7 w-full max-w-xs inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-black text-[15px] py-4 shadow-lg shadow-blue-600/25 transition-all cursor-pointer"
+            >
+              <RotateCw className="w-4 h-4" />
+              Muat Ulang
+            </button>
+          )}
         </div>
       </Layar>
     );
@@ -186,8 +261,24 @@ export default function AbsensiForm({ token, info }: { token: string; info: Abse
   const kirim = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!ttd) {
-      setGalat('Tanda tangan wajib diisi. Goreskan tanda tangan Anda pada kotak di atas.');
+    /*
+     * Teguran urut dari atas ke bawah, satu per satu — yang disebut adalah
+     * isian pertama yang masih kurang, persis yang akan ditemui peserta bila
+     * menggulir naik. Isian teks sudah dijaga `required` milik peramban;
+     * yang diperiksa di sini adalah yang tidak dapat dijaga atribut HTML.
+     */
+    const kurang = !cek.jk
+      ? 'Pilih jenis kelamin Anda.'
+      : !cek.diwakili
+        ? 'Tulis nama atau jabatan yang Anda wakili, atau matikan pilihan "Hadir mewakili".'
+        : !cek.telepon
+          ? `Nomor HP tidak valid. Tulis nomor lengkap (${NOMOR_MIN}–${NOMOR_MAKS} angka), misalnya 0812 3456 7890.`
+          : !ttd
+            ? 'Tanda tangan wajib diisi. Goreskan tanda tangan Anda pada kotak di atas.'
+            : null;
+
+    if (kurang) {
+      setGalat(kurang);
 
       return;
     }
@@ -201,7 +292,9 @@ export default function AbsensiForm({ token, info }: { token: string; info: Abse
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({
           name: nama,
+          gender: jk,
           department: unit,
+          represents: mewakili ? diwakili.trim() : null,
           phone: telepon.trim(),
           signature: ttd,
         }),
@@ -222,7 +315,7 @@ export default function AbsensiForm({ token, info }: { token: string; info: Abse
        *
        * Tanda tangannya sengaja tidak ikut. Lihat `lib/absensiPerangkat.ts`.
        */
-      simpanPeserta({ name: nama, department: unit, phone: telepon.trim() });
+      simpanPeserta({ name: nama, department: unit, phone: telepon.trim(), gender: jk ?? undefined });
       setBerhasil(nama);
     } catch {
       setMengirim(false);
@@ -241,6 +334,9 @@ export default function AbsensiForm({ token, info }: { token: string; info: Abse
     setNama('');
     setUnit('');
     setTelepon('');
+    setJk(null);
+    setMewakili(false);
+    setDiwakili('');
     setTtd(null);
     setDariPerangkat(false);
     setKunciKanvas((k) => k + 1);
@@ -355,49 +451,83 @@ export default function AbsensiForm({ token, info }: { token: string; info: Abse
               </motion.div>
             )}
 
-            <div className="rounded-3xl bg-white ring-1 ring-slate-200 p-5 space-y-5">
-              <label className="block">
-                <LabelMedan icon={User}>Nama Lengkap</LabelMedan>
-                <input
-                  required maxLength={125} autoComplete="name" autoCapitalize="words"
-                  placeholder="Nama sesuai identitas"
-                  className={gaya}
-                  value={nama} onChange={(e) => setNama(e.target.value)}
-                />
-              </label>
+            {/*
+              Empat kartu bernomor, urut seperti lembar daftar hadir kertas:
+              siapa, dari mana, cara menghubungi, lalu tanda tangan. Nomornya
+              berganti centang begitu kartunya lengkap.
+            */}
+            <KartuSeksi nomor={1} judul="Data Diri" selesai={cek.nama && cek.jk}>
+              <MedanTeks
+                label="Nama Lengkap"
+                icon={User}
+                value={nama}
+                onChange={setNama}
+                valid={cek.nama}
+                galat={cek.nama ? null : 'Tulis nama lengkap Anda.'}
+                placeholder="Nama sesuai identitas"
+                required maxLength={125} autoComplete="name" autoCapitalize="words" enterKeyHint="next"
+              />
+              <PilihJenisKelamin value={jk} onChange={setJk} />
+            </KartuSeksi>
 
-              <label className="block">
-                <LabelMedan icon={Building2}>Unit Kerja / Instansi</LabelMedan>
-                <input
-                  required maxLength={125}
-                  placeholder="Contoh: Seksi Teknik & Operasi"
-                  className={gaya}
-                  value={unit} onChange={(e) => setUnit(e.target.value)}
+            <KartuSeksi
+              nomor={2}
+              judul="Instansi"
+              keterangan="Tempat Anda bekerja, dan siapa yang Anda wakili bila diutus"
+              selesai={cek.unit && cek.diwakili}
+            >
+              <MedanTeks
+                label="Unit Kerja / Instansi"
+                icon={Building2}
+                value={unit}
+                onChange={setUnit}
+                valid={cek.unit}
+                galat={cek.unit ? null : 'Tulis unit kerja atau instansi Anda.'}
+                placeholder="Contoh: Seksi Teknik & Operasi"
+                required maxLength={125} autoComplete="organization" enterKeyHint="next"
+              />
+              <SakelarMewakili aktif={mewakili} onToggle={ubahMewakili}>
+                <MedanTeks
+                  label="Yang Diwakili"
+                  icon={UserRoundPen}
+                  value={diwakili}
+                  onChange={setDiwakili}
+                  valid={mewakili && cek.diwakili}
+                  galat={cek.diwakili ? null : 'Tulis siapa yang Anda wakili.'}
+                  placeholder="Contoh: Kepala Dinas Perhubungan"
+                  petunjuk="Tercetak di bawah nama Anda: “mewakili …”."
+                  autoFocus
+                  maxLength={125} autoCapitalize="words" enterKeyHint="next"
                 />
-              </label>
+              </SakelarMewakili>
+            </KartuSeksi>
 
-              {/* WAJIB, bukan opsional. Nomor inilah satu-satunya penanda yang
-                  membedakan peserta pada daftar hadir tanpa akun, dan yang
-                  dipakai backend menolak absensi ganda. */}
-              <label className="block">
-                <LabelMedan icon={Phone}>Nomor Telepon</LabelMedan>
-                <input
-                  type="tel" inputMode="numeric" required maxLength={125} autoComplete="tel"
-                  placeholder="08xx xxxx xxxx"
-                  className={gaya}
-                  value={telepon} onChange={(e) => setTelepon(e.target.value)}
-                />
-                <span className="mt-1.5 block text-[11px] text-slate-400 leading-relaxed">
-                  Dipakai untuk memastikan satu peserta tercatat sekali saja.
-                </span>
-              </label>
-            </div>
+            {/* WAJIB, bukan opsional. Nomor inilah satu-satunya penanda yang
+                membedakan peserta pada daftar hadir tanpa akun, dan yang
+                dipakai backend menolak absensi ganda. */}
+            <KartuSeksi nomor={3} judul="Kontak" selesai={cek.telepon}>
+              <MedanTeks
+                label="Nomor HP"
+                icon={Phone}
+                value={telepon}
+                onChange={(v) => setTelepon(rapikanNomor(v))}
+                valid={cek.telepon}
+                galat={cek.telepon ? null : `Nomor belum lengkap — paling sedikit ${NOMOR_MIN} angka.`}
+                placeholder="0812 3456 7890"
+                petunjuk={
+                  angkaNomor > 0
+                    ? `${angkaNomor} angka${cek.telepon ? ' · siap' : ` · minimal ${NOMOR_MIN}`}`
+                    : 'Dipakai untuk memastikan satu peserta tercatat sekali saja.'
+                }
+                type="tel" inputMode="tel" required maxLength={22} autoComplete="tel" enterKeyHint="done"
+              />
+            </KartuSeksi>
 
             {/* Label, tombol "Ulangi", dan petunjuknya dibawa komponen kanvas
-                sendiri — jangan menambahkan judul lagi di sini. */}
-            <div className="rounded-3xl bg-white ring-1 ring-slate-200 p-5">
+                sendiri — kartunya cukup memberi nomor urut. */}
+            <KartuSeksi nomor={4} judul="Tanda Tangan" selesai={cek.ttd}>
               <TandaTanganKanvas key={kunciKanvas} onChange={setTtd} />
-            </div>
+            </KartuSeksi>
 
             {galat && (
               <p
@@ -409,18 +539,42 @@ export default function AbsensiForm({ token, info }: { token: string; info: Abse
             )}
 
             {/* Tombol menempel di dasar layar — kanvas tanda tangan membuat
-                halaman lebih panjang daripada satu layar ponsel. */}
+                halaman lebih panjang daripada satu layar ponsel.
+
+                Bilah kemajuan di atasnya menjawab pertanyaan yang muncul
+                begitu tombol ditekan dan ditolak: "apa lagi yang kurang?".
+                Tombolnya TIDAK dimatikan selama belum lengkap — tombol mati
+                tidak menjelaskan apa pun, sedangkan menekannya memunculkan
+                teguran yang menyebut isian mana yang kurang. */}
             <div
-              className="fixed bottom-0 inset-x-0 z-20 mx-auto w-full max-w-[560px] bg-slate-50/95 backdrop-blur-md border-t border-slate-200 px-5 pt-3"
+              className="fixed bottom-0 inset-x-0 z-20 mx-auto w-full max-w-[560px] bg-slate-50/95 backdrop-blur-md border-t border-slate-200 px-5 pt-2.5"
               style={{ paddingBottom: 'max(0.85rem, env(safe-area-inset-bottom))' }}
             >
-              <button
+              <div className="flex items-center gap-3 mb-2.5">
+                <div className="flex-1 h-1.5 rounded-full bg-slate-200 overflow-hidden">
+                  <motion.div
+                    className={`h-full rounded-full ${lengkap ? 'bg-emerald-500' : 'bg-blue-600'}`}
+                    initial={false}
+                    animate={{ width: `${(terisi / langkah.length) * 100}%` }}
+                    transition={{ type: 'spring', stiffness: 200, damping: 30 }}
+                  />
+                </div>
+                <span className={`text-[11px] font-bold tabular-nums ${lengkap ? 'text-emerald-600' : 'text-slate-500'}`}>
+                  {lengkap ? 'Siap dikirim' : `${terisi}/${langkah.length} terisi`}
+                </span>
+              </div>
+
+              <motion.button
                 type="submit"
                 disabled={mengirim}
-                className="w-full rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-[0.99] disabled:bg-slate-300 text-white font-black text-[15.5px] py-4 shadow-lg shadow-blue-600/25 transition-all cursor-pointer"
+                whileTap={{ scale: 0.98 }}
+                animate={lengkap ? { boxShadow: '0 12px 28px -10px rgba(16,185,129,0.6)' } : { boxShadow: '0 12px 28px -10px rgba(37,99,235,0.45)' }}
+                className={`w-full rounded-2xl text-white font-black text-[15.5px] py-4 transition-colors cursor-pointer disabled:bg-slate-300 ${
+                  lengkap ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-blue-600 hover:bg-blue-700'
+                }`}
               >
                 {mengirim ? 'Mengirim…' : 'Catat Kehadiran Saya'}
-              </button>
+              </motion.button>
             </div>
           </form>
         )}

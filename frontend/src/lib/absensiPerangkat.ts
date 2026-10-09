@@ -4,8 +4,8 @@
  * Orang yang sama menghadiri banyak rapat, dan mengetik ulang nama, unit
  * kerja, dan nomor teleponnya di layar ponsel setiap kali adalah bagian
  * paling melelahkan dari daftar hadir digital. Sesudah sekali mengisi,
- * ketiganya disimpan di ponsel yang bersangkutan dan dituangkan kembali ke
- * formulir rapat berikutnya.
+ * ketiganya — beserta jenis kelaminnya — disimpan di ponsel yang bersangkutan
+ * dan dituangkan kembali ke formulir rapat berikutnya.
  *
  * ────────────────────────────────────────────────────────────────────────
  * TIGA BATAS YANG TIDAK BOLEH DILANGGAR
@@ -32,13 +32,23 @@
 
 const KUNCI = 'aiais_absensi_peserta';
 
+export type JenisKelamin = 'L' | 'P';
+
+/**
+ * Pihak yang DIWAKILI sengaja tidak ada di sini: ia berganti dari rapat ke
+ * rapat, dan mengisikan "mewakili Kepala Dinas" dari rapat kemarin ke rapat
+ * hari ini — tempat yang bersangkutan hadir atas namanya sendiri — adalah
+ * kesalahan yang tak terlihat sampai daftar hadirnya dicetak.
+ */
 export type PesertaTersimpan = {
   name: string;
   department: string;
   phone: string;
+  /** Opsional: simpanan dari sebelum isian ini ada tidak memilikinya. */
+  gender?: JenisKelamin;
 };
 
-/** Benar bila ketiga medannya benar-benar berisi. */
+/** Benar bila ketiga medan wajibnya benar-benar berisi. */
 function utuh(nilai: unknown): nilai is PesertaTersimpan {
   if (typeof nilai !== 'object' || nilai === null) return false;
 
@@ -46,7 +56,9 @@ function utuh(nilai: unknown): nilai is PesertaTersimpan {
 
   return typeof p.name === 'string' && p.name.trim() !== ''
     && typeof p.department === 'string' && p.department.trim() !== ''
-    && typeof p.phone === 'string' && p.phone.trim() !== '';
+    && typeof p.phone === 'string' && p.phone.trim() !== ''
+    // Simpanan lama tanpa jenis kelamin tetap sah — tinggal memilihnya.
+    && (p.gender === undefined || p.gender === 'L' || p.gender === 'P');
 }
 
 /**
@@ -83,6 +95,7 @@ export function simpanPeserta(peserta: PesertaTersimpan): void {
       name: peserta.name.trim(),
       department: peserta.department.trim(),
       phone: peserta.phone.trim(),
+      gender: peserta.gender,
     }));
   } catch {
     // Mode penyamaran dan kuota penuh sama-sama melempar di sini. Gagal

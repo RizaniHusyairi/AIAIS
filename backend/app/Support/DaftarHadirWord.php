@@ -196,8 +196,9 @@ class DaftarHadirWord
 
         $tabel->addRow(400, ['tblHeader' => true]);
         $tabel->addCell(600, $selKepala)->addText('NO', $kepala, $tengah);
-        $tabel->addCell(2800, $selKepala)->addText('NAMA', $kepala);
-        $tabel->addCell(2600, $selKepala)->addText('UNIT KERJA / INSTANSI', $kepala);
+        $tabel->addCell(2700, $selKepala)->addText('NAMA', $kepala);
+        $tabel->addCell(500, $selKepala)->addText('L/P', $kepala, $tengah);
+        $tabel->addCell(2200, $selKepala)->addText('UNIT KERJA / INSTANSI', $kepala);
         $tabel->addCell(1600, $selKepala)->addText('TELEPON', $kepala);
         $tabel->addCell(1600, $selKepala)->addText('WAKTU HADIR', $kepala);
         $tabel->addCell(self::LEBAR_TTD, $selKepala)->addText('TANDA TANGAN', $kepala, $tengah);
@@ -205,8 +206,14 @@ class DaftarHadirWord
         foreach ($daftar as $i => $p) {
             $tabel->addRow(700);
             $tabel->addCell(600, ['valign' => 'center'])->addText((string) ($i + 1), $isi, $tengah);
-            $tabel->addCell(2800, ['valign' => 'center'])->addText($p['name'], $isi);
-            $tabel->addCell(2600, ['valign' => 'center'])->addText($p['department'], $isi);
+            // Sama dengan cetakan PDF: pihak yang diwakili menumpang di sel nama.
+            $selNama = $tabel->addCell(2700, ['valign' => 'center']);
+            $selNama->addText($p['name'], $isi);
+            if (filled($p['represents'] ?? null)) {
+                $selNama->addText('mewakili '.$p['represents'], ['size' => 7, 'color' => self::ABU]);
+            }
+            $tabel->addCell(500, ['valign' => 'center'])->addText($p['gender'] ?: '—', $isi, $tengah);
+            $tabel->addCell(2200, ['valign' => 'center'])->addText($p['department'], $isi);
             $tabel->addCell(1600, ['valign' => 'center'])->addText($p['phone'] ?: '—', $isi);
             $tabel->addCell(1600, ['valign' => 'center'])->addText($p['waktu'], $isi);
 

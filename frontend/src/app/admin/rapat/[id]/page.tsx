@@ -272,6 +272,7 @@ export default function AdminRapatDetailPage() {
     return peserta.filter((a) =>
       a.name.toLowerCase().includes(s)
       || a.department.toLowerCase().includes(s)
+      || (a.represents ?? '').toLowerCase().includes(s)
       || (a.phone ?? '').toLowerCase().includes(s));
   }, [peserta, q]);
 
@@ -280,7 +281,22 @@ export default function AdminRapatDetailPage() {
     berTtd: peserta.filter((a) => a.has_signature).length,
     tanpaTtd: peserta.filter((a) => !a.has_signature).length,
     unit: new Set(peserta.map((a) => a.department.trim().toLowerCase())).size,
+    laki: peserta.filter((a) => a.gender === 'L').length,
+    perempuan: peserta.filter((a) => a.gender === 'P').length,
+    mewakili: peserta.filter((a) => a.represents).length,
   }), [peserta]);
+
+  /*
+   * Rincian jenis kelamin di bawah angka total. Baris yang ditulis sebelum
+   * isian ini ada (dan baris tulisan v1) tidak punya nilainya — mereka
+   * disebut terang sebagai "tanpa keterangan", bukan diam-diam dibuang dari
+   * hitungan sehingga L + P tidak sama dengan total.
+   */
+  const rincianJk = (() => {
+    const tanpa = stats.total - stats.laki - stats.perempuan;
+
+    return `${stats.laki} L · ${stats.perempuan} P${tanpa > 0 ? ` · ${tanpa} tanpa keterangan` : ''}`;
+  })();
 
   /* ---------------------- tindakan ---------------------- */
 
@@ -411,7 +427,7 @@ export default function AdminRapatDetailPage() {
 
       {/* ================= RINGKASAN ================= */}
       <motion.div variants={stagger} initial="hidden" animate="show" className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-        <StatCard label="Total Kehadiran" value={stats.total} icon={Users} accent="#38bdf8" />
+        <StatCard label="Total Kehadiran" value={stats.total} icon={Users} accent="#38bdf8" hint={rincianJk} />
         <StatCard
           label="Bertanda Tangan"
           value={stats.berTtd}
@@ -419,7 +435,13 @@ export default function AdminRapatDetailPage() {
           accent="#34d399"
           hint={stats.tanpaTtd > 0 ? `${stats.tanpaTtd} tanpa tanda tangan` : 'Seluruhnya lengkap'}
         />
-        <StatCard label="Unit Kerja" value={stats.unit} icon={UserCog} accent="#a78bfa" hint="Instansi berbeda yang hadir" />
+        <StatCard
+          label="Unit Kerja"
+          value={stats.unit}
+          icon={UserCog}
+          accent="#a78bfa"
+          hint={stats.mewakili > 0 ? `${stats.mewakili} peserta hadir mewakili` : 'Instansi berbeda yang hadir'}
+        />
         <StatCard
           label="Status Absensi"
           value={rapat.is_active ? 'Terbuka' : 'Ditutup'}
@@ -593,7 +615,7 @@ export default function AdminRapatDetailPage() {
           ) : terlihat.length === 0 ? (
             <EmptyState text="Tidak ada peserta yang cocok" hint="Coba kata kunci lain." />
           ) : (
-            <Table head={['No', 'Nama', 'Unit Kerja / Instansi', 'Telepon', 'Waktu Hadir', 'Tanda Tangan', 'Aksi']}>
+            <Table head={['No', 'Nama', 'L/P', 'Unit Kerja / Instansi', 'Telepon', 'Waktu Hadir', 'Tanda Tangan', 'Aksi']}>
               <AnimatePresence initial={false}>
                 {terlihat.map((a, i) => (
                   <Row key={a.id}>
@@ -603,6 +625,18 @@ export default function AdminRapatDetailPage() {
 
                     <Cell>
                       <span className="font-bold text-[var(--adm-fg)] text-[12.5px]">{a.name}</span>
+                      {/* Sama seperti cetakannya: pihak yang diwakili di bawah nama. */}
+                      {a.represents && (
+                        <span className="block text-[11px] text-[var(--adm-dim)]">mewakili {a.represents}</span>
+                      )}
+                    </Cell>
+
+                    <Cell>
+                      {a.gender ? (
+                        <span className="tabular-nums font-bold text-[var(--adm-body)]">{a.gender}</span>
+                      ) : (
+                        <span className="text-[var(--adm-dim)]" title="Diisi sebelum isian jenis kelamin tersedia">—</span>
+                      )}
                     </Cell>
 
                     <Cell><span className="text-[var(--adm-body)]">{a.department}</span></Cell>
@@ -710,7 +744,13 @@ export default function AdminRapatDetailPage() {
         {pratinjau && (
           <div className="space-y-4">
             <div>
-              <p className="text-[13px] font-bold text-[var(--adm-fg)]">{pratinjau.name}</p>
+              <p className="text-[13px] font-bold text-[var(--adm-fg)]">
+                {pratinjau.name}
+                {pratinjau.gender && <span className="ml-1.5 font-semibold text-[var(--adm-dim)]">({pratinjau.gender})</span>}
+              </p>
+              {pratinjau.represents && (
+                <p className="text-[11.5px] text-[var(--adm-body)]">mewakili {pratinjau.represents}</p>
+              )}
               <p className="text-[11.5px] text-[var(--adm-dim)]">
                 {pratinjau.department}
                 {pratinjau.phone && ` · ${pratinjau.phone}`}

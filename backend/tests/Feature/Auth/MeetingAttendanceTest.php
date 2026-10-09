@@ -2,8 +2,10 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Models\Attendance;
 use App\Models\Meeting;
-use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Tests\Support\CreatesLegacyUserSchema;
@@ -41,42 +43,36 @@ class MeetingAttendanceTest extends TestCase
         $this->prefix = '/api/'.config('api.version');
     }
 
-    private function createMeetingSchema(): void
+    /** Migrasi absensi rapat, berurutan seperti yang dialami `db_apt`. */
+    private const MIGRASI = [
+        '2026_08_13_005900_create_meetings_and_attendances_tables.php',
+        '2026_08_13_006000_add_public_token_to_meetings.php',
+        '2026_10_09_000100_add_phone_normalized_to_attendances.php',
+        '2026_10_09_000200_add_gender_and_represents_to_attendances.php',
+    ];
+
+    /**
+     * Skema dibangun dari MIGRASI YANG SAMA dengan produksi, bukan salinan
+     * tangan — salinan tangan inilah yang dulu membuat tidak ada yang sadar
+     * kedua tabelnya tidak punya migrasi `create`.
+     *
+     * @param  int|null  $sampai  jalankan hanya sejumlah migrasi pertama
+     */
+    private function createMeetingSchema(?int $sampai = null): void
     {
         Schema::dropIfExists('attendances');
         Schema::dropIfExists('meetings');
 
-        Schema::create('meetings', function (Blueprint $table) {
-            $table->id();
-            $table->string('title', 125);
-            $table->string('slug', 125);
-            $table->string('public_token', 64)->nullable()->unique();
-            $table->date('date');
-            $table->time('start_time');
-            $table->string('location', 125);
-            $table->string('organizer', 125);
-            $table->string('organizer_nip', 125)->nullable();
-            $table->boolean('is_active')->default(true);
-            $table->foreignId('user_id');
-            $table->timestamps();
-        });
-
-        Schema::create('attendances', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('meeting_id');
-            $table->string('name', 125);
-            $table->string('department', 125);
-            $table->string('phone', 125)->nullable();
-            $table->text('signature')->nullable();
-            $table->timestamps();
-        });
+        foreach (array_slice(self::MIGRASI, 0, $sampai) as $berkas) {
+            (require database_path('migrations/'.$berkas))->up();
+        }
     }
 
     private function buatRapat(bool $aktif = true): Meeting
     {
         $rapat = new Meeting([
             'title' => 'Rapat Uji',
-            'slug' => 'rapat-uji',
+            'slug' => Meeting::slugBaru('Rapat Uji'),
             'date' => '2026-08-20',
             'start_time' => '09:00',
             'location' => 'Ruang Rapat',
@@ -100,6 +96,7 @@ class MeetingAttendanceTest extends TestCase
     {
         return array_merge([
             'name' => 'Siti Aminah',
+            'gender' => 'P',
             'department' => 'Unit Operasi',
             'phone' => '081234567890',
             'signature' => $this->tandaTangan(),
@@ -282,5 +279,188 @@ class MeetingAttendanceTest extends TestCase
 
         $this->assertSame(1, $satu->attendances()->count());
         $this->assertSame(1, $dua->attendances()->count());
+    }
+
+    /* ================================================================
+       Jenis kelamin & pihak yang diwakili
+       ================================================================ */
+
+    public function test_jenis_kelamin_wajib_dan_hanya_l_atau_p(): void
+    {
+        $rapat = $this->buatRapat();
+
+        foreach ([null, '', 'X', 'laki-laki'] as $salah) {
+            $this->postJson(
+                $this->prefix.'/absensi/'.$rapat->public_token,
+                $this->isian(['gender' => $salah]),
+            )->assertStatus(422)->assertJsonValidationErrors('gender');
+        }
+
+        $this->assertSame(0, $rapat->attendances()->count());
+    }
+
+    public function test_pihak_yang_diwakili_tersimpan_dan_boleh_kosong(): void
+    {
+        $rapat = $this->buatRapat();
+
+        $this->postJson($this->prefix.'/absensi/'.$rapat->public_token, $this->isian([
+            'represents' => '  Kepala Dinas Perhubungan  ',
+        ]))->assertCreated();
+
+        // Isian berisi spasi saja disimpan NULL, bukan string kosong.
+        $this->postJson($this->prefix.'/absensi/'.$rapat->public_token, $this->isian([
+            'name' => 'Budi', 'gender' => 'L', 'phone' => '081111111111', 'represents' => '   ',
+        ]))->assertCreated();
+
+        $this->assertSame(
+            [['P', 'Kepala Dinas Perhubungan'], ['L', null]],
+            $rapat->attendances()->reorder('id')->get()->map(fn ($p) => [$p->gender, $p->represents])->all(),
+        );
+    }
+
+    /** "+62 812..." dan "0812..." adalah nomor yang sama. */
+    public function test_awalan_62_disamakan_dengan_0(): void
+    {
+        $rapat = $this->buatRapat();
+
+        $this->postJson($this->prefix.'/absensi/'.$rapat->public_token, $this->isian())
+            ->assertCreated();
+
+        $this->postJson(
+            $this->prefix.'/absensi/'.$rapat->public_token,
+            $this->isian(['phone' => '+62 812-3456-7890']),
+        )->assertStatus(422);
+
+        $this->assertSame(1, $rapat->attendances()->count());
+    }
+
+    /**
+     * Isian tanpa angka dulu lolos `required`, lalu dinormalkan menjadi ""
+     * yang bertabrakan dengan setiap isian tanpa angka berikutnya.
+     */
+    public function test_nomor_tanpa_angka_cukup_ditolak(): void
+    {
+        $rapat = $this->buatRapat();
+
+        foreach (['-', 'tidak ada', '0812'] as $salah) {
+            $this->postJson(
+                $this->prefix.'/absensi/'.$rapat->public_token,
+                $this->isian(['phone' => $salah]),
+            )->assertStatus(422)->assertJsonValidationErrors('phone');
+        }
+
+        $this->assertSame(0, $rapat->attendances()->count());
+    }
+
+    /**
+     * Penjaga terakhir terhadap kiriman kembar yang tiba bersamaan: keduanya
+     * lolos pemeriksaan di controller, jadi basis datalah yang harus menolak.
+     */
+    public function test_basis_data_menolak_nomor_ganda_pada_rapat_yang_sama(): void
+    {
+        $rapat = $this->buatRapat();
+        $buat = fn (string $nomor) => Attendance::create([
+            'meeting_id' => $rapat->id, 'name' => 'Uji', 'department' => 'Unit', 'phone' => $nomor,
+        ]);
+
+        $buat('081234567890');
+
+        $this->expectException(UniqueConstraintViolationException::class);
+        $buat('+62 812 3456 7890');
+    }
+
+    /**
+     * Baris lama diisi nomor pembandingnya, kecuali yang tanpa angka dan
+     * kemunculan kedua dari nomor yang sama — keduanya dibiarkan NULL, tidak
+     * dihapus, supaya indeks unik dapat dipasang tanpa membuang daftar hadir.
+     */
+    public function test_migrasi_mengisi_baris_lama_tanpa_menghapus_yang_ganda(): void
+    {
+        $this->createMeetingSchema(sampai: 2);
+        $rapat = $this->buatRapat();
+
+        foreach (['0812-3456-7890', '+6281234567890', '-', '0811 111 111'] as $nomor) {
+            DB::table('attendances')->insert([
+                'meeting_id' => $rapat->id, 'name' => 'Lama', 'department' => 'Unit', 'phone' => $nomor,
+            ]);
+        }
+
+        (require database_path('migrations/'.self::MIGRASI[2]))->up();
+        (require database_path('migrations/'.self::MIGRASI[3]))->up();
+
+        $this->assertSame(
+            ['081234567890', null, null, '0811111111'],
+            DB::table('attendances')->orderBy('id')->pluck('phone_normalized')->all(),
+        );
+
+        // Baris lama yang NULL tetap ikut dibandingkan.
+        $this->postJson(
+            $this->prefix.'/absensi/'.$rapat->public_token,
+            $this->isian(['phone' => '081234567890']),
+        )->assertStatus(422);
+    }
+
+    /**
+     * Unduhan Word tidak boleh meninggalkan apa pun di direktori temp.
+     *
+     * Dulu `tempnam()` membuat satu berkas kosong lalu `.docx` ditempelkan
+     * pada namanya; hanya berkas `.docx` yang dihapus sesudah terkirim. Yang
+     * tertinggal kosong, tetapi berkas `.docx`-nya sendiri berisi nama dan
+     * nomor HP peserta — keduanya harus benar-benar hilang.
+     */
+    public function test_unduhan_word_tidak_meninggalkan_berkas_sementara(): void
+    {
+        $rapat = $this->buatRapat();
+        $this->postJson($this->prefix.'/absensi/'.$rapat->public_token, $this->isian())->assertCreated();
+
+        // `abs*`, bukan `absensi_*`: di Windows `tempnam()` hanya memakai tiga
+        // aksara pertama awalannya (`absXXXX.tmp`), dan pola yang lebih
+        // panjang membuat tes ini lulus padahal berkas yatimnya ada.
+        $sebelum = glob(sys_get_temp_dir().DIRECTORY_SEPARATOR.'abs*') ?: [];
+
+        $res = $this->withToken($this->buatPengguna('admin')->createToken('uji', ['admin-panel'])->plainTextToken)
+            ->get($this->prefix.'/admin/meetings/'.$rapat->id.'/docx');
+
+        $res->assertOk();
+        $this->assertStringStartsWith('PK', file_get_contents($res->baseResponse->getFile()->getPathname()));
+
+        // Kirim isinya, seperti yang dilakukan server sungguhan.
+        ob_start();
+        $res->baseResponse->sendContent();
+        ob_end_clean();
+
+        $sesudah = glob(sys_get_temp_dir().DIRECTORY_SEPARATOR.'abs*') ?: [];
+        $this->assertSame([], array_values(array_diff($sesudah, $sebelum)));
+    }
+
+    /* ================================================================
+       Batas laju
+
+       Halaman absensi membaca keterangan rapat dari server Next, sehingga
+       bagi Laravel semua peserta datang dari SATU IP. Batas per IP yang lama
+       (30/menit) membuat peserta ke-31 melihat "tautan tidak dikenali".
+       ================================================================ */
+
+    public function test_banyak_peserta_dari_satu_ip_tetap_dapat_membuka_tautan(): void
+    {
+        $rapat = $this->buatRapat();
+
+        for ($i = 0; $i < 60; $i++) {
+            $this->getJson($this->prefix.'/absensi/'.$rapat->public_token)->assertOk();
+        }
+    }
+
+    public function test_batas_laju_dijawab_dalam_bahasa_indonesia(): void
+    {
+        $rapat = $this->buatRapat();
+
+        for ($i = 0; $i < 60; $i++) {
+            $this->postJson($this->prefix.'/absensi/'.$rapat->public_token, ['name' => 'x']);
+        }
+
+        $this->postJson($this->prefix.'/absensi/'.$rapat->public_token, $this->isian())
+            ->assertStatus(429)
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('message', 'Daftar hadir sedang ramai diisi. Tunggu sebentar, lalu coba lagi.');
     }
 }

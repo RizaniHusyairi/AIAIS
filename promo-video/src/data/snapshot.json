@@ -1,11 +1,15 @@
 {
-  "fetchedAt": "2026-09-29T06:45:03.105Z",
+  "fetchedAt": "2026-10-06T07:37:17.705Z",
   "source": {
-    "flights": "http://127.0.0.1:8000/api/v2",
-    "ppid": "http://127.0.0.1:8000/api/v2",
+    "flights": "http://127.0.0.1:8010/api/v2",
+    "ppid": "http://127.0.0.1:8010/api/v2",
+    "llau": "http://127.0.0.1:8010/api/v2",
     "news": "https://aptpairport.id/api/v2",
     "facilities": "https://aptpairport.id/api/v2",
-    "tourisms": "https://aptpairport.id/api/v2"
+    "tourisms": "https://aptpairport.id/api/v2",
+    "faqs": "https://aptpairport.id/api/v2",
+    "letters": "https://aptpairport.id/api/v2",
+    "profile": "frontend/src/lib/airportProfile.ts"
   },
   "flights": [
     {
@@ -16,9 +20,9 @@
       "logo": "img/airline-QG.webp",
       "city": "Surabaya",
       "code": "SUB",
-      "time": "12:05 WITA",
+      "time": "11:00 WITA",
       "status": "Berangkat",
-      "date": "2026-09-29"
+      "date": "2026-10-06"
     },
     {
       "type": "departure",
@@ -30,7 +34,7 @@
       "code": "CGK",
       "time": "12:20 WITA",
       "status": "Berangkat",
-      "date": "2026-09-29"
+      "date": "2026-10-06"
     },
     {
       "type": "departure",
@@ -42,7 +46,7 @@
       "code": "SUB",
       "time": "12:30 WITA",
       "status": "Berangkat",
-      "date": "2026-09-29"
+      "date": "2026-10-06"
     },
     {
       "type": "departure",
@@ -54,7 +58,7 @@
       "code": "CGK",
       "time": "13:00 WITA",
       "status": "Berangkat",
-      "date": "2026-09-29"
+      "date": "2026-10-06"
     },
     {
       "type": "departure",
@@ -65,8 +69,8 @@
       "city": "Berau",
       "code": "BEJ",
       "time": "14:05 WITA",
-      "status": "Berangkat",
-      "date": "2026-09-29"
+      "status": "Tertunda",
+      "date": "2026-10-06"
     },
     {
       "type": "arrival",
@@ -76,9 +80,9 @@
       "logo": "img/airline-QG.webp",
       "city": "Surabaya",
       "code": "SUB",
-      "time": "11:15 WITA",
+      "time": "10:30 WITA",
       "status": "Mendarat",
-      "date": "2026-09-29"
+      "date": "2026-10-06"
     },
     {
       "type": "arrival",
@@ -90,7 +94,7 @@
       "code": "CGK",
       "time": "11:20 WITA",
       "status": "Mendarat",
-      "date": "2026-09-29"
+      "date": "2026-10-06"
     },
     {
       "type": "arrival",
@@ -102,7 +106,7 @@
       "code": "SUB",
       "time": "11:50 WITA",
       "status": "Mendarat",
-      "date": "2026-09-29"
+      "date": "2026-10-06"
     },
     {
       "type": "arrival",
@@ -114,7 +118,7 @@
       "code": "CGK",
       "time": "12:20 WITA",
       "status": "Mendarat",
-      "date": "2026-09-29"
+      "date": "2026-10-06"
     },
     {
       "type": "arrival",
@@ -126,7 +130,7 @@
       "code": "BEJ",
       "time": "13:35 WITA",
       "status": "Mendarat",
-      "date": "2026-09-29"
+      "date": "2026-10-06"
     }
   ],
   "news": [
@@ -510,12 +514,138 @@
   },
   "home": {
     "heroBg": "img/home-bg.jpg",
-    "ig": [
+    "ig": []
+  },
+  "llau": {
+    "label": "September 2026",
+    "passengers": 51248,
+    "flights": 639,
+    "cargo": 297117,
+    "routes": [
       {
-        "image": "img/ig-0.jpg",
-        "video": true,
-        "caption": ""
+        "code": "CGK",
+        "passengers": 29482,
+        "flights": 224
+      },
+      {
+        "code": "SUB",
+        "passengers": 18752,
+        "flights": 130
+      },
+      {
+        "code": "BEJ",
+        "passengers": 1773,
+        "flights": 58
+      },
+      {
+        "code": "BDJ",
+        "passengers": 358,
+        "flights": 18
+      },
+      {
+        "code": "RTU",
+        "passengers": 226,
+        "flights": 26
+      }
+    ],
+    "trend": [
+      {
+        "label": "Apr 26",
+        "passengers": 63145,
+        "flights": 663
+      },
+      {
+        "label": "Mei 26",
+        "passengers": 52223,
+        "flights": 618
+      },
+      {
+        "label": "Jun 26",
+        "passengers": 63507,
+        "flights": 690
+      },
+      {
+        "label": "Jul 26",
+        "passengers": 63271,
+        "flights": 698
+      },
+      {
+        "label": "Agu 26",
+        "passengers": 58990,
+        "flights": 695
+      },
+      {
+        "label": "Sep 26",
+        "passengers": 51248,
+        "flights": 639
       }
     ]
+  },
+  "faqs": [
+    {
+      "category": "Penerbangan & Keberangkatan",
+      "question": "Apa saja rute penerbangan yang tersedia di Bandara A.P.T. Pranoto Samarinda?",
+      "answer": "Bandara A.P.T. Pranoto Samarinda melayani penerbangan menuju Jakarta, Surabaya, Yogyakarta, Banjarmasin, Berau, dan Melak. Selain itu tersedia rute penerbangan perintis menuju Long Apung, Maratua, Datah Dawai, dan Muara Wahau, serta koneksi antarwilayah Datah Dawai–Melak dan Maratua–Berau."
+    },
+    {
+      "category": "Fasilitas Bandara",
+      "question": "Apakah bandara menyediakan fasilitas bagi penyandang disabilitas?",
+      "answer": "Ya. Bandara menyediakan fasilitas ramah disabilitas seperti jalur khusus, toilet difabel, area parkir khusus, dan layanan bantuan sesuai kebutuhan. Penumpang dapat menghubungi petugas atau Customer Service setibanya di bandara maupun sebelum keberangkatan, agar petugas dapat memberikan pendampingan dan bantuan sesuai kebutuhan."
+    },
+    {
+      "category": "Layanan & Perizinan",
+      "question": "Apakah Bandara A.P.T. Pranoto Samarinda menyediakan layanan kargo?",
+      "answer": "Ya. Bandara A.P.T. Pranoto Samarinda memiliki Gedung Kargo Lini 2 yang melayani kegiatan Ekspedisi Muatan Pesawat Udara (EMPU). Layanan kargo beroperasi setiap hari pada pukul 08.00–17.00 WITA dan didukung oleh beberapa perusahaan kargo untuk melayani kebutuhan pengiriman barang melalui transportasi udara, termasuk informasi terkait tarif, pengiriman, dan jenis layanan."
+    },
+    {
+      "category": "Informasi Publik & Pengaduan",
+      "question": "Bagaimana cara mengajukan pengaduan atau saran?",
+      "answer": "Pengaduan dan saran dapat disampaikan melalui: Media sosial resmi bandara WhatsApp pengaduan: +62 811-551-944 Website resmi bandara Kotak saran yang tersedia di terminal SP4N-LAPOR!"
+    },
+    {
+      "category": "Penerbangan & Keberangkatan",
+      "question": "Berapa jam operasional Bandara A.P.T. Pranoto?",
+      "answer": "Jam operasional Bandara A.P.T. Pranoto mengikuti jadwal operasional yang telah ditetapkan, yaitu pukul 07.00 WITA hingga 20.00 WITA."
+    },
+    {
+      "category": "Fasilitas Bandara",
+      "question": "Bagaimana jika saya kehilangan barang di bandara?",
+      "answer": "Segera hubungi petugas Lost and Found atau Pusat Informasi bandara, atau kontak resmi bandara, dengan menyampaikan ciri-ciri barang, lokasi terakhir, dan waktu kehilangan."
+    }
+  ],
+  "letters": {
+    "count": {
+      "keputusan": 1,
+      "edaran": 0
+    },
+    "items": [
+      {
+        "type": "keputusan",
+        "number": "AU.108/8121/APTP/2025",
+        "title": "Penetapan Dokumen Standar Pelayanan Jasa Kebandarudaraan di Bandar Udara Kelas I Aji Pangeran Tumenggung Pranoto - Samarinda",
+        "date": "2025-10-29T00:00:00.000000Z"
+      }
+    ]
+  },
+  "profile": {
+    "timeline": [
+      {
+        "year": "2018",
+        "title": "Mulai Beroperasi",
+        "desc": "Beroperasi sejak 24 Mei 2018, menggantikan Bandar Udara Temindung yang resmi ditutup sehari sebelumnya."
+      },
+      {
+        "year": "2023",
+        "title": "Ditetapkan sebagai BLU",
+        "desc": "Melalui Keputusan Menteri Keuangan No. 63/KMK.05/2023, ditetapkan sebagai instansi dengan Pola Pengelolaan Keuangan Badan Layanan Umum."
+      },
+      {
+        "year": "2024",
+        "title": "Organisasi & Tata Kerja Baru",
+        "desc": "PM 20 Tahun 2024 menetapkan organisasi dan tata kerja Kantor UPBU A.P.T. Pranoto, memperkuat perannya sebagai gerbang penunjang Ibu Kota Nusantara."
+      }
+    ],
+    "visi": "Terwujudnya penyelenggaraan jasa kebandarudaraan sesuai dengan standar keselamatan, keamanan dan pelayanan Bandar Udara yang Bertaraf Internasional dalam mewujudkan visi dan misi Direktorat Jenderal Perhubungan Udara yaitu Transportasi Udara Maju Menuju Indonesia Emas 2045",
+    "org": "Kantor UPBU Kelas I A.P.T. Pranoto Samarinda"
   }
 }

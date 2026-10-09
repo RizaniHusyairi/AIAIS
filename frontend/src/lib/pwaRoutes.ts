@@ -106,6 +106,11 @@ const TABEL: PetaRute[] = [
 
   { publik: '/layanan', app: '/app/layanan', simpanSegmen: true },
 
+  // Pendaftaran akun warga punya layar bertahap sendiri di PWA. `/masuk` dan
+  // `/akun` tetap di KEEP_RESPONSIVE — masuk sudah tertanam di layar Akun,
+  // dan formulir pengajuan berunggahan belum punya padanan layar.
+  { publik: '/daftar', app: '/app/akun/daftar' },
+
   { publik: '/regulasi/surat-keputusan', app: '/app/regulasi/keputusan' },
   { publik: '/regulasi/surat-edaran', app: '/app/regulasi/edaran' },
 
@@ -152,6 +157,13 @@ const TERURUT = [...TABEL].sort((a, b) => b.publik.length - a.publik.length);
  * `/karaoke` masuk dengan alasan yang sama persis seperti `/absensi`: token
  * jurinya ada di dalam URL, dan papan nilainya memang dirancang untuk dipegang
  * satu tangan di ruang acara.
+ *
+ * `/aplikasi`, `/masuk`, dan `/akun` sudah lama dikecualikan dari `matcher`
+ * proxy (lihat komentar di `proxy.ts`), tetapi tidak dari daftar ini — jadi
+ * pengecualian itu hanya berlaku di sisi server. Di sisi klien,
+ * `MobileRedirect` tetap melempar halaman-halaman itu ke `/app`: pemohon yang
+ * sesinya habis dilempar ke `/masuk` lalu mendarat di beranda aplikasi.
+ * (`/daftar` dulu ikut di sini; kini ia punya layar PWA sendiri di tabel.)
  */
 export const KEEP_RESPONSIVE = [
   '/terminal-3d',
@@ -161,6 +173,9 @@ export const KEEP_RESPONSIVE = [
   '/peta-rute',
   '/absensi',
   '/karaoke',
+  '/aplikasi',
+  '/masuk',
+  '/akun',
 ] as const;
 
 /** Benar bila rute ini harus disajikan apa adanya, tanpa pengalihan ke PWA. */

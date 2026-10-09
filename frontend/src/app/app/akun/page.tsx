@@ -200,7 +200,7 @@ export default function AkunScreen() {
 
               <p className="text-center text-[12.5px] text-slate-500">
                 Belum punya akun?{' '}
-                <Link href="/daftar" className="font-bold text-blue-600">Daftar di sini</Link>
+                <Link href="/app/akun/daftar" className="font-bold text-blue-600">Daftar di sini</Link>
               </p>
             </motion.form>
 

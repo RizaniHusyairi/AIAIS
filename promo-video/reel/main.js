@@ -33,7 +33,7 @@ async function sheet(times, cols) {
 
 async function render() {
   const out = new Output({ format: new Mp4OutputFormat({ fastStart: 'in-memory' }), target: new BufferTarget() });
-  const video = new CanvasSource(canvas, { codec: 'avc', bitrate: 30e6, keyFrameInterval: 1 });
+  const video = new CanvasSource(canvas, { codec: 'avc', bitrate: 14e6, keyFrameInterval: 2 });
   // 192 kbps: pengode AAC Windows menolak 256 kbps.
   const audio = new AudioBufferSource({ codec: 'aac', bitrate: 192_000 });
   out.addVideoTrack(video, { frameRate: FPS });

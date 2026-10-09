@@ -277,10 +277,15 @@ Route::prefix(config('api.version'))->group(function () {
     //
     // Penjaganya: token acak-aman 48 aksara yang tidak pernah ikut respons,
     // penolakan bila absensinya sudah ditutup, dan pembatasan laju di bawah.
+    //
+    // Batas lajunya bernama, bukan `throttle:N,1` per IP: halaman absensi
+    // membaca keterangan rapat dari server Next (satu IP untuk semua peserta),
+    // dan peserta sendiri berbagi IP Wi-Fi kantor. Hitungannya per rapat —
+    // lihat `AppServiceProvider::aturBatasLajuAbsensi()`.
     Route::get('/absensi/{token}', [MeetingController::class, 'showByToken'])
-        ->middleware('throttle:30,1');
+        ->middleware('throttle:absensi-baca');
     Route::post('/absensi/{token}', [MeetingController::class, 'storeByToken'])
-        ->middleware('throttle:20,1');
+        ->middleware('throttle:absensi-tulis');
 
     // Papan nilai lomba karaoke.
     //

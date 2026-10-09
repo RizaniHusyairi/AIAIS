@@ -9,10 +9,11 @@ import { toAppRoute, simpanQuery, keepResponsive, adalahPerayap } from '@/lib/pw
  * dipakai `components/pwa/MobileRedirect.tsx`. Dulu keduanya menyimpan
  * daftarnya masing-masing dan sudah menyimpang.
  *
- * `/aplikasi`, `/masuk`, `/daftar`, dan `/akun` sengaja tidak didaftarkan pada
- * `matcher`. Portal Aplikasi dirancang responsif dan memang untuk dibuka apa
- * adanya, sementara formulir pengajuan harus dapat dibuka dari ponsel — di
- * sanalah pemohon memotret dan mengunggah surat pengantarnya.
+ * `/aplikasi`, `/masuk`, dan `/akun` sengaja tidak didaftarkan pada `matcher`.
+ * Portal Aplikasi dirancang responsif dan memang untuk dibuka apa adanya,
+ * sementara formulir pengajuan harus dapat dibuka dari ponsel — di sanalah
+ * pemohon memotret dan mengunggah surat pengantarnya. `/daftar` dulu ikut
+ * dikecualikan; kini ia dialihkan ke layar pendaftaran PWA.
  */
 
 /*
@@ -119,6 +120,7 @@ export const config = {
     '/tautan-terkait/:path*',
     '/profile/:path*',
     '/layanan/:path*',
+    '/daftar/:path*',
     '/regulasi/:path*',
     '/ppid/:path*',
   ],

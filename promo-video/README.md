@@ -16,32 +16,43 @@ npm run render      # → out/promo.mp4 (CLI Remotion, ±2 menit) — cara utama
 
 ## Motion reel 16:9 (`reel/`)
 
-Versi kedua: reel motion graphic 1920×1080, 60 fps, 20 detik, untuk YouTube, layar terminal, dan situs. Tidak memakai Remotion. Setiap frame adalah fungsi murni dari waktu yang digambar ke kanvas 2D, lalu dienkode WebCodecs (mediabunny) di Chrome headless terpasang. Musik disintesis di `reel/audio.js` memakai jam 120 BPM yang sama.
+Versi kedua: reel motion graphic 1920×1080, 60 fps, **60 detik, 80 BPM**, untuk YouTube, layar terminal, dan situs. Tidak memakai Remotion. Setiap frame adalah fungsi murni dari waktu yang digambar ke kanvas 2D, lalu dienkode WebCodecs (mediabunny, 14 Mbps) di Chrome headless terpasang. Musik disintesis di `reel/audio.js`.
+
+Tempo dan urutan adegan hanya ditulis di `reel/timeline.js`; gambar dan musik sama-sama membacanya, dan pewaktuan di dalam adegan ditulis dalam ketuk. Mengubah tempo atau durasi adegan cukup di sana.
 
 ```bash
-npm run reel                                  # → out/promo-reel.mp4 (±15 dtk)
+npm run reel                                  # → out/promo-reel.mp4 (±50 dtk render)
 npm run reel:sheet -- "sheet=2.3,4.5,8.7"     # → out/reel-sheet.png, lembar kontak untuk pemeriksaan
+npm run reel:sheet -- audio                   # ringkasan level musik per 0,5 dtk
 ```
 
 Datanya juga `src/data/snapshot.json` dan foto di `public/img`, jadi `npm run data` ikut memperbarui reel. Aturan isi di bawah tetap berlaku.
 
 | Dtk | Adegan |
 |---|---|
-| 0–2 | Titik → landasan pacu, "Samarinda", pesawat lepas landas |
-| 2–4 | "SATU PORTAL. SEMUA INFO." lalu kamera menembus huruf O |
-| 4–7 | Papan split-flap keberangkatan → kedatangan |
-| 7–10 | Mosaik fasilitas berbalik, Runway layar penuh, kartu wisata |
-| 10–13 | Korsel berita, tiga golongan informasi PPID |
-| 13–16 | Aplikasi di ponsel: Pusat Bantuan → Lapor Kehilangan → terkirim |
-| 16–18 | Montase delapan potongan |
-| 18–20 | Partikel menyusun "aptpairport.id", logo bandara |
+| 0–6 | Titik → landasan pacu, "Samarinda", pesawat lepas landas dengan kamera mengikuti, iris |
+| 6–9 | "SATU PORTAL. SEMUA INFO." lalu kamera menembus huruf O |
+| 9–15 | Linimasa 2018/2023/2024 dan visi, dari `frontend/src/lib/airportProfile.ts` |
+| 15–21 | Papan split-flap keberangkatan → kedatangan |
+| 21–27 | Statistik LLAU: penumpang, penerbangan, kargo, tren bulanan, rute tersibuk |
+| 27–33 | Mosaik fasilitas berbalik, Runway layar penuh, kartu wisata |
+| 33–39 | Korsel berita, tiga golongan informasi PPID |
+| 39–42 | Surat keputusan asli dan kipas dokumen PPID |
+| 42–48 | Aplikasi di ponsel: Pusat Bantuan → Lapor Kehilangan → terkirim |
+| 48–51 | Akordeon FAQ |
+| 51–54 | Montase delapan potongan |
+| 54–60 | Partikel menyusun "aptpairport.id", logo bandara |
 
 ## Sumber data
 
 | Data | Sumber |
 |---|---|
-| Berita, fasilitas, wisata (teks + foto) | Portal tayang `https://aptpairport.id/api/v2` (ubah lewat `PORTAL_API_URL`) |
-| Penerbangan (FIDS), PPID | API lokal `http://127.0.0.1:8000/api/v2` (ubah lewat `API_URL`) |
+| Berita, fasilitas, wisata (teks + foto), FAQ, surat regulasi | Portal tayang `https://aptpairport.id/api/v2` (ubah lewat `PORTAL_API_URL`) |
+| Penerbangan (FIDS), PPID, statistik LLAU | API lokal `http://127.0.0.1:8000/api/v2` (ubah lewat `API_URL`) |
+
+| Linimasa & visi | `frontend/src/lib/airportProfile.ts` (dibundel esbuild) |
+
+Portal tayang belum punya endpoint LLAU, dan surat di basis data lokal masih entri uji — karena itu sumbernya dibagi seperti di atas. Bila port 8000 dipakai proyek lain, jalankan backend di port lain lalu `API_URL=http://127.0.0.1:8010/api/v2 npm run data`.
 
 Foto dikecilkan ke lebar 900 px (JPEG) oleh `scripts/shrink.ps1`.
 
