@@ -51,8 +51,10 @@
             color: #64748b;
         }
 
-        /* Nomor halaman diletakkan DomPDF lewat counter CSS. */
-        .halaman:after { content: counter(page) " / " counter(pages); }
+        /* Nomor halaman TIDAK ditulis di sini. `counter(pages)` tidak pernah
+           diisi DomPDF — cetakannya dulu tertulis "Halaman 1 / 0". Nomornya
+           digambar sesudah render oleh `CetakanPdf::bubuhkanNomorHalaman()`,
+           di pojok kanan kaki di bawah ini. */
 
         h1 { font-size: 15px; margin: 0 0 2px 0; color: #0b1e5b; }
         .periode { font-size: 10px; color: #475569; margin: 0 0 12px 0; }
@@ -87,7 +89,6 @@
         Dicetak {{ $dicetakPada }}
         @isset($dicetakOleh) oleh {{ $dicetakOleh }} @endisset
         · Portal Bandara APT Pranoto
-        <span style="float: right;">Halaman <span class="halaman"></span></span>
     </footer>
 
     <main>

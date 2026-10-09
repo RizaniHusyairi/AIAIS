@@ -202,7 +202,7 @@ class InventoryController extends Controller
             'aset' => $aset,
         ])->setPaper('a4', 'portrait');
 
-        return $pdf->download('logbook-'.Str::slug($aset->name).'.pdf');
+        return CetakanPdf::bubuhkanNomorHalaman($pdf)->download('logbook-'.Str::slug($aset->name).'.pdf');
     }
 
     /* -------------------------------------------------------------- */

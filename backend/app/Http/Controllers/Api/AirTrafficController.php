@@ -115,7 +115,7 @@ class AirTrafficController extends Controller
             'kategori' => $this->kategoriCetak(),
         ])->setPaper('a4', 'landscape');
 
-        return $pdf->download('lalu-lintas-udara-'.$periode->format('Y-m').'.pdf');
+        return CetakanPdf::bubuhkanNomorHalaman($pdf)->download('lalu-lintas-udara-'.$periode->format('Y-m').'.pdf');
     }
 
     /**

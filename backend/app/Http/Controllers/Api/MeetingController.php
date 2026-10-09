@@ -200,7 +200,7 @@ class MeetingController extends Controller
             'peserta' => $peserta,
         ])->setPaper('a4', 'portrait');
 
-        return $pdf->download('daftar-hadir-'.$rapat->slug.'.pdf');
+        return CetakanPdf::bubuhkanNomorHalaman($pdf)->download('daftar-hadir-'.$rapat->slug.'.pdf');
     }
 
     /**
@@ -275,14 +275,13 @@ class MeetingController extends Controller
                 'represents' => $a->represents,
                 'phone' => $a->phone,
                 /*
-                 * Waktu tanda tangan dibubuhkan — kolom yang ada pada cetakan
-                 * v1 dan sempat hilang di v2. Pada daftar hadir, jam mengisi
-                 * adalah bagian dari bukti kehadirannya, bukan hiasan.
-                 *
-                 * Lewat `CetakanPdf::waktu()`, WAJIB: tanpa itu kolomnya
-                 * tercetak dalam UTC sementara kaki halaman menulis WITA.
+                 * Waktu hadir SENGAJA tidak ikut cetakan sejak Oktober 2026 —
+                 * susunan kolomnya mengikuti permintaan petugas: No., Nama,
+                 * No. HP, Jenis Kelamin, Perwakilan, Tanda Tangan. Jamnya tetap
+                 * tersimpan (`created_at`) dan tampil di panel admin. Bila
+                 * kelak dikembalikan, format lewat `CetakanPdf::waktu()` —
+                 * tanpa itu jamnya tercetak dalam UTC, bukan WITA.
                  */
-                'waktu' => CetakanPdf::waktu($a->created_at),
                 'signature' => $mentah
                     ? $this->tandaTanganBiner($a)
                     : $this->tandaTanganDataUri($a),

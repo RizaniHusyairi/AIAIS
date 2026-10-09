@@ -41,34 +41,35 @@
         <table class="data">
             <thead>
                 <tr>
-                    <th class="tengah" style="width: 26px;">No</th>
+                    {{-- Susunan kolom mengikuti permintaan petugas (Okt 2026). Waktu
+                         hadir tidak lagi dicetak; ia tetap tersimpan dan tampil di
+                         panel admin. --}}
+                    <th class="tengah" style="width: 26px;">No.</th>
                     <th>Nama</th>
-                    <th class="tengah" style="width: 24px;">L/P</th>
-                    <th style="width: 125px;">Unit Kerja / Instansi</th>
-                    <th style="width: 82px;">Telepon</th>
-                    <th style="width: 96px;">Waktu Hadir</th>
-                    <th class="tengah" style="width: 104px;">Tanda Tangan</th>
+                    <th style="width: 88px;">No. HP</th>
+                    <th class="tengah" style="width: 62px;">Jenis Kelamin (L/P)</th>
+                    <th style="width: 160px;">Perwakilan</th>
+                    <th class="tengah" style="width: 110px;">Tanda Tangan</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach ($peserta as $i => $p)
                     <tr>
                         <td class="tengah">{{ $i + 1 }}</td>
+                        <td>{{ $p['name'] }}</td>
+                        {{-- `nowrap`: formulir merapikan nomor menjadi kelompok
+                             berspasi, dan tanpa ini "0812 3456 7890" patah dua baris. --}}
+                        <td style="white-space: nowrap;">{{ $p['phone'] ?: '—' }}</td>
+                        <td class="tengah">{{ $p['gender'] ?: '—' }}</td>
+                        {{-- Perwakilan = instansi asal peserta, ditambah pihak yang
+                             diwakili bila ada. Unit kerja tidak punya kolom sendiri
+                             lagi, jadi ia harus tetap tercetak di sini. --}}
                         <td>
-                            {{ $p['name'] }}
-                            {{-- Pihak yang diwakili menumpang di sel nama, bukan
-                                 kolom sendiri: kebanyakan baris kosong, dan
-                                 lebar A4 tegak sudah habis dipakai tanda tangan. --}}
+                            {{ $p['department'] }}
                             @if (filled($p['represents']))
                                 <br><span style="font-size: 8px; color: #64748b;">mewakili {{ $p['represents'] }}</span>
                             @endif
                         </td>
-                        <td class="tengah">{{ $p['gender'] ?: '—' }}</td>
-                        <td>{{ $p['department'] }}</td>
-                        {{-- `nowrap`: formulir merapikan nomor menjadi kelompok
-                             berspasi, dan tanpa ini "0812 3456 7890" patah dua baris. --}}
-                        <td style="white-space: nowrap;">{{ $p['phone'] ?: '—' }}</td>
-                        <td>{{ $p['waktu'] }}</td>
                         <td class="tengah" style="height: 42px;">
                             @if ($p['signature'])
                                 <img src="{{ $p['signature'] }}" alt="" style="height: 34px;">

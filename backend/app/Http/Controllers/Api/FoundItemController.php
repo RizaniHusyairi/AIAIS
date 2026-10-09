@@ -168,7 +168,7 @@ class FoundItemController extends Controller
             'diserahkanPada' => CetakanPdf::waktu($barang->returned_at),
         ])->setPaper('a4', 'portrait');
 
-        return $pdf->download('berita-acara-' . Str::lower($barang->code) . '.pdf');
+        return CetakanPdf::bubuhkanNomorHalaman($pdf)->download('berita-acara-' . Str::lower($barang->code) . '.pdf');
     }
 
     public function destroy($id)
