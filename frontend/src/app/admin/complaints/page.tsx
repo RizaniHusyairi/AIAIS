@@ -49,6 +49,25 @@ const CANNED_RESPONSES = [
 const jam = (iso?: string | null) =>
   iso ? new Date(iso).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '';
 
+// Jam saja menyesatkan begitu utas berumur lebih dari sehari — petugas mengira
+// "10.17" berarti pagi ini. Hari ini cukup jam, kemarin diberi label, selebihnya
+// tanggal lengkap (tahun hanya bila berbeda).
+const waktu = (iso?: string | null) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const now = new Date();
+  const hari = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const selisih = Math.round((hari(now) - hari(d)) / 86_400_000);
+  if (selisih === 0) return jam(iso);
+  if (selisih === 1) return `Kemarin, ${jam(iso)}`;
+  const tgl = d.toLocaleDateString('id-ID', {
+    day: 'numeric',
+    month: 'short',
+    ...(d.getFullYear() !== now.getFullYear() && { year: 'numeric' }),
+  });
+  return `${tgl}, ${jam(iso)}`;
+};
+
 const tanggal = (iso?: string | null) =>
   iso ? new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
 
@@ -379,7 +398,7 @@ export default function AdminHelpdeskPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2">
                             <span className="font-mono text-[11px] font-bold text-blue-400">{t.ticket_number}</span>
-                            <span className="text-[10px] text-[var(--adm-dim)]">{jam(t.last_activity_at)}</span>
+                            <span className="text-[10px] text-[var(--adm-dim)]">{waktu(t.last_activity_at)}</span>
                           </div>
 
                           <h4 className="font-bold text-xs text-[var(--adm-body)] truncate mt-0.5">{t.subject}</h4>
@@ -485,7 +504,7 @@ export default function AdminHelpdeskPage() {
                           >
                             <div className="flex items-center justify-between gap-4 text-[10px] opacity-75 pb-0.5 border-b border-[var(--adm-line)]">
                               <span className="font-bold">{msg.sender_name}</span>
-                              <span>{jam(msg.created_at)}</span>
+                              <span>{waktu(msg.created_at)}</span>
                             </div>
                             <p className="leading-relaxed whitespace-pre-wrap font-normal text-xs">{msg.message}</p>
                           </div>
