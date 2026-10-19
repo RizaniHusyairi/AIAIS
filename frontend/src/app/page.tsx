@@ -10,6 +10,7 @@ import { ORG_NAME } from '@/lib/airportProfile';
 import { PEJABAT_PHOTO_FIT } from '@/lib/pejabatFoto';
 import { usePejabat } from '@/lib/pejabatLive';
 import HeroParticles from '@/components/effects/HeroParticles';
+import PesawatHero from '@/components/effects/PesawatHero';
 import DekorEvent, { PitaPerayaan } from '@/components/events/DekorEvent';
 import { usePerayaanAktif } from '@/lib/perayaanAktif';
 import NamaBandaraHero from '@/components/home/NamaBandaraHero';
@@ -317,6 +318,8 @@ export default function HomePage() {
           <div className="absolute inset-0 bg-gradient-to-t from-slate-50 via-transparent to-transparent" />
           {/* Partikel cahaya, aliran udara & jejak pesawat */}
           <HeroParticles />
+          {/* Pesawat 3D di langit kosong antara judul dan ponsel; hanya `lg` ke atas. */}
+          <PesawatHero />
           {/* Hiasan perayaan. Sengaja DI DALAM kotak latar ini, bukan sebagai
               saudara kolom teks: kotaknya sudah `absolute inset-0` di bawah
               lapisan isi, sehingga untaian bendera dan konfetinya tidak akan
